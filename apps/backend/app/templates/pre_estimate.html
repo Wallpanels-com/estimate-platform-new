@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  @page { size: letter; margin: 0.6in 0.7in; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; color: #1a1a1a; }
+
+  table.header { width: 100%; border-collapse: collapse; border-bottom: 1.5pt solid #111; margin-bottom: 16px; padding-bottom: 10px; }
+  .brand { font-size: 11pt; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
+  .brand-sub { font-size: 7pt; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+  .pre-badge { font-size: 6pt; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; color: #888; border: 0.5pt solid #ccc; padding: 3px 8px; }
+
+  .title { font-size: 18pt; font-weight: bold; color: #111; margin-bottom: 4px; }
+  .desc { font-size: 8pt; color: #666; margin-bottom: 14px; }
+
+  table.meta { width: 100%; border-collapse: collapse; border: 0.5pt solid #ddd; margin-bottom: 16px; }
+  table.meta td { padding: 6px 9px; border-right: 0.5pt solid #ddd; font-size: 8pt; }
+  .meta-label { font-size: 5.5pt; color: #aaa; letter-spacing: 1.5px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+
+  .section-label { font-size: 6.5pt; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; color: #777; padding: 6px 0 3px 0; border-bottom: 0.5pt solid #e0e0e0; margin-top: 4px; }
+
+  table.items { width: 100%; border-collapse: collapse; }
+  table.items td { padding: 4px 0; border-bottom: 0.5pt solid #f0f0f0; font-size: 8pt; vertical-align: top; }
+  .item-num { width: 18px; color: #bbb; }
+  .item-name { font-weight: bold; }
+  .item-desc { font-size: 7pt; color: #888; }
+  .item-price { text-align: right; font-weight: bold; white-space: nowrap; width: 70px; }
+
+  .total-box { margin-top: 14px; background: #f7f7f7; border: 0.5pt solid #ddd; padding: 8px 10px; }
+  .footer { margin-top: 20px; font-size: 6.5pt; color: #aaa; text-align: center; border-top: 0.5pt solid #eee; padding-top: 7px; }
+</style>
+</head>
+<body>
+  <table class="header">
+    <tr>
+      <td><div class="brand">WALLPANELS.COM</div><div class="brand-sub">By VERONA HOME</div></td>
+      <td style="text-align:right;"><span class="pre-badge">Pre-Estimate</span></td>
+    </tr>
+  </table>
+
+  <div class="title">{{ estimate.title or (estimate.room_name or 'Pre-Estimate') }}</div>
+  {% if estimate.description %}<div class="desc">{{ estimate.description }}</div>{% endif %}
+
+  <table class="meta">
+    <tr>
+      <td><span class="meta-label">Client</span>{{ estimate.client_name or '&mdash;' }}</td>
+      <td><span class="meta-label">Project</span>{{ estimate.project_name or '&mdash;' }}</td>
+      <td><span class="meta-label">Date</span>{{ estimate.estimate_date.strftime('%m/%d/%y') if estimate.estimate_date else '&mdash;' }}</td>
+      <td style="border-right:none;"><span class="meta-label">Prepared by</span>{{ estimate.prepared_by or '&mdash;' }}</td>
+    </tr>
+  </table>
+
+  {% set ns = namespace(row_num=1) %}
+  {% for section_name, items in sections.items() %}
+  <div class="section-label">{{ section_name }}</div>
+  <table class="items">
+    {% for item in items %}
+    <tr>
+      <td class="item-num">{{ ns.row_num }}</td>
+      <td>
+        <div class="item-name">{{ item.name }}</div>
+        {% if item.description %}<div class="item-desc">{{ item.description }}</div>{% endif %}
+      </td>
+      <td class="item-price">~${{ "{:,.0f}".format(item.total_price) }}</td>
+    </tr>
+    {% set ns.row_num = ns.row_num + 1 %}
+    {% endfor %}
+  </table>
+  {% endfor %}
+
+  <div class="total-box">
+    <table style="width:100%;border-collapse:collapse;">
+      <tr>
+        <td style="font-size:7.5pt;font-weight:bold;text-transform:uppercase;letter-spacing:1px;color:#555;">Approximate Total</td>
+        <td style="text-align:right;font-size:14pt;font-weight:bold;color:#111;">~${{ "{:,.0f}".format(estimate.final_total) }}</td>
+      </tr>
+    </table>
+  </div>
+
+  {% if estimate.notes %}<div style="margin-top:12px;font-size:7.5pt;color:#666;">Notes: {{ estimate.notes }}</div>{% endif %}
+
+  <div class="footer">This is a preliminary estimate. Final pricing subject to site visit and detailed scope review. &mdash; WALLPANELS.COM by VERONA HOME</div>
+</body>
+</html>

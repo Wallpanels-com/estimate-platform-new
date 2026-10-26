@@ -1,0 +1,32 @@
+{
+  "name": "wallpanels-estimate-platform",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/frontend"
+  ],
+  "scripts": {
+    "setup": "python3 scripts/setup.py",
+    "dev": "python3 scripts/dev.py start",
+    "start": "python3 scripts/dev.py start",
+    "stop": "python3 scripts/dev.py stop",
+    "status": "python3 scripts/dev.py status",
+    "build": "npm run build --workspace apps/frontend",
+    "typecheck": "npm run typecheck --workspace apps/frontend",
+    "test": ".venv/bin/python -m unittest discover -s tests -v",
+    "test:pdf-source": "node scripts/test-pdf-source.mjs",
+    "qa:api": ".venv/bin/python scripts/qa_api.py",
+    "verify:repo": "python3 scripts/verify_repository.py",
+    "test:quick": "node --experimental-strip-types scripts/test-quick.mjs",
+    "format:check": "prettier --check apps/frontend/src apps/frontend/vite.config.ts",
+    "test:i18n": "node scripts/test-i18n.mjs",
+    "test:catalog-ui": "node scripts/test-catalog-ui.mjs"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "prettier": "^3.9.10"
+  }
+}

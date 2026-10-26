@@ -1,0 +1,2290 @@
+[
+  {
+    "room": {
+      "id": "fixture",
+      "label": "hallway",
+      "room_type": "hallway",
+      "width_ft": 0,
+      "height_ft": 10,
+      "options": {}
+    },
+    "expected": [
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "hallway",
+      "room_type": "hallway",
+      "width_ft": 12,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Wall Panels",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 120,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 9600
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Mirror",
+        "section": "Mirrors",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 15,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 1200
+      },
+      {
+        "name": "Mirror Delivery & Installation",
+        "section": "Mirrors",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 15,
+        "unit": "SF",
+        "unit_price": 95,
+        "total_price": 1425
+      },
+      {
+        "name": "Entry Console",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 5,
+        "unit": "LF",
+        "unit_price": 1400,
+        "total_price": 7000
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "hallway",
+      "room_type": "hallway",
+      "width_ft": 20,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Wall Panels",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 200,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 16000
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Mirror",
+        "section": "Mirrors",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 15,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 1200
+      },
+      {
+        "name": "Mirror Delivery & Installation",
+        "section": "Mirrors",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 15,
+        "unit": "SF",
+        "unit_price": 95,
+        "total_price": 1425
+      },
+      {
+        "name": "Entry Console",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 5,
+        "unit": "LF",
+        "unit_price": 1400,
+        "total_price": 7000
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "living_room",
+      "room_type": "living_room",
+      "width_ft": 0,
+      "height_ft": 10,
+      "options": {}
+    },
+    "expected": [
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "living_room",
+      "room_type": "living_room",
+      "width_ft": 12,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Feature Wall / TV Wall",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 120,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 9600
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "TV Stand with Fireplace",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 8,
+        "unit": "LF",
+        "unit_price": 800,
+        "total_price": 6400
+      },
+      {
+        "name": "E-Fireplace Unit",
+        "section": "Fireplace",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": 1,
+        "unit": "ea",
+        "unit_price": 2200,
+        "total_price": 2200
+      },
+      {
+        "name": "Fireplace Installation",
+        "section": "Fireplace",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": 1,
+        "unit": "ea",
+        "unit_price": 1000,
+        "total_price": 1000
+      },
+      {
+        "name": "Wall Build-out",
+        "section": "Construction",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": 1,
+        "unit": "ea",
+        "unit_price": 4000,
+        "total_price": 4000
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "living_room",
+      "room_type": "living_room",
+      "width_ft": 20,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Feature Wall / TV Wall",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 200,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 16000
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "TV Stand with Fireplace",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 10,
+        "unit": "LF",
+        "unit_price": 800,
+        "total_price": 8000
+      },
+      {
+        "name": "E-Fireplace Unit",
+        "section": "Fireplace",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": 1,
+        "unit": "ea",
+        "unit_price": 2200,
+        "total_price": 2200
+      },
+      {
+        "name": "Fireplace Installation",
+        "section": "Fireplace",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": 1,
+        "unit": "ea",
+        "unit_price": 1000,
+        "total_price": 1000
+      },
+      {
+        "name": "Wall Build-out",
+        "section": "Construction",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": 1,
+        "unit": "ea",
+        "unit_price": 4000,
+        "total_price": 4000
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "kitchen",
+      "room_type": "kitchen",
+      "width_ft": 0,
+      "height_ft": 10,
+      "options": {}
+    },
+    "expected": [
+      {
+        "name": "Backsplash Installation",
+        "section": "Finishes",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Countertop",
+        "section": "Finishes",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Plumbing Services",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical / Appliance Installation",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "kitchen",
+      "room_type": "kitchen",
+      "width_ft": 12,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Kitchen Cabinets - High-end",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 8,
+        "unit": "LF",
+        "unit_price": 1300,
+        "total_price": 10400
+      },
+      {
+        "name": "Kitchen Island - High-end",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 4,
+        "unit": "LF",
+        "unit_price": 1300,
+        "total_price": 5200
+      },
+      {
+        "name": "Backsplash Installation",
+        "section": "Finishes",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Countertop",
+        "section": "Finishes",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Plumbing Services",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical / Appliance Installation",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "kitchen",
+      "room_type": "kitchen",
+      "width_ft": 20,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Kitchen Cabinets - High-end",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 8,
+        "unit": "LF",
+        "unit_price": 1300,
+        "total_price": 10400
+      },
+      {
+        "name": "Kitchen Island - High-end",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 4,
+        "unit": "LF",
+        "unit_price": 1300,
+        "total_price": 5200
+      },
+      {
+        "name": "Backsplash Installation",
+        "section": "Finishes",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Countertop",
+        "section": "Finishes",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Plumbing Services",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical / Appliance Installation",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "bedroom",
+      "room_type": "bedroom",
+      "width_ft": 0,
+      "height_ft": 10,
+      "options": {}
+    },
+    "expected": [
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Night Stands",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 4,
+        "unit": "LF",
+        "unit_price": 1400,
+        "total_price": 5600
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "bedroom",
+      "room_type": "bedroom",
+      "width_ft": 12,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Wall Panels",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 120,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 9600
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Mirror",
+        "section": "Mirrors",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 15,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 1200
+      },
+      {
+        "name": "Mirror Delivery & Installation",
+        "section": "Mirrors",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 15,
+        "unit": "SF",
+        "unit_price": 95,
+        "total_price": 1425
+      },
+      {
+        "name": "Night Stands",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 4,
+        "unit": "LF",
+        "unit_price": 1400,
+        "total_price": 5600
+      },
+      {
+        "name": "Wardrobe / Closet",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 10,
+        "unit": "LF",
+        "unit_price": 950,
+        "total_price": 9500
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "bedroom",
+      "room_type": "bedroom",
+      "width_ft": 20,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Wall Panels",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 200,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 16000
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Mirror",
+        "section": "Mirrors",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 15,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 1200
+      },
+      {
+        "name": "Mirror Delivery & Installation",
+        "section": "Mirrors",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 15,
+        "unit": "SF",
+        "unit_price": 95,
+        "total_price": 1425
+      },
+      {
+        "name": "Night Stands",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 4,
+        "unit": "LF",
+        "unit_price": 1400,
+        "total_price": 5600
+      },
+      {
+        "name": "Wardrobe / Closet",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 10,
+        "unit": "LF",
+        "unit_price": 950,
+        "total_price": 9500
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "bathroom",
+      "room_type": "bathroom",
+      "width_ft": 0,
+      "height_ft": 10,
+      "options": {}
+    },
+    "expected": [
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Plumbing Services",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "bathroom",
+      "room_type": "bathroom",
+      "width_ft": 12,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Wall Panels",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 120,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 9600
+      },
+      {
+        "name": "Vanity",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 6,
+        "unit": "LF",
+        "unit_price": 1200,
+        "total_price": 7200
+      },
+      {
+        "name": "Mirror",
+        "section": "Mirrors",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 15,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 1200
+      },
+      {
+        "name": "Mirror Delivery & Installation",
+        "section": "Mirrors",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 15,
+        "unit": "SF",
+        "unit_price": 95,
+        "total_price": 1425
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Plumbing Services",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "bathroom",
+      "room_type": "bathroom",
+      "width_ft": 20,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Wall Panels",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 200,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 16000
+      },
+      {
+        "name": "Vanity",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 6,
+        "unit": "LF",
+        "unit_price": 1200,
+        "total_price": 7200
+      },
+      {
+        "name": "Mirror",
+        "section": "Mirrors",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 15,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 1200
+      },
+      {
+        "name": "Mirror Delivery & Installation",
+        "section": "Mirrors",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 15,
+        "unit": "SF",
+        "unit_price": 95,
+        "total_price": 1425
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Plumbing Services",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "home_office",
+      "room_type": "home_office",
+      "width_ft": 0,
+      "height_ft": 10,
+      "options": {}
+    },
+    "expected": [
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Appliance / Device Installation",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "home_office",
+      "room_type": "home_office",
+      "width_ft": 12,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Wall Panels",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 120,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 9600
+      },
+      {
+        "name": "Built-in Cabinetry / Shelving",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 8,
+        "unit": "LF",
+        "unit_price": 1200,
+        "total_price": 9600
+      },
+      {
+        "name": "Built-in Desk - High-end",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 5,
+        "unit": "LF",
+        "unit_price": 1600,
+        "total_price": 8000
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Appliance / Device Installation",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "home_office",
+      "room_type": "home_office",
+      "width_ft": 20,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Wall Panels",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 200,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 16000
+      },
+      {
+        "name": "Built-in Cabinetry / Shelving",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 8,
+        "unit": "LF",
+        "unit_price": 1200,
+        "total_price": 9600
+      },
+      {
+        "name": "Built-in Desk - High-end",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 5,
+        "unit": "LF",
+        "unit_price": 1600,
+        "total_price": 8000
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Appliance / Device Installation",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "bar",
+      "room_type": "bar",
+      "width_ft": 0,
+      "height_ft": 10,
+      "options": {}
+    },
+    "expected": [
+      {
+        "name": "Backsplash Installation",
+        "section": "Finishes",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Countertop",
+        "section": "Finishes",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Bottle Racks",
+        "section": "Accessories",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": 1,
+        "unit": "ea",
+        "unit_price": 1500,
+        "total_price": 1500
+      },
+      {
+        "name": "Plumbing Services",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "bar",
+      "room_type": "bar",
+      "width_ft": 12,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Bar Cabinetry",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 9,
+        "unit": "LF",
+        "unit_price": 1200,
+        "total_price": 10800
+      },
+      {
+        "name": "Accent Wall",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 120,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 9600
+      },
+      {
+        "name": "Backsplash Installation",
+        "section": "Finishes",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Countertop",
+        "section": "Finishes",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Bottle Racks",
+        "section": "Accessories",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": 2,
+        "unit": "ea",
+        "unit_price": 1500,
+        "total_price": 3000
+      },
+      {
+        "name": "Glass Doors - standard",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": 5,
+        "unit": "ea",
+        "unit_price": 650,
+        "total_price": 3250
+      },
+      {
+        "name": "Plumbing Services",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "bar",
+      "room_type": "bar",
+      "width_ft": 20,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Bar Cabinetry",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 9,
+        "unit": "LF",
+        "unit_price": 1200,
+        "total_price": 10800
+      },
+      {
+        "name": "Accent Wall",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 200,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 16000
+      },
+      {
+        "name": "Backsplash Installation",
+        "section": "Finishes",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Countertop",
+        "section": "Finishes",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Bottle Racks",
+        "section": "Accessories",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": 2,
+        "unit": "ea",
+        "unit_price": 1500,
+        "total_price": 3000
+      },
+      {
+        "name": "Glass Doors - standard",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": 9,
+        "unit": "ea",
+        "unit_price": 650,
+        "total_price": 5850
+      },
+      {
+        "name": "Plumbing Services",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "gym_media",
+      "room_type": "gym_media",
+      "width_ft": 0,
+      "height_ft": 10,
+      "options": {}
+    },
+    "expected": [
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "gym_media",
+      "room_type": "gym_media",
+      "width_ft": 12,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Wall Panels",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 120,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 9600
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Built-in Storage",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 7,
+        "unit": "LF",
+        "unit_price": 1200,
+        "total_price": 8400
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "gym_media",
+      "room_type": "gym_media",
+      "width_ft": 20,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Wall Panels",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 200,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 16000
+      },
+      {
+        "name": "LED Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Built-in Storage",
+        "section": "Cabinetry",
+        "description": "",
+        "calc_type": "lf",
+        "quantity": 7,
+        "unit": "LF",
+        "unit_price": 1200,
+        "total_price": 8400
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "staircase",
+      "room_type": "staircase",
+      "width_ft": 0,
+      "height_ft": 10,
+      "options": {}
+    },
+    "expected": [
+      {
+        "name": "LED Strip Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "staircase",
+      "room_type": "staircase",
+      "width_ft": 12,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Staircase Wall Panels",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 120,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 9600
+      },
+      {
+        "name": "LED Strip Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  },
+  {
+    "room": {
+      "id": "fixture",
+      "label": "staircase",
+      "room_type": "staircase",
+      "width_ft": 20,
+      "height_ft": 10,
+      "options": {
+        "mirror_sf": 15,
+        "console_lf": 5,
+        "fireplace": true,
+        "buildout_ft": 14,
+        "tier": "highend",
+        "cabinet_lf": 8,
+        "island_lf": 4,
+        "nightstand_lf": 4,
+        "wardrobe_lf": 10,
+        "vanity_lf": 6,
+        "wall_panels": true,
+        "cabinetry_lf": 8,
+        "desk_lf": 5,
+        "desk_tier": "highend",
+        "bar_lf": 9,
+        "bottle_racks": 2,
+        "storage_lf": 7
+      }
+    },
+    "expected": [
+      {
+        "name": "Staircase Wall Panels",
+        "section": "Wall Panels",
+        "description": "",
+        "calc_type": "sf",
+        "quantity": 200,
+        "unit": "SF",
+        "unit_price": 80,
+        "total_price": 16000
+      },
+      {
+        "name": "LED Strip Lighting",
+        "section": "Lighting",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Electrical Work",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      },
+      {
+        "name": "Floor & Furniture Protection",
+        "section": "Services",
+        "description": "",
+        "calc_type": "fixed",
+        "quantity": null,
+        "unit": null,
+        "unit_price": null,
+        "total_price": 0
+      }
+    ]
+  }
+]

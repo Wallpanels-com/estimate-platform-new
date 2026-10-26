@@ -1,0 +1,42 @@
+[
+  {
+    "file": "final-background-0.png",
+    "role": "cover",
+    "sha256": "19179be0dc590c046d5e24e55a1358190b4e2eba98f18229a2c6f89959563057",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "source": "codex-clipboard-7f89e1e1-c6ce-4ae4-af34-d8d4ae5457a4.png"
+  },
+  {
+    "file": "final-background-1.png",
+    "role": "internal-cycle-1",
+    "sha256": "1e60a02dcfef69ba965b9c964cd0e6db4888d4f7dbd1b3f51d1a3b70700bf72a",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "source": "codex-clipboard-85f3e496-24c6-463d-9d0b-a65a7410f970.png"
+  },
+  {
+    "file": "final-background-2.png",
+    "role": "internal-cycle-2",
+    "sha256": "0ff3abab337360bd89d82bb7c38e1569b7c6283b5590a63f912f82a23c9788de",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "source": "codex-clipboard-bca9ae24-2cdd-4967-8997-2b0a152f79c4.png"
+  },
+  {
+    "file": "final-background-3.png",
+    "role": "internal-cycle-3",
+    "sha256": "414d66189b52e2f93cade765e0fb652c7cfa026f59bdfddb902a1723d21fab9d",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "source": "codex-clipboard-5bf46db6-1682-4be2-82df-d47a9626d33e.png"
+  }
+]

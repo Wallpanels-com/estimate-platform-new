@@ -1,0 +1,377 @@
+{
+  "panels": {
+    "label": "Wall panels",
+    "group": "Walls & finishes",
+    "keywords": "Стеновые панели"
+  },
+  "brickwall": {
+    "label": "Brickwork",
+    "group": "Walls & finishes",
+    "keywords": "Кирпичная кладка"
+  },
+  "wallpaper": {
+    "label": "Wallpaper",
+    "group": "Walls & finishes",
+    "keywords": "Обои"
+  },
+  "paintbrush": {
+    "label": "Painting",
+    "group": "Walls & finishes",
+    "keywords": "Покраска"
+  },
+  "paintroller": {
+    "label": "Paint roller",
+    "group": "Walls & finishes",
+    "keywords": "Малярный валик"
+  },
+  "colors": {
+    "label": "Colors & finishes",
+    "group": "Walls & finishes",
+    "keywords": "Цвета и отделка"
+  },
+  "swatches": {
+    "label": "Finish samples",
+    "group": "Walls & finishes",
+    "keywords": "Образцы отделки"
+  },
+  "materials": {
+    "label": "Materials",
+    "group": "Walls & finishes",
+    "keywords": "Материалы"
+  },
+  "tiles": {
+    "label": "Tile work",
+    "group": "Walls & finishes",
+    "keywords": "Плиточные работы"
+  },
+  "door": {
+    "label": "Doors",
+    "group": "Walls & finishes",
+    "keywords": "Двери"
+  },
+  "window": {
+    "label": "Windows",
+    "group": "Walls & finishes",
+    "keywords": "Окна"
+  },
+  "layout": {
+    "label": "Partitions",
+    "group": "Walls & finishes",
+    "keywords": "Перегородки"
+  },
+  "cabinet": {
+    "label": "Cabinetry",
+    "group": "Furniture & rooms",
+    "keywords": "Корпусная мебель"
+  },
+  "sofa": {
+    "label": "Sofas",
+    "group": "Furniture & rooms",
+    "keywords": "Диваны"
+  },
+  "bed": {
+    "label": "Beds",
+    "group": "Furniture & rooms",
+    "keywords": "Кровати"
+  },
+  "chair": {
+    "label": "Chairs",
+    "group": "Furniture & rooms",
+    "keywords": "Стулья"
+  },
+  "table": {
+    "label": "Tables",
+    "group": "Furniture & rooms",
+    "keywords": "Столы"
+  },
+  "shelves": {
+    "label": "Shelving",
+    "group": "Furniture & rooms",
+    "keywords": "Стеллажи и полки"
+  },
+  "storage": {
+    "label": "Storage",
+    "group": "Furniture & rooms",
+    "keywords": "Хранение"
+  },
+  "mirror": {
+    "label": "Mirrors",
+    "group": "Furniture & rooms",
+    "keywords": "Зеркала"
+  },
+  "kitchen": {
+    "label": "Kitchens",
+    "group": "Furniture & rooms",
+    "keywords": "Кухни"
+  },
+  "fridge": {
+    "label": "Appliances",
+    "group": "Furniture & rooms",
+    "keywords": "Бытовая техника"
+  },
+  "wine": {
+    "label": "Bars & wine storage",
+    "group": "Furniture & rooms",
+    "keywords": "Бары и винные шкафы"
+  },
+  "house": {
+    "label": "Residential spaces",
+    "group": "Furniture & rooms",
+    "keywords": "Жилые помещения"
+  },
+  "building": {
+    "label": "Commercial spaces",
+    "group": "Furniture & rooms",
+    "keywords": "Коммерческие помещения"
+  },
+  "warehouse": {
+    "label": "Utility spaces",
+    "group": "Furniture & rooms",
+    "keywords": "Подсобные помещения"
+  },
+  "lighting": {
+    "label": "Lighting",
+    "group": "Lighting & electrical",
+    "keywords": "Освещение"
+  },
+  "ceiling-light": {
+    "label": "Ceiling lights",
+    "group": "Lighting & electrical",
+    "keywords": "Потолочные светильники"
+  },
+  "wall-light": {
+    "label": "Wall lights",
+    "group": "Lighting & electrical",
+    "keywords": "Настенные светильники"
+  },
+  "desk-light": {
+    "label": "Desk lights",
+    "group": "Lighting & electrical",
+    "keywords": "Настольные светильники"
+  },
+  "bulb": {
+    "label": "Light fixtures",
+    "group": "Lighting & electrical",
+    "keywords": "Светильники"
+  },
+  "power": {
+    "label": "Electrical work",
+    "group": "Lighting & electrical",
+    "keywords": "Электромонтаж"
+  },
+  "socket": {
+    "label": "Sockets & switches",
+    "group": "Lighting & electrical",
+    "keywords": "Розетки и выключатели"
+  },
+  "cable": {
+    "label": "Cabling",
+    "group": "Lighting & electrical",
+    "keywords": "Прокладка кабеля"
+  },
+  "tv": {
+    "label": "TV installation",
+    "group": "Lighting & electrical",
+    "keywords": "Монтаж телевизоров"
+  },
+  "speaker": {
+    "label": "Audio systems",
+    "group": "Lighting & electrical",
+    "keywords": "Аудиосистемы"
+  },
+  "camera": {
+    "label": "Security systems",
+    "group": "Lighting & electrical",
+    "keywords": "Системы безопасности"
+  },
+  "bath": {
+    "label": "Bathtubs",
+    "group": "Plumbing & climate",
+    "keywords": "Ванны"
+  },
+  "shower": {
+    "label": "Showers",
+    "group": "Plumbing & climate",
+    "keywords": "Душевые"
+  },
+  "water": {
+    "label": "Plumbing",
+    "group": "Plumbing & climate",
+    "keywords": "Сантехника"
+  },
+  "faucet": {
+    "label": "Water fixtures",
+    "group": "Plumbing & climate",
+    "keywords": "Водоснабжение"
+  },
+  "heating": {
+    "label": "Heating",
+    "group": "Plumbing & climate",
+    "keywords": "Отопление"
+  },
+  "ventilation": {
+    "label": "Ventilation",
+    "group": "Plumbing & climate",
+    "keywords": "Вентиляция"
+  },
+  "fan": {
+    "label": "Fans",
+    "group": "Plumbing & climate",
+    "keywords": "Вентиляторы"
+  },
+  "climate": {
+    "label": "Climate control",
+    "group": "Plumbing & climate",
+    "keywords": "Климатическое оборудование"
+  },
+  "fireplace": {
+    "label": "Fireplaces",
+    "group": "Plumbing & climate",
+    "keywords": "Камины"
+  },
+  "cooling": {
+    "label": "Air conditioning",
+    "group": "Plumbing & climate",
+    "keywords": "Кондиционирование"
+  },
+  "services": {
+    "label": "Services",
+    "group": "Tools & installation",
+    "keywords": "Услуги"
+  },
+  "tools": {
+    "label": "Tools",
+    "group": "Tools & installation",
+    "keywords": "Инструменты"
+  },
+  "drill": {
+    "label": "Drilling",
+    "group": "Tools & installation",
+    "keywords": "Сверление"
+  },
+  "ruler": {
+    "label": "Measurements",
+    "group": "Tools & installation",
+    "keywords": "Замеры"
+  },
+  "pencil-ruler": {
+    "label": "Design & planning",
+    "group": "Tools & installation",
+    "keywords": "Дизайн и проектирование"
+  },
+  "compass": {
+    "label": "Site survey",
+    "group": "Tools & installation",
+    "keywords": "Обследование объекта"
+  },
+  "hardhat": {
+    "label": "Installation crew",
+    "group": "Tools & installation",
+    "keywords": "Монтажная бригада"
+  },
+  "construction": {
+    "label": "Site preparation",
+    "group": "Tools & installation",
+    "keywords": "Подготовка объекта"
+  },
+  "settings": {
+    "label": "Adjustments",
+    "group": "Tools & installation",
+    "keywords": "Настройка и регулировка"
+  },
+  "truck": {
+    "label": "Delivery",
+    "group": "Tools & installation",
+    "keywords": "Доставка"
+  },
+  "package": {
+    "label": "Supplies",
+    "group": "Tools & installation",
+    "keywords": "Комплектация"
+  },
+  "cleaning": {
+    "label": "Cleaning",
+    "group": "Tools & installation",
+    "keywords": "Уборка"
+  },
+  "protection": {
+    "label": "Surface protection",
+    "group": "Tools & installation",
+    "keywords": "Защита поверхностей"
+  },
+  "recycling": {
+    "label": "Waste removal",
+    "group": "Tools & installation",
+    "keywords": "Вывоз отходов"
+  },
+  "scissors": {
+    "label": "Cutting",
+    "group": "Tools & installation",
+    "keywords": "Резка"
+  },
+  "folder": {
+    "label": "Category",
+    "group": "Documents & pricing",
+    "keywords": "Категория"
+  },
+  "quick": {
+    "label": "Quick estimate",
+    "group": "Documents & pricing",
+    "keywords": "Быстрая смета"
+  },
+  "calculator": {
+    "label": "Calculations",
+    "group": "Documents & pricing",
+    "keywords": "Расчёты"
+  },
+  "receipt": {
+    "label": "Estimates & invoices",
+    "group": "Documents & pricing",
+    "keywords": "Сметы и счета"
+  },
+  "document": {
+    "label": "Documents",
+    "group": "Documents & pricing",
+    "keywords": "Документы"
+  },
+  "spreadsheet": {
+    "label": "Spreadsheets",
+    "group": "Documents & pricing",
+    "keywords": "Таблицы"
+  },
+  "book": {
+    "label": "Specifications",
+    "group": "Documents & pricing",
+    "keywords": "Спецификации"
+  },
+  "coins": {
+    "label": "Pricing",
+    "group": "Documents & pricing",
+    "keywords": "Расценки"
+  },
+  "percent": {
+    "label": "Discounts & markup",
+    "group": "Documents & pricing",
+    "keywords": "Скидки и наценка"
+  },
+  "tags": {
+    "label": "Product categories",
+    "group": "Documents & pricing",
+    "keywords": "Товарные категории"
+  },
+  "images": {
+    "label": "Reference images",
+    "group": "Documents & pricing",
+    "keywords": "Изображения и примеры"
+  },
+  "photo": {
+    "label": "Photography",
+    "group": "Documents & pricing",
+    "keywords": "Фотосъёмка"
+  },
+  "checklist": {
+    "label": "Inspection & handover",
+    "group": "Documents & pricing",
+    "keywords": "Проверка и сдача работ"
+  }
+}

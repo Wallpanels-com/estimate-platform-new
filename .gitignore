@@ -1,0 +1,49 @@
+# Secrets and machine-specific configuration
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+
+# Dependencies and virtual environments
+.venv/
+venv/
+node_modules/
+**/node_modules/
+
+# Runtime data: may contain clients, users, uploads and generated exports
+.local/
+/storage/
+/data/
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.backup
+
+# Generated builds, reports and caches
+apps/frontend/dist/
+dist/
+build/
+output/
+outputs/
+coverage/
+.coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.vite/
+*.tsbuildinfo
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Logs and operating-system/editor files
+*.log
+*.pid
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~

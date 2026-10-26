@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  @page { size: letter landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; color: #1a1a1a; }
+
+  .page { width: 100%; }
+  table.layout { width: 100%; border-collapse: collapse; }
+  td.left-col { width: 42%; vertical-align: top; background: #111; padding: 0; }
+  td.right-col { width: 58%; vertical-align: top; padding: 28px 26px; }
+
+  .photo-area { width: 100%; }
+  .photo-img { width: 100%; display: block; }
+  .photo-placeholder { background: #222; height: 200px; }
+
+  .branding { text-align: center; padding: 14px 10px; background: #000; }
+  .brand-main { font-size: 12pt; font-weight: bold; color: #fff; letter-spacing: 2px; }
+  .brand-sub { font-size: 7pt; color: #aaa; letter-spacing: 3px; margin-top: 2px; }
+
+  .doc-meta { font-size: 7pt; color: #999; margin-bottom: 8px; }
+  .estimate-label { font-size: 6pt; font-weight: bold; color: #aaa; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 3px; }
+  .estimate-title { font-size: 15pt; font-weight: bold; color: #111; margin-bottom: 4px; }
+  .estimate-desc { font-size: 7.5pt; color: #666; margin-bottom: 10px; }
+  .badge { font-size: 6pt; font-weight: bold; color: #888; border: 0.5pt solid #ccc; padding: 2px 6px; display: inline-block; margin-bottom: 10px; }
+
+  table.meta { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  table.meta td { border: 0.5pt solid #e0e0e0; padding: 5px 7px; font-size: 7.5pt; }
+  .meta-label { font-size: 6pt; color: #aaa; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 2px; }
+
+  .section-label { font-size: 6.5pt; font-weight: bold; color: #777; text-transform: uppercase; letter-spacing: 1.5px; padding: 5px 0 3px 0; border-bottom: 0.5pt solid #ddd; margin-top: 4px; }
+
+  table.items { width: 100%; border-collapse: collapse; }
+  table.items td { padding: 4px 0; border-bottom: 0.5pt solid #f0f0f0; font-size: 7.5pt; vertical-align: top; }
+  .item-num { width: 16px; color: #bbb; }
+  .item-name { font-weight: bold; color: #111; }
+  .item-desc { font-size: 6.5pt; color: #888; }
+  .item-calc { font-size: 6pt; color: #aaa; }
+  .item-price { text-align: right; font-weight: bold; white-space: nowrap; width: 60px; }
+
+  .subtotal-row td { padding: 4px 0; border-bottom: 0.5pt solid #ddd; font-size: 7pt; color: #888; font-style: italic; }
+
+  .total-box { background: #111; padding: 7px 10px; margin-top: 10px; }
+  .total-label { font-size: 7pt; font-weight: bold; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
+  .total-value { font-size: 14pt; font-weight: bold; color: #fff; text-align: right; }
+</style>
+</head>
+<body>
+<div class="page">
+<table class="layout">
+<tr>
+  <td class="left-col">
+    <div class="photo-area">
+      {% for slot in range(1, 5) %}
+        {% if images.get(slot) %}
+          <img src="{{ images[slot] }}" class="photo-img" alt="Photo {{ slot }}">
+        {% endif %}
+      {% endfor %}
+      {% if not images %}
+        <div class="photo-placeholder"></div>
+      {% endif %}
+    </div>
+    <div class="branding">
+      <div class="brand-main">WALLPANELS.COM</div>
+      <div class="brand-sub">By VERONA HOME</div>
+    </div>
+  </td>
+  <td class="right-col">
+    <div class="doc-meta">{{ estimate.estimate_date.strftime('%m/%d/%y') if estimate.estimate_date else '' }} &nbsp;&nbsp; {{ estimate.room_name or '' }}{% if estimate.wall_name %} &mdash; {{ estimate.wall_name }}{% endif %}</div>
+    <div class="estimate-label">Cost Estimate</div>
+    <div class="estimate-title">{{ estimate.title or ((estimate.room_name or '') + (' &mdash; ' + estimate.wall_name if estimate.wall_name else '')) or 'Estimate' }}</div>
+    {% if estimate.description %}<div class="estimate-desc">{{ estimate.description }}</div>{% endif %}
+    <div class="badge">Prepared for Review</div>
+
+    <table class="meta">
+      <tr>
+        <td><span class="meta-label">Project</span>{{ estimate.project_name or '&mdash;' }}</td>
+        <td><span class="meta-label">Client</span>{{ estimate.client_name or '&mdash;' }}</td>
+        <td><span class="meta-label">Date</span>{{ estimate.estimate_date.strftime('%m/%d/%y') if estimate.estimate_date else '&mdash;' }}</td>
+        <td><span class="meta-label">Prepared by</span>{{ estimate.prepared_by or '&mdash;' }}</td>
+      </tr>
+      <tr>
+        <td><span class="meta-label">Width</span>{{ estimate.wall_width_ft or '&mdash;' }} ft</td>
+        <td><span class="meta-label">Height</span>{{ estimate.wall_height_ft or '&mdash;' }} ft</td>
+        <td><span class="meta-label">Square footage</span>{{ estimate.square_footage or '&mdash;' }} SF</td>
+        <td><span class="meta-label">Notes</span><span style="font-size:6.5pt;color:#888;">{{ estimate.notes or '' }}</span></td>
+      </tr>
+    </table>
+
+    {% set ns = namespace(row_num=1) %}
+    {% for section_name, items in sections.items() %}
+    <div class="section-label">{{ section_name }}</div>
+    <table class="items">
+      {% for item in items %}
+      <tr>
+        <td class="item-num">{{ ns.row_num }}</td>
+        <td>
+          <div class="item-name">{{ item.name }}</div>
+          {% if item.description %}<div class="item-desc">{{ item.description }}</div>{% endif %}
+          {% if item.calc_type in ['sf','lf'] and item.quantity and item.unit_price %}
+          <div class="item-calc">{{ item.quantity }} {{ item.unit }} &times; ${{ item.unit_price }} / {{ item.unit }}</div>
+          {% endif %}
+        </td>
+        <td class="item-price">${{ "{:,.0f}".format(item.total_price) }}</td>
+      </tr>
+      {% set ns.row_num = ns.row_num + 1 %}
+      {% endfor %}
+      <tr class="subtotal-row">
+        <td></td>
+        <td>{{ section_name }} subtotal</td>
+        <td style="text-align:right;font-weight:500;">${{ "{:,.0f}".format(items | sum(attribute='total_price')) }}</td>
+      </tr>
+    </table>
+    {% endfor %}
+
+    <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+      <tr>
+        <td class="total-box total-label">Total &mdash; {{ estimate.wall_name or estimate.room_name or 'Feature Wall' }}</td>
+        <td class="total-box total-value">${{ "{:,.0f}".format(estimate.final_total) }}</td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+</div>
+</body>
+</html>

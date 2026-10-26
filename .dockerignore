@@ -1,0 +1,17 @@
+.git
+.github
+.env
+.env.*
+.venv
+.local
+node_modules
+**/node_modules
+**/__pycache__
+apps/frontend/dist
+output
+outputs
+tests
+docs
+*.log
+*.pyc
+.DS_Store

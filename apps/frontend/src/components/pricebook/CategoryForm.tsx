@@ -1,0 +1,94 @@
+import { useState, type FormEvent } from "react";
+import { type BookCategory, type CategoryIcon } from "../../lib/pricebook";
+import { post, request, errorMessage } from "../../lib/api";
+import { useI18n } from "../../lib/i18n";
+import { Button, ErrorNotice, Field, Modal } from "../ui";
+import CategoryIconPicker from "./CategoryIconPicker";
+
+export default function CategoryForm({
+  category,
+  onClose,
+  onSaved,
+}: {
+  category?: BookCategory;
+  onClose: () => void;
+  onSaved: (category: BookCategory) => Promise<void>;
+}) {
+  const { t } = useI18n();
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  const [icon, setIcon] = useState<CategoryIcon>(category?.icon || "folder");
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const payload = {
+      ...data,
+      description: category?.description || "",
+      description_ru: category?.description_ru || "",
+      icon,
+      archived: category?.archived || false,
+      expected_version: category?.version,
+    };
+    try {
+      const result = category
+        ? await request<BookCategory>(
+            `/pricing/catalog/categories/${category.id}`,
+            { method: "PUT", body: JSON.stringify(payload) },
+          )
+        : await post<BookCategory>("/pricing/catalog/categories", payload);
+      await onSaved(result);
+      onClose();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal
+      title={t(category ? "Edit category" : "Add category")}
+      onClose={onClose}
+    >
+      <form onSubmit={save}>
+        <div className="modal-body form-grid">
+          {error ? (
+            <div className="span-all">
+              <ErrorNotice>{error}</ErrorNotice>
+            </div>
+          ) : null}
+          <Field label={t("Category name (EN)")}>
+            <input
+              name="name"
+              defaultValue={category?.name}
+              required
+              maxLength={160}
+            />
+          </Field>
+          <Field label={t("Category name (RU)")}>
+            <input
+              name="name_ru"
+              defaultValue={category?.name_ru}
+              maxLength={160}
+            />
+          </Field>
+          <CategoryIconPicker value={icon} onChange={setIcon} />
+          <p className="form-hint span-all">
+            {t(
+              category?.builtin
+                ? "Renaming a category keeps its existing calculation rules and saved estimates."
+                : "A category groups catalogue items. It does not create a new calculator.",
+            )}
+          </p>
+        </div>
+        <footer className="modal-footer">
+          <Button onClick={onClose}>{t("Cancel")}</Button>
+          <Button type="submit" variant="primary" busy={busy}>
+            {t("Save category")}
+          </Button>
+        </footer>
+      </form>
+    </Modal>
+  );
+}

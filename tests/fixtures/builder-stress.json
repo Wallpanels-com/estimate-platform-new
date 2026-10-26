@@ -1,0 +1,149 @@
+{
+  "title": "[STRESS TEST] Builder \u2014 long scope & many items",
+  "description": "Opt-in local layout fixture. Never append these records to an existing demo estimate.",
+  "items": [
+    {
+      "name": "Installation detail 2 \u2014 additional scope and workmanship requirements",
+      "section": "Installation details",
+      "description": "Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. ",
+      "calc_type": "fixed",
+      "quantity": "1.00",
+      "unit": "ea",
+      "unit_price": "0.00",
+      "total_price": "0.00",
+      "is_tbd": false
+    },
+    {
+      "name": "Installation detail 1 \u2014 additional scope and workmanship requirements",
+      "section": "Installation details",
+      "description": "Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. ",
+      "calc_type": "fixed",
+      "quantity": "1.00",
+      "unit": "ea",
+      "unit_price": "0.00",
+      "total_price": "0.00",
+      "is_tbd": false
+    },
+    {
+      "name": "Installation detail 3 \u2014 additional scope and workmanship requirements",
+      "section": "Installation details",
+      "description": "Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. ",
+      "calc_type": "fixed",
+      "quantity": "1.00",
+      "unit": "ea",
+      "unit_price": "0.00",
+      "total_price": "0.00",
+      "is_tbd": false
+    },
+    {
+      "name": "Installation detail 4 \u2014 additional scope and workmanship requirements",
+      "section": "Installation details",
+      "description": "Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. ",
+      "calc_type": "fixed",
+      "quantity": "1.00",
+      "unit": "ea",
+      "unit_price": "0.00",
+      "total_price": "0.00",
+      "is_tbd": false
+    },
+    {
+      "name": "Installation detail 5 \u2014 additional scope and workmanship requirements",
+      "section": "Installation details",
+      "description": "Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. ",
+      "calc_type": "fixed",
+      "quantity": "1.00",
+      "unit": "ea",
+      "unit_price": "0.00",
+      "total_price": "0.00",
+      "is_tbd": false
+    },
+    {
+      "name": "Installation detail 6 \u2014 additional scope and workmanship requirements",
+      "section": "Installation details",
+      "description": "Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. ",
+      "calc_type": "fixed",
+      "quantity": "1.00",
+      "unit": "ea",
+      "unit_price": "0.00",
+      "total_price": "0.00",
+      "is_tbd": false
+    },
+    {
+      "name": "Installation detail 7 \u2014 additional scope and workmanship requirements",
+      "section": "Installation details",
+      "description": "Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. ",
+      "calc_type": "fixed",
+      "quantity": "1.00",
+      "unit": "ea",
+      "unit_price": "0.00",
+      "total_price": "0.00",
+      "is_tbd": false
+    },
+    {
+      "name": "Installation detail 8 \u2014 additional scope and workmanship requirements",
+      "section": "Installation details",
+      "description": "Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. ",
+      "calc_type": "fixed",
+      "quantity": "1.00",
+      "unit": "ea",
+      "unit_price": "0.00",
+      "total_price": "0.00",
+      "is_tbd": false
+    },
+    {
+      "name": "Installation detail 9 \u2014 additional scope and workmanship requirements",
+      "section": "Installation details",
+      "description": "Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. ",
+      "calc_type": "fixed",
+      "quantity": "1.00",
+      "unit": "ea",
+      "unit_price": "0.00",
+      "total_price": "0.00",
+      "is_tbd": false
+    },
+    {
+      "name": "Installation detail 10 \u2014 additional scope and workmanship requirements",
+      "section": "Installation details",
+      "description": "Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. ",
+      "calc_type": "fixed",
+      "quantity": "1.00",
+      "unit": "ea",
+      "unit_price": "0.00",
+      "total_price": "0.00",
+      "is_tbd": false
+    },
+    {
+      "name": "Installation detail 11 \u2014 additional scope and workmanship requirements",
+      "section": "Installation details",
+      "description": "Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. ",
+      "calc_type": "fixed",
+      "quantity": "1.00",
+      "unit": "ea",
+      "unit_price": "0.00",
+      "total_price": "0.00",
+      "is_tbd": false
+    },
+    {
+      "name": "Installation detail 12 \u2014 additional scope and workmanship requirements",
+      "section": "Installation details",
+      "description": "Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. Detailed installation scope with careful surface preparation, full-height panel alignment, concealed fixings, and final site finishing. ",
+      "calc_type": "fixed",
+      "quantity": "1.00",
+      "unit": "ea",
+      "unit_price": "0.00",
+      "total_price": "0.00",
+      "is_tbd": false
+    },
+    {
+      "name": "QA manual fixed item",
+      "section": "General",
+      "description": "",
+      "calc_type": "fixed",
+      "quantity": "2.00",
+      "unit": "ea",
+      "unit_price": "125.00",
+      "total_price": "250.00",
+      "is_tbd": false
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "original_sha256": "7227de5cb738219cf16a837c218ba5e4a8ffc5ed3b977b761d7a53efa2357ea7",
+  "clean_sha256": "ed578fbb183b46423088003acfd0cee8efd79c7dff342d97ed2cf8535a6ba112",
+  "method": "Deterministic local interpolation of baked text, separators and total band; original unchanged.",
+  "source_size": [
+    1672,
+    941
+  ],
+  "regions": [
+    [
+      84,
+      250,
+      453,
+      320
+    ],
+    [
+      174,
+      400,
+      622,
+      416
+    ],
+    [
+      174,
+      473,
+      622,
+      489
+    ],
+    [
+      174,
+      546,
+      622,
+      562
+    ],
+    [
+      174,
+      619,
+      622,
+      635
+    ],
+    [
+      944,
+      758,
+      1672,
+      889
+    ]
+  ]
+}

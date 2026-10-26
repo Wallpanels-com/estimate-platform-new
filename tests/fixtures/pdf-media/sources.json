@@ -1,0 +1,128 @@
+[
+  {
+    "name": "architectural-reference.png",
+    "source": "User-provided architectural reference (unaltered copy)",
+    "size": [
+      829,
+      372
+    ],
+    "sha256": "82a4651b1a1c2ba969b2a6a2c8bad45addb670d7d618f71e9bfbcc0561b1436e"
+  },
+  {
+    "name": "photo-01.jpg",
+    "source": "https://picsum.photos/seed/wallpanels-media-qa-1/1200/750.jpg",
+    "size": [
+      1200,
+      750
+    ],
+    "sha256": "8856da845b74184d694f78662d5bdbc6dadca79a929991ac2bc453c236e3aaa2"
+  },
+  {
+    "name": "photo-02.jpg",
+    "source": "https://picsum.photos/seed/wallpanels-media-qa-2/700/1100.jpg",
+    "size": [
+      700,
+      1100
+    ],
+    "sha256": "e06f4078b2a8ef715d6608d15c13de3497ce7867a308a667f16f8f42a81dac3d"
+  },
+  {
+    "name": "photo-03.jpg",
+    "source": "https://picsum.photos/seed/wallpanels-media-qa-3/900/900.jpg",
+    "size": [
+      900,
+      900
+    ],
+    "sha256": "93eaaf3f28601e5008f4553afdb5aaf9a5a7973b5e61c0ef0b49ca1e1c36ef62"
+  },
+  {
+    "name": "photo-04.jpg",
+    "source": "https://picsum.photos/seed/wallpanels-media-qa-4/1280/720.jpg",
+    "size": [
+      1280,
+      720
+    ],
+    "sha256": "6b1f8cb994fb11077da7b3b4835cf087c0afe66d5336fe6bfcc95e81550ff7d8"
+  },
+  {
+    "name": "photo-05.jpg",
+    "source": "https://picsum.photos/seed/wallpanels-media-qa-5/720/1080.jpg",
+    "size": [
+      720,
+      1080
+    ],
+    "sha256": "5d759353b61b2d1096cfa344e6f325526d3b940186094f531f6806e3dc00faf3"
+  },
+  {
+    "name": "photo-06.jpg",
+    "source": "https://picsum.photos/seed/wallpanels-media-qa-6/1200/800.jpg",
+    "size": [
+      1200,
+      800
+    ],
+    "sha256": "2a8710bf3a05d5ef07c542d9e274a3d3d97a1555e2d326e97b3ed72127e9c332"
+  },
+  {
+    "name": "photo-07.jpg",
+    "source": "https://picsum.photos/seed/wallpanels-media-qa-7/800/800.jpg",
+    "size": [
+      800,
+      800
+    ],
+    "sha256": "297f789ff7775787bac88e58180881d00ab2bddcbf23c5e0d49d964410c73129"
+  },
+  {
+    "name": "photo-08.jpg",
+    "source": "https://picsum.photos/seed/wallpanels-media-qa-8/650/1000.jpg",
+    "size": [
+      650,
+      1000
+    ],
+    "sha256": "bf234d86207a7affe3622169eaed78ada6445be79e5044a0af2f9461851c5596"
+  },
+  {
+    "name": "photo-09.jpg",
+    "source": "https://picsum.photos/seed/wallpanels-media-qa-9/1200/700.jpg",
+    "size": [
+      1200,
+      700
+    ],
+    "sha256": "c205b4fa0ae7f14f8cdd8395f4ea4bccb4701adbe677585d0e7b886aa8c1d531"
+  },
+  {
+    "name": "photo-10.jpg",
+    "source": "https://picsum.photos/seed/wallpanels-media-qa-10/700/1050.jpg",
+    "size": [
+      700,
+      1050
+    ],
+    "sha256": "702f091c9139aaf564a87165b6af3ace55b808b08c6a7c3e496242dccb3e847a"
+  },
+  {
+    "name": "photo-11.jpg",
+    "source": "https://picsum.photos/seed/wallpanels-media-qa-11/850/850.jpg",
+    "size": [
+      850,
+      850
+    ],
+    "sha256": "5484dbbc320df1a9143ae16a4937813fe25303474033f5c67ba119a3b4f88ee8"
+  },
+  {
+    "name": "photo-12.jpg",
+    "source": "https://picsum.photos/seed/wallpanels-media-qa-12/320/180.jpg",
+    "size": [
+      320,
+      180
+    ],
+    "sha256": "b9536fefc56826c519dc3a4d905938c7c004d5f90d20ba7639905818fc03ff4c"
+  },
+  {
+    "name": "photo-13.jpg",
+    "source": "https://picsum.photos/seed/wallpanels-media-qa-13/2200/300.jpg",
+    "size": [
+      2200,
+      300
+    ],
+    "sha256": "034029320d32c6c575ffa7df9b9689de50aeb20c44b883ec35c12b48a56e16c5"
+  }
+]
