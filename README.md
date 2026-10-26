@@ -57,6 +57,7 @@ password inside `DATABASE_URL` identical when using Docker Compose. Then run:
 ```bash
 npm run setup
 docker compose up -d --wait db  # omit when using an existing PostgreSQL server
+npm run db:migrate             # empty database; see migration notes for legacy DB
 npm run dev
 ```
 
@@ -92,6 +93,9 @@ an existing shared PostgreSQL cluster and does not delete data.
 | `LOCAL_PG_BIN`, `LOCAL_PG_DATA` | Optional local PostgreSQL executable/data paths. Never needed in a deployed container. |
 | `ALLOW_REMOTE_DATABASE` | Local safety switch. Keep `false`; set `true` only for an intentional non-production development database. |
 | `LOCAL_QA_EMAIL`, `LOCAL_QA_PASSWORD` | Optional ignored credentials for explicit localhost QA scripts. |
+| `ALLOW_SELF_REGISTRATION` | `false`: existing employees create accounts through Team accounts. |
+| `ENABLE_PERMANENT_DELETE` | `false`: retain deleted Estimates for recovery. |
+| `AUTO_MIGRATE` | Keep `false`; migrations must be explicitly approved and applied with Alembic. |
 
 Do not commit `.env`, database dumps, local storage, client images or generated
 exports. `npm run verify:repo` checks the source tree for these common mistakes.
@@ -149,15 +153,21 @@ Before the first deployment:
    `ALLOWED_ORIGINS` in Railway variables.
 3. Restore approved production data and storage through a documented migration;
    never upload the local `.env`, `.local` folder or raw client backup to GitHub.
-4. Replace startup-time schema SQL with a reviewed Alembic migration history.
-5. Complete authentication/authorization, private-file access, backup/restore,
-   retention and security review before exposing the service publicly.
+4. Review/apply the prepared Alembic migrations on the new target database. The app
+   never mutates schema at startup.
+5. Enable backup schedules, rehearse recovery, review retention and run a security
+   review before exposing the service publicly.
 6. Run the verification suite and a staging smoke test for Estimates, photos, Price
    Book, Pre/Final PDF and XLSX.
 
 The current code is ready to live in one private corporate GitHub repository. It is
 not yet approved for public production traffic; the remaining production controls
 above are intentionally documented rather than silently assumed.
+
+All active employees now have one **User** role with equal shared access, personal
+credentials, attributed history and immutable saved PDF/XLSX versions. Corporate
+SSH setup and the exact release sequence are documented in
+[corporate release preparation](docs/corporate-release.md).
 
 Additional details are in [architecture](docs/architecture.md), [QA](docs/qa.md),
 [managed Price Book](docs/price-book-managed.md), [Pre-Estimate V2](docs/pre-estimate-v2.md),

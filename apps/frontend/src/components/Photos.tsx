@@ -4,7 +4,7 @@ import { ImagePlus, Expand, Trash2, Upload, Star } from "lucide-react";
 import type { Zone } from "../lib/types";
 import { Button, Confirm, Modal, useNotice } from "./ui";
 import ActionMenu from "./ActionMenu";
-import { photoUrl } from "../lib/api";
+import ProtectedImage from "./ProtectedImage";
 export default function Photos({
   zone,
   onUpload,
@@ -72,8 +72,8 @@ export default function Photos({
                 aria-label={t("View photo {0}", photo.slot)}
                 onClick={() => setView(photo.slot)}
               >
-                <img
-                  src={photoUrl(zone.estimate_id, zone.id, photo.file_path)}
+                <ProtectedImage
+                  imageId={photo.id}
                   alt={photo.original_name || t("Zone photo {0}", photo.slot)}
                   width={420}
                   height={315}
@@ -168,12 +168,8 @@ export default function Photos({
       {view !== null ? (
         <Modal title={t("Photo {0}", view)} onClose={() => setView(null)} wide>
           <div className="photo-view">
-            <img
-              src={photoUrl(
-                zone.estimate_id,
-                zone.id,
-                zone.images.find((i) => i.slot === view)!.file_path,
-              )}
+            <ProtectedImage
+              imageId={zone.images.find((i) => i.slot === view)!.id}
               alt={t("Full photograph {0}", view)}
               width={1000}
               height={750}

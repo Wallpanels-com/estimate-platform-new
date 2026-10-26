@@ -5,10 +5,16 @@ import { post, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { Button, Field, ErrorNotice } from "../components/ui";
 import { Brand } from "../components/Shell";
+import { useQuery } from "@tanstack/react-query";
+import { request } from "../lib/api";
 export default function Auth({ register = false }: { register?: boolean }) {
   const { t } = useI18n();
 
   const { token, signIn } = useAuth();
+  const settings = useQuery({
+    queryKey: ["auth-settings"],
+    queryFn: () => request<{ self_registration: boolean }>("/auth/settings"),
+  });
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -31,6 +37,8 @@ export default function Auth({ register = false }: { register?: boolean }) {
     }
   }
   if (token) return <Navigate to="/" replace />;
+  if (register && !settings.data?.self_registration)
+    return <Navigate to="/login" replace />;
   return (
     <main className="auth-page">
       <div className="auth-story">
@@ -88,12 +96,18 @@ export default function Auth({ register = false }: { register?: boolean }) {
             {register ? t("Create account") : t("Sign in")}
           </Button>
         </form>
-        <p className="auth-switch">
-          {register ? t("Already have an account?") : t("New to WallPanels?")}{" "}
-          <Link to={register ? "/login" : "/register"}>
-            {register ? t("Sign in") : t("Create account")}
-          </Link>
-        </p>
+        {settings.data?.self_registration ? (
+          <p className="auth-switch">
+            {register ? t("Already have an account?") : t("New to WallPanels?")}{" "}
+            <Link to={register ? "/login" : "/register"}>
+              {register ? t("Sign in") : t("Create account")}
+            </Link>
+          </p>
+        ) : (
+          <p className="auth-switch">
+            {t("Ask a team member to create your account.")}
+          </p>
+        )}
       </section>
     </main>
   );

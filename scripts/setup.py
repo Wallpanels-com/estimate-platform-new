@@ -9,4 +9,4 @@ if not (ROOT/'.env').exists():
     (ROOT/'.env').write_text(text);(ROOT/'.env').chmod(0o600)
 subprocess.run([str(ROOT/'.venv/bin/python'),'-m','pip','install','-r','apps/backend/requirements.txt','-c','apps/backend/constraints-local.txt'],check=True)
 subprocess.run(['npm','ci','--cache','.local/npm-cache'],check=True)
-print('Setup complete. Configure DATABASE_URL in .env, start PostgreSQL, then npm run dev.')
+print('Setup complete. Configure DATABASE_URL, start PostgreSQL, run npm run db:migrate, then npm run dev. Existing pre-Alembic databases need an approved backup and explicit --adopt-legacy first.')

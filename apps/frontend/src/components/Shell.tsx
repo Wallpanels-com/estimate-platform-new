@@ -1,6 +1,13 @@
 import { LanguageSwitch, useI18n } from "../lib/i18n";
 import { NavLink, Outlet } from "react-router-dom";
-import { FileText, BookOpen, WandSparkles, Trash2, LogOut } from "lucide-react";
+import {
+  FileText,
+  BookOpen,
+  WandSparkles,
+  Trash2,
+  LogOut,
+  Users,
+} from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { Button } from "./ui";
 export function Brand() {
@@ -49,6 +56,10 @@ export default function Shell() {
           <NavLink to="/price-book">
             <BookOpen size={18} />
             {t("Price book")}
+          </NavLink>
+          <NavLink to="/users">
+            <Users size={18} />
+            {t("Team accounts")}
           </NavLink>
           <NavLink to="/trash">
             <Trash2 size={18} />

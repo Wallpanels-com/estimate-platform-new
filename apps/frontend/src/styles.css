@@ -3668,3 +3668,102 @@ html[lang="ru"] .line-head {
   opacity: 0.6;
   cursor: wait;
 }
+
+.team-page {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.team-page .page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.team-page .page-heading h1 {
+  margin: 0 0 8px;
+}
+.team-page .page-heading p {
+  margin: 0;
+  color: var(--muted);
+}
+.team-table-wrap {
+  overflow-x: auto;
+  background: var(--surface, white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.team-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.team-table th,
+.team-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+.team-table th {
+  background: var(--canvas, #f5f4ef);
+  font-weight: 500;
+}
+.team-table td:last-child {
+  width: 300px;
+}
+.team-table .row-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+.records-body {
+  display: grid;
+  gap: 16px;
+}
+.record-row {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+.record-row small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.record-row dl > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr);
+  gap: 16px;
+  padding: 8px 0;
+}
+.record-row dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.record-actions,
+.record-document {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.record-actions {
+  justify-content: flex-start;
+}
+.estimate-authorship {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.estimate-authorship summary {
+  cursor: pointer;
+}
+.estimate-authorship > span {
+  display: block;
+  white-space: normal;
+  padding-top: 4px;
+}
+.search-select:has(> .choice:only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}

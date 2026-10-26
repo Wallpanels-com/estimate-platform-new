@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 20
     PRE_ESTIMATE_DESIGN: Literal["v1", "v2"] = "v2"
     ALLOWED_ORIGINS: str = "*"
+    ALLOW_SELF_REGISTRATION: bool = False
+    AUTO_MIGRATE: bool = False
+    ENABLE_PERMANENT_DELETE: bool = False
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod

@@ -11,6 +11,7 @@
     "start": "python3 scripts/dev.py start",
     "stop": "python3 scripts/dev.py stop",
     "status": "python3 scripts/dev.py status",
+    "db:migrate": ".venv/bin/python scripts/migrate.py",
     "build": "npm run build --workspace apps/frontend",
     "typecheck": "npm run typecheck --workspace apps/frontend",
     "test": ".venv/bin/python -m unittest discover -s tests -v",

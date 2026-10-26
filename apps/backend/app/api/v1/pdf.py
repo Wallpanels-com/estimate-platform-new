@@ -22,6 +22,7 @@ from app.services.estimate_branches import synchronize, switch_mode
 from app.services.final_pricing import quote
 from app.services.final_zone_layout import photos as validate_zone_photos
 from app.services.final_zone_photos import selected_slot, PHOTO_REQUIRED
+from app.api.v1.estimates import load_estimate
 
 router = APIRouter(prefix="/pdf", tags=["pdf"])
 
@@ -155,15 +156,21 @@ async def passport(
     if not estimate:
         raise HTTPException(status_code=404, detail="Estimate not found")
 
+    if getattr(estimate, "source_estimate_id", None):
+        estimate = await load_estimate(estimate_id, current_user, db)
+        estimate = await synchronize(db, estimate)
+        await db.commit()
+
     output_dir = os.path.join(settings.STORAGE_PATH, "passports", str(estimate_id))
     os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, "passport.xlsx")
+    output_path = os.path.join(output_dir, f"passport-{uuid.uuid4()}.xlsx")
     generate_passport(estimate, output_path)
 
     return FileResponse(
         output_path,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         filename=f"{_passport_name(estimate)}.xlsx",
+        background=BackgroundTask(lambda: Path(output_path).unlink(missing_ok=True)),
     )
 
 @router.get("/{estimate_id}/pre-estimate")

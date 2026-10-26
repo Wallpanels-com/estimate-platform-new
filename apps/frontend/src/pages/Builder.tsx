@@ -24,6 +24,7 @@ import {
   List,
   Layers,
   Eye,
+  History,
 } from "lucide-react";
 import {
   request,
@@ -51,6 +52,7 @@ import LineItems, { Description } from "../components/LineItems";
 import ActionMenu from "../components/ActionMenu";
 import AddItems from "../components/AddItems";
 import Photos from "../components/Photos";
+import EstimateRecords from "../components/EstimateRecords";
 import AiInput from "../components/AiInput";
 import EstimatePdfPreview from "../components/EstimatePdfPreview";
 import PdfChecks, { type ExportChecks } from "../components/PdfChecks";
@@ -77,12 +79,14 @@ export default function Builder() {
   }, [panel]);
   const [proposal, setProposal] = useState(false);
   const [details, setDetails] = useState(false);
+  const [records, setRecords] = useState(false);
   const [zoneForm, setZoneForm] = useState<"new" | "edit" | null>(null);
   const [adding, setAdding] = useState<
     "calculator" | "manual" | "services" | null
   >(null);
   const [ai, setAi] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [exporting, setExporting] = useState<"pdf" | "xlsx" | null>(null);
   const [deletingZone, setDeletingZone] = useState<Zone | null>(null);
   const [deletingItem, setDeletingItem] = useState<LineItem | null>(null);
@@ -111,6 +115,8 @@ export default function Builder() {
     enabled: !!pdfId && pdfMode === "final",
   });
   const loadPdf = useCallback(async () => {
+    if (saveFailed || busy)
+      throw new Error(t("Save your changes before exporting."));
     if (!pdfId || !pdfRevision)
       return Promise.reject(new Error("Estimate is not loaded."));
     if (pdfMode === "final") {
@@ -124,7 +130,7 @@ export default function Builder() {
       mode: pdfMode,
       revision: pdfRevision,
     });
-  }, [pdfId, pdfMode, pdfRevision, client, t]);
+  }, [pdfId, pdfMode, pdfRevision, client, t, saveFailed, busy]);
   const zones = estimate?.zones || [];
   const zone = zones.find((z) => z.id === params.get("zone")) || zones[0];
   async function refresh() {
@@ -148,9 +154,11 @@ export default function Builder() {
     try {
       await task();
       await refresh();
+      setSaveFailed(false);
       notify(message);
       return true;
     } catch (err) {
+      setSaveFailed(true);
       notify(errorMessage(err), true);
       return false;
     } finally {
@@ -184,6 +192,8 @@ export default function Builder() {
   }
   async function exportFile(kind: "pdf" | "xlsx") {
     if (!estimate) return;
+    if (busy || saveFailed)
+      return notify("Save your changes before exporting.", true);
     setExporting(kind);
     try {
       if (kind === "pdf") {
@@ -263,13 +273,34 @@ export default function Builder() {
               {estimate.client_name || t("No client")}
               {estimate.project_name ? ` · ${estimate.project_name}` : ""}
             </span>
+            <details className="estimate-authorship">
+              <summary>
+                {t("Prepared by")}:{" "}
+                {estimate.prepared_by || estimate.created_by_name || "—"}
+              </summary>
+              <span>
+                {t("Created by")}: {estimate.created_by_name || "—"} ·{" "}
+                {t("Created at")}:{" "}
+                {new Date(estimate.created_at).toLocaleString()} ·{" "}
+                {t("Last edited by")}: {estimate.updated_by_name || "—"}
+              </span>
+            </details>
           </div>
         </div>
         <div className="builder-top-actions">
+          <Button
+            variant="ghost"
+            aria-label={t("History & saved documents")}
+            title={t("History & saved documents")}
+            onClick={() => setRecords(true)}
+            disabled={busy}
+          >
+            <History size={18} />
+          </Button>
           <LanguageSwitch />
           <span className="save-state" role="status">
             <Check size={14} />
-            {busy ? t("Saving…") : t("Saved")}
+            {busy ? t("Saving…") : saveFailed ? t("Not saved") : t("Saved")}
           </span>
           <div className="segments type-switch" aria-label={t("Estimate type")}>
             <button
@@ -297,6 +328,9 @@ export default function Builder() {
           </Button>
         </div>
       </header>
+      {records ? (
+        <EstimateRecords id={estimate.id} onClose={() => setRecords(false)} />
+      ) : null}
       <nav className="workspace-tabs" aria-label={t("Builder panels")}>
         {[
           ["estimate", t("Estimate"), List],

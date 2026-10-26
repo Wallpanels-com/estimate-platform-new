@@ -51,15 +51,21 @@ async def upload_image(
         select(EstimateImage).where(EstimateImage.zone_id == zone_id, EstimateImage.slot == slot)
     )
     for img in existing.scalars().all():
-        try:
-            os.remove(img.file_path)
-        except FileNotFoundError:
-            pass
+        # Retain previous bytes for history and backup recovery.
         await db.delete(img)
 
     storage_dir = os.path.join(settings.STORAGE_PATH, "images", str(estimate_id), str(zone_id))
     os.makedirs(storage_dir, exist_ok=True)
-    ext = os.path.splitext(file.filename or "img.jpg")[1] or ".jpg"
+    ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}[file.content_type]
+    from io import BytesIO
+    from PIL import Image, UnidentifiedImageError
+    try:
+        with Image.open(BytesIO(content)) as checked:
+            if checked.format not in {"JPEG", "PNG", "WEBP"}:
+                raise ValueError("Unsupported image")
+            checked.verify()
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise HTTPException(400, "The uploaded image is damaged or invalid.")
     filename = f"slot{slot}_{uuid.uuid4()}{ext}"
     file_path = os.path.join(storage_dir, filename)
     async with aiofiles.open(file_path, "wb") as f:
@@ -87,10 +93,7 @@ async def delete_image(
         select(EstimateImage).where(EstimateImage.zone_id == zone_id, EstimateImage.slot == slot)
     )
     for img in imgs.scalars().all():
-        try:
-            os.remove(img.file_path)
-        except FileNotFoundError:
-            pass
+        # Logical deletion only; physical retention is a separate admin operation.
         await db.delete(img)
     est = await load_estimate(estimate_id, current_user, db)
     touch(est, current_user)

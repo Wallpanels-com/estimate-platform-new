@@ -12,7 +12,7 @@ from app.models import *  # noqa
 config = context.config
 
 db_url = settings.DATABASE_URL.replace("postgres://", "postgresql://").replace("postgresql+asyncpg://", "postgresql://")
-config.set_main_option("sqlalchemy.url", db_url)
+config.set_main_option("sqlalchemy.url", db_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

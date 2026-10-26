@@ -4,6 +4,7 @@ export interface User {
   email: string;
   name: string | null;
   role: string;
+  is_active: boolean;
   onboarding_completed: boolean;
 }
 export interface LineItem {
@@ -60,6 +61,8 @@ export interface Estimate {
   client_name: string | null;
   project_name: string | null;
   prepared_by: string | null;
+  created_by_name?: string | null;
+  updated_by_name?: string | null;
   estimate_date: string | null;
   description: string | null;
   notes: string | null;

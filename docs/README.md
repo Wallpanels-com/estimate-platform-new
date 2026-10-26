@@ -3,6 +3,7 @@
 ## Current architecture and operations
 
 - [Architecture](architecture.md)
+- [Corporate release, SSH, User accounts and Railway](corporate-release.md)
 - [QA and regression coverage](qa.md)
 - [Interface languages](interface-languages.md)
 - [Design system](design-system.md)

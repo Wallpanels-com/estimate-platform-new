@@ -135,7 +135,7 @@ export default function Estimates({ trash = false }: { trash?: boolean }) {
         title={trash ? t("Trash") : t("Estimates")}
         description={
           trash
-            ? t("Deleted estimates can be restored for 7 days.")
+            ? t("Deleted estimates remain available for restoration.")
             : t(
                 "Project scopes, considered pricing, and client-ready estimates.",
               )

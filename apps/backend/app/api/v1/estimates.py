@@ -14,6 +14,7 @@ from app.schemas.estimate import (
     LineItemCreate, LineItemUpdate, LineItemOut, ReorderRequest
 )
 from app.api.deps import get_current_user
+from app.core.config import settings
 from app.services.estimate_branches import switch_mode, synchronize
 from pydantic import BaseModel, Field
 from app.services.final_zone_photos import select_photo
@@ -37,6 +38,7 @@ def user_display_name(user: User) -> str:
 def touch(estimate: Estimate, user: User) -> None:
     """Record who last modified this estimate."""
     estimate.updated_by_name = user_display_name(user)
+    estimate.updated_at = datetime.now(timezone.utc)
 
 
 async def load_estimate(estimate_id: uuid.UUID, user: User, db: AsyncSession) -> Estimate:
@@ -65,12 +67,8 @@ TRASH_RETENTION_DAYS = 7
 
 
 async def _purge_expired_trash(db: AsyncSession) -> None:
-    """Hard-delete estimates that have been in the trash for more than the retention period."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=TRASH_RETENTION_DAYS)
-    await db.execute(
-        sa_delete(Estimate).where(Estimate.deleted_at.isnot(None), Estimate.deleted_at < cutoff)
-    )
-    await db.commit()
+    """Trash remains recoverable until an explicit, reviewed retention operation."""
+    return
 
 
 @router.get("", response_model=List[EstimateListItem])
@@ -218,6 +216,7 @@ async def update_estimate(
 ):
     est = await load_estimate(estimate_id, current_user, db)
     fields = data.model_dump(exclude_unset=True)
+    fields.pop("prepared_by", None)  # Attribution comes from the account, not typed input.
     if fields.get('type') in ('pre', 'final') and fields['type'] != est.type:
         est = await switch_mode(db, est, fields.pop('type'))
         estimate_id = est.id
@@ -235,7 +234,7 @@ async def delete_estimate(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Soft delete - moves the estimate to the Trash (kept for 7 days, then purged)."""
+    """Soft delete both versions; never silently purge on a read request."""
     est = await load_estimate(estimate_id, current_user, db)
     root_id = est.source_estimate_id or est.id
     versions = (await db.execute(select(Estimate).where((Estimate.id == root_id) | (Estimate.source_estimate_id == root_id)))).scalars().all()
@@ -267,6 +266,8 @@ async def permanently_delete_estimate(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if not settings.ENABLE_PERMANENT_DELETE:
+        raise HTTPException(409, "Permanent deletion is disabled. Estimates remain recoverable in Trash.")
     est = await load_estimate(estimate_id, current_user, db)
     if est.source_estimate_id:
         est = await load_estimate(est.source_estimate_id, current_user, db)
@@ -287,7 +288,9 @@ async def duplicate_estimate(
         title=f"{src.title or 'Estimate'} (copy)",
         client_name=src.client_name,
         project_name=src.project_name,
-        prepared_by=src.prepared_by,
+        prepared_by=user_display_name(current_user),
+        created_by_name=user_display_name(current_user),
+        updated_by_name=user_display_name(current_user),
         notes=src.notes,
         status="draft",
     )

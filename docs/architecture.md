@@ -1,5 +1,10 @@
 # Архитектура объединённого проекта
 
+Текущая корпоративная подготовка: одна роль User для всех сотрудников, общие
+сметы и Price Book, отдельные персональные пароли, история изменений и сохранённые
+неизменяемые PDF/XLSX. Порядок SSH, миграций и будущего Railway-развёртывания:
+[corporate-release.md](corporate-release.md).
+
 ## Границы модулей
 
 Frontend — React 18 + TypeScript + Vite, React Router, TanStack Query, Lucide и обычный CSS. Исходники сгруппированы по страницам, UI-компонентам и сетевому/доменному коду. Фреймворк дизайна с навязанной сеткой карточек не используется.
@@ -44,11 +49,17 @@ flowchart TD
 
 ## Backend и данные
 
-Восемь прежних таблиц: users, estimates, estimate_zones, line_items, estimate_images, voice_files, pdf_files, pricing_config. Отдельной Client-таблицы нет: client_name — поле Estimate. Изменений структуры БД и pricing defaults не внесено.
+Сохранены таблицы users, estimates, estimate_zones, line_items, estimate_images,
+voice_files, pdf_files, pricing_config. Добавлены audit_events и document_versions,
+а в users — is_active и token_version. Client-таблицы нет: client_name — поле
+Estimate. Pricing defaults и формулы не изменены.
 
 API endpoints остались в app/api/v1. Существующие генераторы в app/services. Models/schemas разделены, старый schemas/schemas.py сохранён как reference, хотя активные routes используют schemas/estimate.py и auth.py.
 
-Запуск backend по-прежнему выполняет metadata.create_all и SQL из main.py. Скопированный Alembic scaffolding не содержит реальной последовательности revisions; это будущая работа. При выборе другого PostgreSQL надо учитывать начальный schema initialization.
+Схема изменяется только явными Alembic migrations 0001–0003. При запуске backend
+проверяет revision, но не выполняет CREATE/ALTER. Для существующей локальной базы
+есть проверяемая процедура adopt-legacy; production adoption требует отдельного
+одобрения и анализа схемы.
 
 ## Storage и перенос локального состояния
 
@@ -56,7 +67,10 @@ API endpoints остались в app/api/v1. Существующие гене�
 
 В .env LOCAL_PG_BIN/LOCAL_PG_DATA указывают на уже установленный локальный PostgreSQL из родительского окружения. Это путь к внешней службе разработки, не импорт исходников. Код/сборка не зависят от старых frontend/backend папок. На другой машине можно использовать системный PostgreSQL, Docker Compose или dev-provider через environment.
 
-Фото, аудио и PDF на диске; БД хранит пути. Диск должен быть постоянным при будущем деплое. Существующие ограничения очистки и публичной раздачи storage сохранены и требуют отдельного security/lifecycle решения.
+Фото, аудио и документы на диске; БД хранит пути. Для Railway подготовлен volume
+/data. Публичная раздача /storage убрана: фотографии выдаются по authenticated API
+через Blob URL в браузере. Замена/удаление фотографий сохраняет предыдущие файлы
+для восстановления. Физическая очистка требует отдельной retention policy.
 
 ## Pricing и экспорты
 

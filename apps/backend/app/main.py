@@ -7,74 +7,24 @@ import os
 
 from app.core.config import settings
 from app.core.database import engine, Base, AsyncSessionLocal
-from app.api.v1 import auth, estimates, voice, files, pdf, pricing, zones, pricebook
+from app.api.v1 import auth, estimates, voice, files, pdf, pricing, zones, pricebook, users, governance
+from app.services import audit  # register transaction-level audit hooks
 
 
-MIGRATION_SQL = [
-    "ALTER TABLE estimates ADD COLUMN IF NOT EXISTS source_estimate_id UUID REFERENCES estimates(id) ON DELETE CASCADE",
-    "CREATE UNIQUE INDEX IF NOT EXISTS ix_estimates_source_estimate_id ON estimates(source_estimate_id)",
-    "ALTER TABLE estimates ADD COLUMN IF NOT EXISTS branch_state JSON",
-    "ALTER TABLE estimates ADD COLUMN IF NOT EXISTS cover_image_id VARCHAR",
-    """
-    CREATE TABLE IF NOT EXISTS estimate_zones (
-        id UUID PRIMARY KEY,
-        estimate_id UUID NOT NULL REFERENCES estimates(id) ON DELETE CASCADE,
-        sort_order INTEGER DEFAULT 0,
-        zone_type VARCHAR DEFAULT 'wall',
-        label VARCHAR DEFAULT 'Zone',
-        room_name VARCHAR,
-        wall_name VARCHAR,
-        wall_width_ft NUMERIC(10,2),
-        wall_height_ft NUMERIC(10,2),
-        square_footage NUMERIC(10,2),
-        linear_footage NUMERIC(10,2),
-        notes TEXT,
-        created_at TIMESTAMPTZ DEFAULT now()
-    )
-    """,
-    "ALTER TABLE line_items ADD COLUMN IF NOT EXISTS zone_id UUID REFERENCES estimate_zones(id) ON DELETE CASCADE",
-    "ALTER TABLE estimate_images ADD COLUMN IF NOT EXISTS zone_id UUID REFERENCES estimate_zones(id) ON DELETE CASCADE",
-    "CREATE INDEX IF NOT EXISTS ix_line_items_zone_id ON line_items(zone_id)",
-    "CREATE INDEX IF NOT EXISTS ix_estimate_images_zone_id ON estimate_images(zone_id)",
-    "CREATE INDEX IF NOT EXISTS ix_estimate_zones_estimate_id ON estimate_zones(estimate_id)",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT false",
-    "ALTER TABLE estimates ADD COLUMN IF NOT EXISTS created_by_name VARCHAR",
-    "ALTER TABLE estimates ADD COLUMN IF NOT EXISTS updated_by_name VARCHAR",
-    """
-    UPDATE estimates e SET created_by_name = COALESCE(u.name, u.email)
-    FROM users u WHERE e.user_id = u.id AND e.created_by_name IS NULL
-    """,
-    "UPDATE estimates SET updated_by_name = created_by_name WHERE updated_by_name IS NULL",
-    "ALTER TABLE estimates ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ",
-    "CREATE INDEX IF NOT EXISTS ix_estimates_deleted_at ON estimates (deleted_at)",
-    "ALTER TABLE estimates ADD COLUMN IF NOT EXISTS markup_pct NUMERIC(6,2)",
-    "ALTER TABLE estimates ADD COLUMN IF NOT EXISTS discount_pct NUMERIC(6,2)",
-    "ALTER TABLE line_items ADD COLUMN IF NOT EXISTS original_unit_price NUMERIC(12,2)",
-    "ALTER TABLE line_items ADD COLUMN IF NOT EXISTS is_tbd BOOLEAN DEFAULT FALSE",
-    """
-    CREATE TABLE IF NOT EXISTS pricing_config (
-        id UUID PRIMARY KEY,
-        config JSON NOT NULL,
-        updated_by_name VARCHAR,
-        updated_at TIMESTAMPTZ DEFAULT now()
-    )
-    """,
-]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    for d in ["images", "voice", "pdfs"]:
+    for d in ["images", "voice", "pdfs", "passports", "issued"]:
         os.makedirs(os.path.join(settings.STORAGE_PATH, d), exist_ok=True)
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    if settings.AUTO_MIGRATE:
+        raise RuntimeError("Startup schema changes are disabled. Run the approved Alembic migration explicitly.")
 
-    # Idempotent migrations for existing deployments
-    async with AsyncSessionLocal() as session:
-        for stmt in MIGRATION_SQL:
-            await session.execute(text(stmt))
-        await session.commit()
+    async with engine.connect() as conn:
+        result = await conn.execute(text("SELECT version_num FROM alembic_version"))
+        if result.scalar_one_or_none() != "0003_uniform_users":
+            raise RuntimeError("Database migrations are required. Run the approved Alembic upgrade before starting the application.")
 
     yield
 
@@ -89,9 +39,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-static_path = os.path.join(settings.STORAGE_PATH)
-os.makedirs(static_path, exist_ok=True)
-app.mount("/storage", StaticFiles(directory=static_path), name="storage")
+# Client uploads are served only by authenticated routes in governance.py.
 
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(estimates.router, prefix="/api/v1")
@@ -101,6 +49,8 @@ app.include_router(files.router, prefix="/api/v1")
 app.include_router(pdf.router, prefix="/api/v1")
 app.include_router(pricing.router, prefix="/api/v1")
 app.include_router(pricebook.router, prefix="/api/v1")
+app.include_router(users.router, prefix="/api/v1")
+app.include_router(governance.router, prefix="/api/v1")
 
 
 @app.get("/health")

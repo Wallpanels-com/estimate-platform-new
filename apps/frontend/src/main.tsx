@@ -20,6 +20,7 @@ const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Builder = lazy(() => import("./pages/Builder"));
 const PriceBook = lazy(() => import("./pages/PriceBook"));
 const QuickEstimate = lazy(() => import("./pages/QuickEstimate"));
+const Users = lazy(() => import("./pages/Users"));
 const client = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, staleTime: 15_000, refetchOnWindowFocus: false },
@@ -54,6 +55,7 @@ function App() {
             <Route path="onboarding" element={<Onboarding />} />
             <Route path="trash" element={<Estimates trash />} />
             <Route path="price-book" element={<PriceBook />} />
+            <Route path="users" element={<Users />} />
             <Route
               path="pricing-config"
               element={<Navigate to="/price-book" replace />}
