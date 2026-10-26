@@ -2,6 +2,14 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Literal
 import uuid
 from datetime import datetime
+import re
+
+
+def login_identifier(value: str) -> str:
+    value = value.strip().lower()
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_.@+\-]{2,253}", value):
+        raise ValueError("Use a login with letters, numbers, dots, underscores or hyphens.")
+    return value
 
 
 class RegisterRequest(BaseModel):
@@ -11,8 +19,9 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str = Field(min_length=3, max_length=254)
     password: str
+    _login = field_validator("email")(login_identifier)
 
 
 class TokenResponse(BaseModel):
@@ -45,7 +54,8 @@ class PasswordInput(BaseModel):
 
 
 class UserCreate(PasswordInput):
-    email: EmailStr
+    email: str = Field(min_length=3, max_length=254)
+    _login = field_validator("email")(login_identifier)
     name: str = Field(min_length=1, max_length=120)
     role: Literal["user"] = "user"
 

@@ -93,8 +93,26 @@ export default function Builder() {
   const query = useQuery({
     queryKey: ["estimate", id],
     queryFn: ({ signal }) => request<Estimate>(`/estimates/${id}`, { signal }),
+    refetchInterval: () =>
+      busy ||
+      saveFailed ||
+      document.querySelector(
+        "dialog[open], input:focus, textarea:focus, select:focus",
+      )
+        ? false
+        : 8000,
   });
   const estimate = query.data;
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (busy || saveFailed) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [busy, saveFailed]);
   const pdfMode: EstimatePdfMode = estimate?.type === "pre" ? "pre" : "final";
   const pdfId = estimate?.id;
   const pdfRevision = estimate?.updated_at

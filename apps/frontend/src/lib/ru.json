@@ -755,5 +755,8 @@
   "User": "Пользователь",
   "Everyone has the same access to all estimates and the Price Book.": "У всех сотрудников одинаковый доступ ко всем сметам и справочнику.",
   "Ask a team member to create your account.": "Для создания аккаунта обратитесь к сотруднику вашей команды.",
-  "Created by": "Создал"
+  "Created by": "Создал",
+  "Login": "Логин",
+  "Reload this estimate before saving changes.": "Обновите смету перед сохранением изменений.",
+  "Another employee changed this estimate. Your changes were not applied. Reload and review the latest version.": "Другой сотрудник изменил смету. Ваши изменения не применены. Обновите страницу и проверьте актуальную версию."
 }

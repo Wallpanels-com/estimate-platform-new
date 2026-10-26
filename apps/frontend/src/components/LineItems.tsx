@@ -1,4 +1,5 @@
 import Select from "./Select";
+import AutosaveNumber from "./AutosaveNumber";
 import { useI18n } from "../lib/i18n";
 import { useId, useState } from "react";
 import { ArrowDown, ArrowUp, Pencil, Trash2 } from "lucide-react";
@@ -305,7 +306,7 @@ export default function LineItems({
                         {field === "quantity" ? t("Quantity") : t("Unit price")}
                       </span>
                       <div className="number-control">
-                        <input
+                        <AutosaveNumber
                           aria-label={t(
                             "{0} for {1}",
                             field === "quantity"
@@ -318,7 +319,7 @@ export default function LineItems({
                           min="0"
                           name={`${field}-${item.id}`}
                           key={`${item.id}-${field}-${item[field]}`}
-                          defaultValue={item[field] ?? ""}
+                          initialValue={item[field] ?? null}
                           placeholder={
                             field === "unit_price" ? t("Not set") : undefined
                           }
@@ -334,17 +335,9 @@ export default function LineItems({
                               : undefined
                           }
                           disabled={busy}
-                          onBlur={(event) => {
-                            const next =
-                              event.target.value === ""
-                                ? null
-                                : Number(event.target.value);
-                            if (
-                              next !==
-                              (item[field] == null ? null : Number(item[field]))
-                            )
-                              void onUpdate(item.id, { [field]: next });
-                          }}
+                          onSave={(next) =>
+                            onUpdate(item.id, { [field]: next })
+                          }
                         />
                         {field === "quantity" && displayUnit(item) ? (
                           <small>{displayUnit(item)}</small>

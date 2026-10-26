@@ -22,8 +22,9 @@ from app.schemas.estimate import EstimateOut
 from app.services.pre_estimate_service import generate_pre_estimate
 from app.services.passport_service import generate_passport
 from app.services.estimate_branches import synchronize
+from app.core.estimate_routes import EstimateRoute
 
-router = APIRouter(tags=["history-and-documents"])
+router = APIRouter(tags=["history-and-documents"], route_class=EstimateRoute)
 
 
 @router.get("/media/{image_id}")

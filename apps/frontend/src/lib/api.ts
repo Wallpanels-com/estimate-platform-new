@@ -3,6 +3,13 @@ export const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN || "").replace(
   "",
 );
 export const TOKEN_KEY = "wallpanels.token";
+const revisions = new Map<string, string>();
+function rememberRevision(value: unknown) {
+  if (value && typeof value === "object") {
+    const item = value as { id?: string; revision?: string };
+    if (item.id && item.revision) revisions.set(item.id, item.revision);
+  }
+}
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -18,6 +25,20 @@ export async function request<T>(
   const headers = new Headers(options.headers);
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  const writing = !["GET", "HEAD"].includes(options.method || "GET");
+  let estimateId = path.match(/^\/estimates\/([0-9a-f-]{36})(?:\/|$)/)?.[1];
+  if (!estimateId && writing && typeof options.body === "string") {
+    try {
+      estimateId = JSON.parse(options.body).estimate_id;
+    } catch {
+      /* non-JSON body */
+    }
+  }
+  if (writing && estimateId && !headers.has("If-Match")) {
+    if (!revisions.has(estimateId)) await request(`/estimates/${estimateId}`);
+    const revision = revisions.get(estimateId);
+    if (revision) headers.set("If-Match", revision);
+  }
   if (options.body && !(options.body instanceof FormData))
     headers.set("Content-Type", "application/json");
   const response = await fetch(`${API_ORIGIN}/api/v1${path}`, {
@@ -41,8 +62,13 @@ export async function request<T>(
       window.dispatchEvent(new Event("wallpanels:unauthorized"));
     throw new ApiError(response.status, message);
   }
+  const savedId = response.headers.get("X-Estimate-ID");
+  const savedRevision = response.headers.get("X-Estimate-Revision");
+  if (savedId && savedRevision) revisions.set(savedId, savedRevision);
   if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
+  const data = await response.json();
+  rememberRevision(data);
+  return data as T;
 }
 export const post = <T>(path: string, body?: unknown) =>
   request<T>(path, {

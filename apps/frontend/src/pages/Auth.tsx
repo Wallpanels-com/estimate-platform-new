@@ -74,11 +74,11 @@ export default function Auth({ register = false }: { register?: boolean }) {
               <input name="name" autoComplete="name" required maxLength={120} />
             </Field>
           ) : null}
-          <Field label={t("Email")}>
+          <Field label={t(register ? "Email" : "Login")}>
             <input
-              type="email"
+              type={register ? "email" : "text"}
               name="email"
-              autoComplete="email"
+              autoComplete="username"
               spellCheck={false}
               required
             />

@@ -63,10 +63,12 @@ export default function PriceBook() {
   >(null);
   const query = useQuery({
     queryKey: ["pricing-config"],
+    refetchInterval: dirty || busy ? false : 8000,
     queryFn: () => request<ConfigResponse>("/pricing/config"),
   });
   const catalog = useQuery({
     queryKey: ["pricebook-catalog"],
+    refetchInterval: busy || categoryForm || itemForm ? false : 8000,
     queryFn: () => request<BookData>("/pricing/catalog"),
   });
   useEffect(() => {

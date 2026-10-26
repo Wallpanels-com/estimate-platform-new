@@ -18,8 +18,9 @@ from app.core.config import settings
 from app.services.estimate_branches import switch_mode, synchronize
 from pydantic import BaseModel, Field
 from app.services.final_zone_photos import select_photo
+from app.core.estimate_routes import EstimateRoute
 
-router = APIRouter(prefix="/estimates", tags=["estimates"])
+router = APIRouter(prefix="/estimates", tags=["estimates"], route_class=EstimateRoute)
 
 
 def recalc_totals(estimate: Estimate) -> None:
@@ -60,6 +61,21 @@ async def load_estimate(estimate_id: uuid.UUID, user: User, db: AsyncSession) ->
     est = result.scalar_one_or_none()
     if not est:
         raise HTTPException(status_code=404, detail="Estimate not found")
+    parent_timestamp = None
+    if source:
+        parent_timestamp = (await db.execute(select(Estimate.updated_at).where(Estimate.id == source))).scalar_one()
+    est._source_revision = parent_timestamp
+    if db.info.get("write_request") and not db.info.get("revision_checked"):
+        expected = db.info.get("expected_revision")
+        # Creation and internal reloads belong to the same checked transaction.
+        created_here = db.info.get("created_estimate_id") == str(est.id)
+        if not created_here:
+            if not expected and settings.REQUIRE_ESTIMATE_REVISION:
+                raise HTTPException(428, "Reload this estimate before saving changes.")
+            if expected and expected != est.revision:
+                raise HTTPException(409, "Another employee changed this estimate. Your changes were not applied. Reload and review the latest version.")
+        db.info["revision_checked"] = True
+    db.info["last_estimate"] = est
     return est
 
 
@@ -136,6 +152,8 @@ async def create_estimate(
         db.add(zone)
         await db.flush()
     await db.commit()
+    if hasattr(db, "info"):
+        db.info["created_estimate_id"] = str(est.id)
     return await load_estimate(est.id, current_user, db)
 
 
@@ -162,7 +180,8 @@ async def change_mode(estimate_id: uuid.UUID, data: ModeRequest, db: AsyncSessio
     if data.mode not in ('pre', 'final'):
         raise HTTPException(400, 'Choose Pre-estimate or Final Estimate.')
     est = await load_estimate(estimate_id, current_user, db)
-    return await switch_mode(db, est, data.mode)
+    result = await switch_mode(db, est, data.mode)
+    return await load_estimate(result.id, current_user, db)
 
 
 class CoverRequest(BaseModel):
@@ -371,7 +390,6 @@ async def create_line_item(
     item = LineItem(estimate_id=est.id, **{**dump, "total_price": total})
     db.add(item)
     await db.flush()
-    await db.commit()
     est = await load_estimate(estimate_id, current_user, db)
     recalc_totals(est)
     touch(est, current_user)
@@ -406,7 +424,6 @@ async def update_line_item(
     if "total_price" not in fields and item.quantity is not None and item.unit_price is not None:
         item.total_price = item.quantity * item.unit_price
     await db.flush()
-    await db.commit()
     est = await load_estimate(estimate_id, current_user, db)
     recalc_totals(est)
     touch(est, current_user)
@@ -433,7 +450,6 @@ async def delete_line_item(
         raise HTTPException(status_code=404, detail="Line item not found")
     await db.delete(item)
     await db.flush()
-    await db.commit()
     est = await load_estimate(estimate_id, current_user, db)
     recalc_totals(est)
     touch(est, current_user)

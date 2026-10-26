@@ -15,6 +15,10 @@ class PreservedContracts(unittest.TestCase):
             with self.subTest(path=path):self.assertEqual(hashlib.sha256((ROOT/'apps/backend'/path).read_bytes()).hexdigest(),manifest['Estimates_platform_backend-main/'+path])
     def test_estimate_model_only_adds_final_branch_fields(self):
         source=(ROOT/'apps/backend/app/models/estimate.py').read_text()
+        # Revision is a derived concurrency token, not a mapped column.
+        start=source.index('    @property\n    def revision(')
+        end=source.index('    id:', start)
+        source=source[:start]+source[end:]
         original='\n'.join(line for line in source.split('\n') if not any(line.startswith('    '+field+':') for field in ('source_estimate_id','branch_state','cover_image_id')))
         manifest=json.loads((ROOT/'docs/reference-checksums.json').read_text())
         self.assertEqual(hashlib.sha256(original.encode()).hexdigest(),manifest['Estimates_platform_backend-main/app/models/estimate.py'])

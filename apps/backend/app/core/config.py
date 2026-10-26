@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     ALLOW_SELF_REGISTRATION: bool = False
     AUTO_MIGRATE: bool = False
     ENABLE_PERMANENT_DELETE: bool = False
+    REQUIRE_ESTIMATE_REVISION: bool = True
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod

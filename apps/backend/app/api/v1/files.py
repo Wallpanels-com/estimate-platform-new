@@ -10,8 +10,9 @@ from app.models.estimate import Estimate, EstimateZone, EstimateImage
 from app.schemas.estimate import ImageOut
 from app.api.deps import get_current_user
 from app.api.v1.estimates import load_estimate, touch
+from app.core.estimate_routes import EstimateRoute
 
-router = APIRouter(prefix="/estimates/{estimate_id}/zones/{zone_id}", tags=["files"])
+router = APIRouter(prefix="/estimates/{estimate_id}/zones/{zone_id}", tags=["files"], route_class=EstimateRoute)
 
 ALLOWED_IMG = {"image/jpeg", "image/png", "image/webp"}
 

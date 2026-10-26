@@ -11,8 +11,9 @@ from app.models.estimate import Estimate, EstimateZone, LineItem
 from app.schemas.estimate import ZoneCreate, ZoneUpdate, ZoneOut
 from app.api.deps import get_current_user
 from app.api.v1.estimates import recalc_totals, load_estimate, touch
+from app.core.estimate_routes import EstimateRoute
 
-router = APIRouter(prefix="/estimates/{estimate_id}/zones", tags=["zones"])
+router = APIRouter(prefix="/estimates/{estimate_id}/zones", tags=["zones"], route_class=EstimateRoute)
 
 
 async def load_zone(estimate_id: uuid.UUID, zone_id: uuid.UUID, user: User, db: AsyncSession) -> EstimateZone:

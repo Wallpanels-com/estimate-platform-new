@@ -10,6 +10,12 @@ from app.core.database import Base
 class Estimate(Base):
     __tablename__ = "estimates"
 
+    @property
+    def revision(self) -> str:
+        import hashlib
+        state = f"{self.id}|{self.updated_at}|{getattr(self, '_source_revision', None)}"
+        return hashlib.sha256(state.encode()).hexdigest()
+
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     created_by_name: Mapped[Optional[str]] = mapped_column(String)

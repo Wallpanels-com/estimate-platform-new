@@ -83,7 +83,7 @@ export default function Users() {
             <thead>
               <tr>
                 <th>{t("Name")}</th>
-                <th>{t("Email")}</th>
+                <th>{t("Login")}</th>
                 <th>{t("Role")}</th>
                 <th>{t("Status")}</th>
                 <th>{t("Actions")}</th>
@@ -145,10 +145,10 @@ export default function Users() {
                     />
                   </Field>
                   {editing === "new" ? (
-                    <Field label="Email">
+                    <Field label="Login">
                       <input
                         name="email"
-                        type="email"
+                        type="text"
                         autoComplete="off"
                         required
                       />

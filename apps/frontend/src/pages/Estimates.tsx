@@ -48,6 +48,7 @@ export default function Estimates({ trash = false }: { trash?: boolean }) {
   const [deleting, setDeleting] = useState<EstimateSummary | null>(null);
   const data = useQuery({
     queryKey: ["estimates", trash],
+    refetchInterval: 8000,
     queryFn: ({ signal }) =>
       request<EstimateSummary[]>(trash ? "/estimates/trash" : "/estimates", {
         signal,

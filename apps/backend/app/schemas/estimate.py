@@ -173,6 +173,7 @@ class EstimateUpdate(BaseModel):
 
 
 class EstimateOut(BaseModel):
+    revision: str | None = None
     source_estimate_id: Optional[uuid.UUID] = None
     cover_image_id: Optional[str] = None
     id: uuid.UUID
