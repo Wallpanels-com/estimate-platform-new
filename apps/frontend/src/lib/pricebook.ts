@@ -3,6 +3,7 @@ import type { CategoryIcon } from "./category-icons";
 export { categoryIcons } from "./category-icons";
 export type { CategoryIcon } from "./category-icons";
 export interface BookCategory {
+  parent_id?: string | null;
   id: string;
   name: string;
   name_ru: string;
@@ -40,6 +41,7 @@ export const localized = (
   t: (key: string) => string,
 ) => (language === "ru" ? entry.name_ru || t(entry.name) : entry.name);
 export const categoryBody = (entry: BookCategory) => ({
+  parent_id: entry.parent_id || null,
   name: entry.name,
   name_ru: entry.name_ru,
   description: entry.description,
@@ -57,3 +59,40 @@ export const itemKindLabel = {
   material: "Material",
   service: "Service",
 };
+
+export function categoryTrail(entry: BookCategory, categories: BookCategory[]) {
+  const trail: BookCategory[] = [];
+  let current: BookCategory | undefined = entry;
+  while (current && !trail.some((c) => c.id === current!.id)) {
+    trail.unshift(current);
+    current = categories.find((c) => c.id === current?.parent_id);
+  }
+  return trail;
+}
+export const categoryAvailable = (
+  entry: BookCategory,
+  categories: BookCategory[],
+) => categoryTrail(entry, categories).every((c) => !c.archived);
+export const categoryLabel = (
+  entry: BookCategory,
+  categories: BookCategory[],
+  language: Language,
+  t: (key: string) => string,
+) =>
+  categoryTrail(entry, categories)
+    .map((c) => localized(c, language, t))
+    .join(" / ");
+export function orderedCategories(categories: BookCategory[]): BookCategory[] {
+  const result: BookCategory[] = [];
+  function visit(parent: string | null) {
+    for (const c of categories.filter(
+      (c) => (c.parent_id || null) === parent,
+    )) {
+      if (result.some((entry) => entry.id === c.id)) continue;
+      result.push(c);
+      visit(c.id);
+    }
+  }
+  visit(null);
+  return result;
+}

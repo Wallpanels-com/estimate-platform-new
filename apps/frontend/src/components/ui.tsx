@@ -240,6 +240,8 @@ export function Confirm({
   onConfirm,
   onClose,
   busy,
+  variant = "danger",
+  error,
 }: {
   title: string;
   children: ReactNode;
@@ -247,17 +249,27 @@ export function Confirm({
   onConfirm: () => void;
   onClose: () => void;
   busy?: boolean;
+  variant?: "primary" | "danger";
+  error?: string;
 }) {
   const { t } = useI18n();
 
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal
+      title={title}
+      onClose={() => {
+        if (!busy) onClose();
+      }}
+    >
       <div className="modal-body">
         <p>{children}</p>
+        {error ? <ErrorNotice>{error}</ErrorNotice> : null}
       </div>
       <footer className="modal-footer">
-        <Button onClick={onClose}>{t("Cancel")}</Button>
-        <Button variant="danger" busy={busy} onClick={onConfirm}>
+        <Button onClick={onClose} disabled={busy} autoFocus>
+          {t("Cancel")}
+        </Button>
+        <Button variant={variant} busy={busy} onClick={onConfirm}>
           {action}
         </Button>
       </footer>

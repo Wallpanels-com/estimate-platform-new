@@ -26,7 +26,18 @@ def read_catalog(config):
 def categories(config):
     book=read_catalog(config)
     defaults=[{'id':key,'name':name,'name_ru':'','description':'','description_ru':'','icon':icon,'archived':False,'version':0,**book['overrides'].get(key,{}),'builtin':True,'calculator_id':key if key in CALCULATORS else None} for key,name,icon in BUILTINS]
-    return defaults + [{**c,'builtin':False,'calculator_id':None} for c in book['categories']]
+    return [{'parent_id':None,**c} for c in defaults + [{**c,'builtin':False,'calculator_id':None} for c in book['categories']]]
+
+def category_available(config, ident):
+    """Archiving a parent hides its descendants without destroying their state."""
+    seen=set()
+    while ident:
+        if ident in seen:return False
+        seen.add(ident)
+        entry=category(config,ident)
+        if entry['archived']:return False
+        ident=entry.get('parent_id')
+    return True
 
 def category(config, ident):
     result=next((c for c in categories(config) if c['id']==ident),None)
@@ -44,8 +55,16 @@ def category_change(config, payload, ident=None):
     if old:
         version_check(old,payload.expected_version)
         if old['builtin'] and data['archived']:raise HTTPException(409,'Built-in categories cannot be archived.')
+        if old['builtin'] and data['parent_id']:raise HTTPException(409,'Built-in categories must stay at the top level.')
     elif data['archived']:raise HTTPException(422,'Create an active category first.')
-    if any(c['id'] != ident and c['name'].casefold()==data['name'].casefold() for c in categories(config)):
+    parent=data['parent_id'];seen={ident} if ident else set()
+    while parent:
+        if parent in seen:raise HTTPException(422,'A category cannot be placed inside itself or its descendants.')
+        seen.add(parent)
+        parent_entry=category(config,parent)
+        if parent_entry['archived'] and not data['archived']:raise HTTPException(409,'Restore the parent category first.')
+        parent=parent_entry.get('parent_id')
+    if any(c['id'] != ident and c.get('parent_id')==data['parent_id'] and c['name'].casefold()==data['name'].casefold() for c in categories(config)):
         raise HTTPException(409,'A category with this name already exists.')
     entry={**data,'id':ident or str(uuid.uuid4()),'version':old['version']+1 if old else 1}
     if old and old['builtin']:book['overrides'][ident]=entry
@@ -60,7 +79,7 @@ def item_change(config,payload,ident=None):
     if ident and not old:raise HTTPException(404,'Price Book item not found.')
     if old:version_check(old,payload.expected_version)
     cat=category(config,payload.category_id)
-    if cat['archived'] and not payload.archived:raise HTTPException(409,'Restore this category before editing active items.')
+    if not category_available(config,cat['id']) and not payload.archived:raise HTTPException(409,'Restore this category before editing active items.')
     data=payload.model_dump(mode='json',exclude={'expected_version'})
     entry={**data,'id':ident or str(uuid.uuid4()),'version':old['version']+1 if old else 1}
     if old:book['items']=[entry if item['id']==ident else item for item in book['items']]
@@ -72,7 +91,7 @@ def quote(config,ident,quantity):
     item=next((item for item in read_catalog(config)['items'] if item['id']==ident),None)
     if not item:raise HTTPException(404,'Price Book item not found.')
     cat=category(config,item['category_id'])
-    if item['archived'] or cat['archived']:raise HTTPException(409,'This Price Book item is archived.')
+    if item['archived'] or not category_available(config,cat['id']):raise HTTPException(409,'This Price Book item is archived.')
     qty=Decimal('1') if item['pricing_mode']=='fixed' else quantity
     rate=Decimal(str(item['unit_price'])) if item['unit_price'] is not None else None
     total=((rate or Decimal('0'))*qty).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)

@@ -2,7 +2,12 @@ import Select, { Combobox } from "./Select";
 import CatalogPicker from "./pricebook/CatalogPicker";
 import ItemForm from "./pricebook/ItemForm";
 import SearchSelect from "./SearchSelect";
-import { type BookData, type BookItem, localized } from "../lib/pricebook";
+import {
+  type BookData,
+  type BookItem,
+  categoryAvailable,
+  localized,
+} from "../lib/pricebook";
 import { useI18n } from "../lib/i18n";
 import { useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,8 +31,8 @@ export default function AddItems({
     queryKey: ["pricebook-catalog"],
     queryFn: () => request<BookData>("/pricing/catalog"),
   });
-  const categories = (catalog.data?.categories || []).filter(
-    (c) => !c.archived,
+  const categories = (catalog.data?.categories || []).filter((c) =>
+    categoryAvailable(c, catalog.data?.categories || []),
   );
   const catalogItems = (catalog.data?.items || []).filter(
     (i) => !i.archived && categories.some((c) => c.id === i.category_id),

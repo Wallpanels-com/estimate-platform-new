@@ -2983,6 +2983,23 @@ html[lang="ru"] .line-head {
   color: var(--bronze-dark);
   font-weight: 600;
 }
+.book-navigation nav > button.book-subcategory {
+  font-size: 12px;
+}
+.book-navigation nav > button > svg {
+  flex-shrink: 0;
+}
+.book-category-title .book-breadcrumb {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.book-confirm-name {
+  display: block;
+  margin-bottom: 12px;
+  overflow-wrap: anywhere;
+}
 .book-navigation nav > .book-add-category {
   margin-top: 12px;
   border-color: #cdbb9c;
@@ -3007,6 +3024,7 @@ html[lang="ru"] .line-head {
 }
 .book-category-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: start;
   justify-content: space-between;
   gap: 20px;
@@ -3014,11 +3032,13 @@ html[lang="ru"] .line-head {
 }
 .book-category-title {
   display: flex;
+  flex: 1 1 260px;
   align-items: start;
   min-width: 0;
   gap: 12px;
 }
 .book-category-title > svg {
+  flex-shrink: 0;
   margin-top: 1px;
   color: var(--bronze-dark);
 }
@@ -3039,6 +3059,10 @@ html[lang="ru"] .line-head {
 }
 .book-category-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-inline-start: auto;
+  max-width: 100%;
   gap: 4px;
   align-items: center;
   flex-shrink: 0;

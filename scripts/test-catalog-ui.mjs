@@ -53,7 +53,7 @@ const dir = await mkdtemp(resolve(".local/catalog-ui-"));
 try {
   const compiled = await build({
     stdin: {
-      contents: `export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
+      contents: `export {default as PriceBook} from './apps/frontend/src/pages/PriceBook'; export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -68,6 +68,7 @@ try {
   await writeFile(resolve(dir, "app.mjs"), compiled.outputFiles[0].contents);
   const {
     AddItems,
+    PriceBook,
     LanguageProvider,
     QueryClient,
     QueryClientProvider,
@@ -77,6 +78,11 @@ try {
   } = await import(pathToFileURL(resolve(dir, "app.mjs")));
   const categories = ["wall", "cabinet", "mirror", "services"].map((id) => ({
     id,
+    icon: "folder",
+    builtin: true,
+    parent_id: null,
+    description: "",
+    description_ru: "",
     name: id,
     name_ru: "",
     archived: false,
@@ -112,6 +118,9 @@ try {
     colors: [],
     services: {},
   };
+  let categoryWrites = [],
+    rateWrites = [];
+  let config = { wall: { base_rate: 40 } };
   let book,
     creates,
     quotes,
@@ -125,7 +134,28 @@ try {
     const path = String(url).replace("/api/v1", "");
     const payload = options.body ? JSON.parse(options.body) : null;
     let body;
-    if (path === "/pricing/schema") body = schema;
+    if (path === "/pricing/config") {
+      if (payload) {
+        rateWrites.push(payload);
+        config = payload.config;
+      }
+      body = { config, revision: "test-revision", is_default: false };
+    } else if (path.startsWith("/pricing/catalog/categories")) {
+      categoryWrites.push(payload);
+      const id = path.split("/")[4] || `category-${categoryWrites.length}`;
+      const previous = book.categories.find((c) => c.id === id);
+      body = {
+        ...payload,
+        id,
+        version: (previous?.version || 0) + 1,
+        builtin: false,
+        calculator_id: null,
+      };
+      book = {
+        ...book,
+        categories: [...book.categories.filter((c) => c.id !== id), body],
+      };
+    } else if (path === "/pricing/schema") body = schema;
     else if (path === "/pricing/catalog" && !payload) body = book;
     else if (path === "/pricing/catalog/items") {
       creates.push(payload);
@@ -242,7 +272,7 @@ try {
       ),
     );
   }
-  async function submit() {
+  async function submit(confirm = true) {
     await act(async () =>
       editor()
         .querySelector("form")
@@ -253,6 +283,10 @@ try {
     await act(async () => {
       await new Promise((r) => setTimeout(r, 10));
     });
+    const confirmation =
+      button("Confirm save", editor()) ||
+      button("Подтвердить сохранение", editor());
+    if (confirmation && confirm) await click(confirmation);
   }
   const picker = () => document.querySelector('input[role="combobox"]');
 
@@ -292,6 +326,19 @@ try {
   await input(editor().querySelector('[name="name_ru"]'), "Полка на заказ");
   await input(editor().querySelector('[name="unit_price"]'), "45.50");
   await input(editor().querySelector('[name="default_quantity"]'), "2");
+  await submit(false);
+  assert.equal(
+    creates.length,
+    0,
+    "Opening confirmation must not persist an item",
+  );
+  await click(button("Cancel", editor()));
+  assert.equal(
+    editor().querySelector('[name="unit_price"]').value,
+    "45.50",
+    "Cancel retains the draft",
+  );
+  assert.equal(creates.length, 0);
   failAdd = true;
   await submit();
   assert.equal(creates.length, 1);
@@ -370,8 +417,106 @@ try {
   await click(button("Добавить новую позицию"));
   assert.equal(editor().querySelector('[name="name"]').value, "Карниз");
   await cleanup();
+  // Exercise the actual Price Book page, including confirmations before writes.
+  for (const language of ["en", "ru"]) {
+    localStorage.setItem("wallpanels.ui-language", language);
+    book = { categories, items: [] };
+    config = { wall: { base_rate: 40 } };
+    rateWrites = [];
+    categoryWrites = [];
+    client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    root = createRoot(document.getElementById("root"));
+    await act(async () =>
+      root.render(
+        h(
+          LanguageProvider,
+          null,
+          h(QueryClientProvider, { client }, h(PriceBook)),
+        ),
+      ),
+    );
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    const ru = language === "ru";
+    await input(
+      document.querySelector('.book-rate-form input[type="number"]'),
+      "41",
+    );
+    const saveRate = ru ? "Сохранить ставки" : "Save rates";
+    const confirmSave = ru ? "Подтвердить сохранение" : "Confirm save";
+    const cancel = ru ? "Отмена" : "Cancel";
+    await click(button(saveRate));
+    assert.equal(rateWrites.length, 0);
+    await click(button(cancel, editor()));
+    assert.equal(
+      document.querySelector('.book-rate-form input[type="number"]').value,
+      "41",
+    );
+    await click(button(saveRate));
+    await click(button(confirmSave, editor()));
+    assert.equal(rateWrites.length, 1);
+    assert.equal(rateWrites[0].config.wall.base_rate, 41);
+    assert.equal(rateWrites[0].expected_revision, "test-revision");
+    await click(button(ru ? "Добавить категорию" : "Add category"));
+    await input(editor().querySelector('[name="name"]'), "Custom finishes");
+    await input(editor().querySelector('[name="name_ru"]'), "Отделка на заказ");
+    const saveCategory = ru ? "Сохранить категорию" : "Save category";
+    await click(button(saveCategory, editor()));
+    assert.equal(categoryWrites.length, 0);
+    await click(button(cancel, editor()));
+    assert.equal(
+      editor().querySelector('[name="name"]').value,
+      "Custom finishes",
+    );
+    await click(button(saveCategory, editor()));
+    await click(button(confirmSave, editor()));
+    assert.equal(categoryWrites.length, 1);
+    assert.equal(categoryWrites[0].parent_id, null);
+    await click(button(ru ? "Добавить подкатегорию" : "Add subcategory"));
+    assert.equal(
+      editor().querySelector('[name="parent_id"]').value,
+      "category-1",
+    );
+    await input(editor().querySelector('[name="name"]'), "Oak");
+    await click(button(saveCategory, editor()));
+    await click(button(confirmSave, editor()));
+    assert.equal(categoryWrites[1].parent_id, "category-1");
+    await click(
+      document.querySelector(
+        '.book-category-actions button[title="' +
+          (ru ? "Изменить категорию" : "Edit category") +
+          '"]',
+      ),
+    );
+    await input(editor().querySelector('[name="name"]'), "Natural oak");
+    await click(button(saveCategory, editor()));
+    assert.equal(categoryWrites.length, 2);
+    await click(button(confirmSave, editor()));
+    assert.equal(categoryWrites[2].expected_version, 1);
+    assert.equal(categoryWrites[2].parent_id, "category-1");
+    const archiveCategory = () =>
+      document.querySelector(
+        '.book-category-actions button[title="' +
+          (ru ? "Архивировать категорию" : "Archive category") +
+          '"]',
+      );
+    await click(archiveCategory());
+    await click(button(cancel, editor()));
+    assert.equal(categoryWrites.length, 3);
+    await click(archiveCategory());
+    await click(
+      button(ru ? "В архив" : "Archive", editor()) ||
+        button(ru ? "Архивировать" : "Archive", editor()),
+    );
+    assert.equal(categoryWrites.at(-1).archived, true);
+    assert.equal(categoryWrites.at(-1).expected_version, 2);
+    await cleanup();
+  }
   console.log(
-    "Catalogue UI tests passed: EN/RU search, keyboard selection/create, Price Book persistence callback, current-zone quote, retry without duplicate item, cancel and unchanged calculator routing.",
+    "Catalogue UI tests passed: EN/RU search, keyboard selection/create, Price Book persistence callback, current-zone quote, retry without duplicate item, cancel, unchanged calculator routing, and EN/RU Price Book rate/category/subcategory/edit/archive confirmations.",
   );
 } finally {
   await rm(dir, { recursive: true, force: true });

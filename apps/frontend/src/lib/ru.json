@@ -762,5 +762,22 @@
   "Created by": "Создал",
   "Login": "Логин",
   "Reload this estimate before saving changes.": "Обновите смету перед сохранением изменений.",
-  "Another employee changed this estimate. Your changes were not applied. Reload and review the latest version.": "Другой сотрудник изменил смету. Ваши изменения не применены. Обновите страницу и проверьте актуальную версию."
+  "Another employee changed this estimate. Your changes were not applied. Reload and review the latest version.": "Другой сотрудник изменил смету. Ваши изменения не применены. Обновите страницу и проверьте актуальную версию.",
+  "Parent category": "Родительская категория",
+  "Top-level category": "Основная категория",
+  "Add subcategory": "Добавить подкатегорию",
+  "Save category changes?": "Сохранить изменения категории?",
+  "Create this category?": "Создать категорию?",
+  "Confirm save": "Подтвердить сохранение",
+  "Save item changes?": "Сохранить изменения позиции?",
+  "Create this item?": "Создать позицию?",
+  "Save “{0}” to the shared Price Book? Existing estimates will not change.": "Сохранить «{0}» в общем справочнике? Существующие сметы не изменятся.",
+  "Restore this entry?": "Восстановить запись?",
+  "This entry will be available again if its parent categories are active.": "Запись снова станет доступна, если родительские категории активны.",
+  "This category, its subcategories and their items will be hidden from new estimates. Existing estimates are unchanged. You can restore the category later.": "Категория, её подкатегории и позиции будут скрыты при добавлении в новые сметы. Существующие сметы не изменятся. Категорию можно будет восстановить.",
+  "Save pricing changes?": "Сохранить изменения расценок?",
+  "Save all changed rates and parameters to the shared Price Book? All employees will use these values for new calculations. Saved estimates will not be repriced.": "Сохранить все изменённые ставки и параметры в общем справочнике? Все сотрудники будут использовать их для новых расчётов. Цены в сохранённых сметах не изменятся.",
+  "A category cannot be placed inside itself or its descendants.": "Нельзя поместить категорию внутрь неё самой или её подкатегорий.",
+  "Restore the parent category first.": "Сначала восстановите родительскую категорию.",
+  "Built-in categories must stay at the top level.": "Встроенные категории должны оставаться на верхнем уровне."
 }

@@ -3,7 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Search, Check, Plus } from "lucide-react";
 import { request, post, money, errorMessage } from "../../lib/api";
 import type { CalculatedItem } from "../../lib/types";
-import { type BookData, type BookItem, localized } from "../../lib/pricebook";
+import {
+  type BookData,
+  type BookItem,
+  categoryAvailable,
+  categoryLabel,
+  categoryTrail,
+  orderedCategories,
+  localized,
+} from "../../lib/pricebook";
 import { useI18n } from "../../lib/i18n";
 import { Button, EmptyState, ErrorNotice, Field, Loading } from "../ui";
 import Select from "../Select";
@@ -30,13 +38,18 @@ export default function CatalogPicker({
     queryKey: ["pricebook-catalog"],
     queryFn: () => request<BookData>("/pricing/catalog"),
   });
-  const activeCategories =
-    query.data?.categories.filter((c) => !c.archived) || [];
+  const activeCategories = orderedCategories(
+    query.data?.categories || [],
+  ).filter((c) => categoryAvailable(c, query.data?.categories || []));
   const items = (query.data?.items || []).filter(
     (i) =>
       !i.archived &&
       activeCategories.some((c) => c.id === i.category_id) &&
-      (!category || i.category_id === category) &&
+      (!category ||
+        categoryTrail(
+          activeCategories.find((c) => c.id === i.category_id)!,
+          activeCategories,
+        ).some((c) => c.id === category)) &&
       `${i.name} ${i.name_ru} ${i.description} ${i.description_ru}`
         .toLocaleLowerCase()
         .includes(search.toLocaleLowerCase()),
@@ -85,7 +98,7 @@ export default function CatalogPicker({
             <option value="">{t("All categories")}</option>
             {activeCategories.map((c) => (
               <option key={c.id} value={c.id}>
-                {localized(c, language, t)}
+                {categoryLabel(c, query.data?.categories || [], language, t)}
               </option>
             ))}
           </Select>

@@ -37,6 +37,41 @@ class PriceBookContracts(unittest.TestCase):
         self.assertEqual(error.exception.status_code,409)
         with self.assertRaises(HTTPException):category_change(self.config,CategoryInput(name='wall PANELS'))
         with self.assertRaises(HTTPException):category_change(self.config,CategoryInput(name='Walls',archived=True),'wall')
+    def test_subcategories_move_archive_restore_and_quote(self):
+        config,child=category_change(self.config,CategoryInput(name='Slats',parent_id=self.cid))
+        config,grandchild=category_change(config,CategoryInput(name='Oak',parent_id=child))
+        config,item=item_change(config,ItemInput(category_id=grandchild,name='Oak panels',unit='SF',unit_price='12.50'))
+        snapshot=quote(config,item['id'],Decimal('4'))
+        self.assertEqual(snapshot['total_price'],'50.00')
+        # Hiding a parent must prevent quoting and restoring active items under it.
+        config,_=category_change(config,CategoryInput(name='Acoustic work',archived=True,expected_version=1),self.cid)
+        with self.assertRaises(HTTPException):quote(config,item['id'],Decimal('4'))
+        with self.assertRaises(HTTPException):item_change(config,ItemInput(category_id=grandchild,name='Invalid',unit_price='12'))
+        self.assertEqual(next(c for c in categories(config) if c['id']==grandchild)['archived'],False)
+        config,_=category_change(config,CategoryInput(name='Acoustic work',expected_version=2),self.cid)
+        self.assertEqual(quote(config,item['id'],Decimal('4')),snapshot)
+        # Reparenting a custom subtree retains items and formulas.
+        config,_=category_change(config,CategoryInput(name='Slats renamed',parent_id='wall',expected_version=1),child)
+        self.assertEqual(next(c for c in categories(config) if c['id']==child)['parent_id'],'wall')
+        self.assertEqual(quote(config,item['id'],Decimal('4')),snapshot)
+        self.assertEqual(legacy_config(config),DEFAULT_PRICING_CONFIG)
+
+    def test_subcategory_cycles_missing_parent_and_sibling_names(self):
+        config,child=category_change(self.config,CategoryInput(name='Oak',parent_id=self.cid))
+        for payload,ident in [
+            (CategoryInput(name='Acoustic work',parent_id=child),self.cid),
+            (CategoryInput(name='Oak',parent_id=child),child),
+            (CategoryInput(name='Bad',parent_id='missing'),None),
+            (CategoryInput(name='Wall panels',parent_id=child),'wall'),
+            (CategoryInput(name='oak',parent_id=self.cid),None),
+        ]:
+            with self.assertRaises(HTTPException):category_change(config,payload,ident)
+        # Same material group name is valid under a different parent.
+        config,other=category_change(config,CategoryInput(name='Oak',parent_id='wall'))
+        self.assertNotEqual(other,child)
+        config,_=category_change(config,CategoryInput(name='Acoustic work',archived=True),self.cid)
+        with self.assertRaises(HTTPException):category_change(config,CategoryInput(name='Hidden child',parent_id=child))
+
     def test_quote_unit_fixed_unpriced_and_snapshot(self):
         config,item=item_change(self.config,ItemInput(category_id=self.cid,name='Acoustic installation',name_ru='Монтаж',description='Scope',unit='SF',unit_price='12.55',parameters=[{'name':'Finish','value':'Oak'}]))
         snapshot=quote(config,item['id'],Decimal('3'))

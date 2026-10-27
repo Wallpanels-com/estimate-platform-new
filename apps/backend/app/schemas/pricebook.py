@@ -10,6 +10,7 @@ class BookModel(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
 
 class CategoryInput(BookModel):
+    parent_id: str | None = Field(default=None, min_length=1, max_length=80)
     name: str = Field(min_length=1, max_length=160)
     name_ru: str = Field(default='', max_length=160)
     description: str = Field(default='', max_length=1200)

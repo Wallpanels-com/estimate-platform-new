@@ -20,6 +20,10 @@ import {
   categoryBody,
   itemBody,
   localized,
+  categoryAvailable,
+  categoryLabel,
+  categoryTrail,
+  orderedCategories,
 } from "../lib/pricebook";
 import { useI18n } from "../lib/i18n";
 import {
@@ -51,14 +55,17 @@ export default function PriceBook() {
   const [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
     [reset, setReset] = useState(false),
-    [showArchived, setShowArchived] = useState(false);
+    [showArchived, setShowArchived] = useState(false),
+    [confirmRates, setConfirmRates] = useState(false),
+    [actionError, setActionError] = useState(""),
+    [newParent, setNewParent] = useState<string | null>(null);
   const [categoryForm, setCategoryForm] = useState<BookCategory | "new" | null>(
       null,
     ),
     [itemForm, setItemForm] = useState<BookItem | "new" | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<
-    | { kind: "category"; entry: BookCategory }
-    | { kind: "item"; entry: BookItem }
+    | { kind: "category"; entry: BookCategory; restore?: boolean }
+    | { kind: "item"; entry: BookItem; restore?: boolean }
     | null
   >(null);
   const query = useQuery({
@@ -94,6 +101,9 @@ export default function PriceBook() {
     (i) => i.category_id === category?.id,
   );
   const activeCount = items.filter((i) => !i.archived).length;
+  useEffect(() => {
+    setActionError("");
+  }, [confirmRates, reset, archiveTarget]);
   function select(c: BookCategory) {
     setTab(c.id);
     setView(c.builtin ? "rates" : "items");
@@ -114,7 +124,12 @@ export default function PriceBook() {
   }
   async function save(event: FormEvent) {
     event.preventDefault();
+    setConfirmRates(true);
+  }
+  async function persistRates() {
+    if (busy) return;
     setBusy(true);
+    setActionError("");
     try {
       const result = await request<ConfigResponse>("/pricing/config", {
         method: "PUT",
@@ -127,7 +142,9 @@ export default function PriceBook() {
       await client.invalidateQueries({ queryKey: ["pricing-schema"] });
       await client.invalidateQueries({ queryKey: ["quick-pricing"] });
       notify("Price book saved");
+      setConfirmRates(false);
     } catch (err) {
+      setActionError(errorMessage(err));
       notify(errorMessage(err), true);
     } finally {
       setBusy(false);
@@ -142,6 +159,7 @@ export default function PriceBook() {
     archived: boolean,
   ) {
     setBusy(true);
+    setActionError("");
     try {
       const body =
         kind === "category"
@@ -159,6 +177,7 @@ export default function PriceBook() {
       }
       notify(archived ? "Entry archived" : "Entry restored");
     } catch (err) {
+      setActionError(errorMessage(err));
       notify(errorMessage(err), true);
     } finally {
       setBusy(false);
@@ -166,6 +185,7 @@ export default function PriceBook() {
   }
   async function resetDefaults() {
     setBusy(true);
+    setActionError("");
     try {
       const result = await post<ConfigResponse>("/pricing/config/reset");
       client.setQueryData(["pricing-config"], result);
@@ -173,9 +193,11 @@ export default function PriceBook() {
       setRevision(result.revision);
       setDirty(false);
       await client.invalidateQueries({ queryKey: ["pricing-schema"] });
+      await client.invalidateQueries({ queryKey: ["quick-pricing"] });
       setReset(false);
       notify("Default pricing restored");
     } catch (err) {
+      setActionError(errorMessage(err));
       notify(errorMessage(err), true);
     } finally {
       setBusy(false);
@@ -210,8 +232,8 @@ export default function PriceBook() {
         <div className="book-layout">
           <aside className="book-navigation">
             <nav aria-label={t("Price categories")}>
-              {categories
-                .filter((c) => showArchived || !c.archived)
+              {orderedCategories(categories)
+                .filter((c) => showArchived || categoryAvailable(c, categories))
                 .map((c) => {
                   const CategoryIcon = categoryIcons[c.icon];
                   return (
@@ -219,7 +241,14 @@ export default function PriceBook() {
                       type="button"
                       key={c.id}
                       aria-current={category.id === c.id ? "page" : undefined}
-                      className={c.archived ? "book-archived" : ""}
+                      className={`${!categoryAvailable(c, categories) ? "book-archived" : ""} ${c.parent_id ? "book-subcategory" : ""}`}
+                      title={categoryLabel(c, categories, language, t)}
+                      style={{
+                        paddingInlineStart:
+                          12 +
+                          Math.min(categoryTrail(c, categories).length - 1, 4) *
+                            16,
+                      }}
                       onClick={() => select(c)}
                     >
                       <CategoryIcon size={18} aria-hidden="true" />
@@ -232,7 +261,10 @@ export default function PriceBook() {
                 })}
               <Button
                 className="book-add-category"
-                onClick={() => setCategoryForm("new")}
+                onClick={() => {
+                  setNewParent(null);
+                  setCategoryForm("new");
+                }}
               >
                 <Plus size={17} />
                 {t("Add category")}
@@ -258,6 +290,14 @@ export default function PriceBook() {
               <div className="book-category-title">
                 <Icon size={24} aria-hidden="true" />
                 <div>
+                  {category.parent_id ? (
+                    <p className="book-breadcrumb">
+                      {categoryTrail(category, categories)
+                        .slice(0, -1)
+                        .map((c) => localized(c, language, t))
+                        .join(" / ")}
+                    </p>
+                  ) : null}
                   <h2>{name}</h2>
                   <p>
                     {(language === "ru"
@@ -274,6 +314,16 @@ export default function PriceBook() {
                 </div>
               </div>
               <div className="book-category-actions">
+                <Button
+                  disabled={!categoryAvailable(category, categories)}
+                  onClick={() => {
+                    setNewParent(category.id);
+                    setCategoryForm("new");
+                  }}
+                >
+                  <Plus size={16} />
+                  {t("Add subcategory")}
+                </Button>
                 <Button
                   variant="ghost"
                   aria-label={t("Edit category")}
@@ -298,7 +348,11 @@ export default function PriceBook() {
                     disabled={busy}
                     onClick={() =>
                       category.archived
-                        ? archive("category", category, false)
+                        ? setArchiveTarget({
+                            kind: "category",
+                            entry: category,
+                            restore: true,
+                          })
                         : setArchiveTarget({
                             kind: "category",
                             entry: category,
@@ -315,14 +369,14 @@ export default function PriceBook() {
                 <Button
                   variant="primary"
                   onClick={() => setItemForm("new")}
-                  disabled={category.archived}
+                  disabled={!categoryAvailable(category, categories)}
                 >
                   <Plus size={16} />
                   {t("Add item")}
                 </Button>
               </div>
             </header>
-            {category.archived ? (
+            {!categoryAvailable(category, categories) ? (
               <p className="book-context-note">
                 {t(
                   "This category is archived. Restore it to use its items in estimates.",
@@ -401,8 +455,14 @@ export default function PriceBook() {
                   onArchive={(item) =>
                     setArchiveTarget({ kind: "item", entry: item })
                   }
-                  onRestore={(item) => archive("item", item, false)}
-                  disabled={busy || category.archived}
+                  onRestore={(item) =>
+                    setArchiveTarget({
+                      kind: "item",
+                      entry: item,
+                      restore: true,
+                    })
+                  }
+                  disabled={busy || !categoryAvailable(category, categories)}
                 />
               </>
             )}
@@ -412,6 +472,8 @@ export default function PriceBook() {
       {categoryForm ? (
         <CategoryForm
           category={categoryForm === "new" ? undefined : categoryForm}
+          categories={categories}
+          parentId={newParent}
           onClose={() => setCategoryForm(null)}
           onSaved={async (c) => {
             await refreshCatalogue();
@@ -436,19 +498,49 @@ export default function PriceBook() {
       {archiveTarget ? (
         <Confirm
           title={t(
-            archiveTarget.kind === "category"
-              ? "Archive this category?"
-              : "Archive this item?",
+            archiveTarget.restore
+              ? "Restore this entry?"
+              : archiveTarget.kind === "category"
+                ? "Archive this category?"
+                : "Archive this item?",
           )}
-          action={t("Archive")}
+          action={t(archiveTarget.restore ? "Restore" : "Archive")}
+          variant={archiveTarget.restore ? "primary" : "danger"}
+          error={actionError}
           busy={busy}
           onClose={() => setArchiveTarget(null)}
           onConfirm={() =>
-            archive(archiveTarget.kind, archiveTarget.entry, true)
+            archive(
+              archiveTarget.kind,
+              archiveTarget.entry,
+              !archiveTarget.restore,
+            )
           }
         >
+          <strong className="book-confirm-name">
+            {localized(archiveTarget.entry, language, t)}
+          </strong>
           {t(
-            "Archived entries are hidden from new estimates. Existing estimates are unchanged, and you can restore this entry later.",
+            archiveTarget.restore
+              ? "This entry will be available again if its parent categories are active."
+              : archiveTarget.kind === "category"
+                ? "This category, its subcategories and their items will be hidden from new estimates. Existing estimates are unchanged. You can restore the category later."
+                : "Archived entries are hidden from new estimates. Existing estimates are unchanged, and you can restore this entry later.",
+          )}
+        </Confirm>
+      ) : null}
+      {confirmRates ? (
+        <Confirm
+          title={t("Save pricing changes?")}
+          action={t("Confirm save")}
+          variant="primary"
+          busy={busy}
+          error={actionError}
+          onClose={() => setConfirmRates(false)}
+          onConfirm={persistRates}
+        >
+          {t(
+            "Save all changed rates and parameters to the shared Price Book? All employees will use these values for new calculations. Saved estimates will not be repriced.",
           )}
         </Confirm>
       ) : null}
@@ -458,6 +550,7 @@ export default function PriceBook() {
           action={t("Restore defaults")}
           busy={busy}
           onClose={() => setReset(false)}
+          error={actionError}
           onConfirm={resetDefaults}
         >
           {t(
