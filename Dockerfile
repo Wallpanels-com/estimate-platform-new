@@ -9,7 +9,13 @@ COPY apps/backend/app/data/category_icons.json apps/backend/app/data/category_ic
 RUN npm run build
 
 FROM python:3.12-slim
-RUN apt-get update && apt-get install -y --no-install-recommends fonts-liberation fonts-dejavu-core && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-liberation fonts-dejavu-core curl ca-certificates \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && curl --fail --silent --show-error https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+    && . /etc/os-release \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y --no-install-recommends postgresql-client-18 \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY apps/backend/requirements.txt apps/backend/constraints-local.txt ./
 RUN pip install --no-cache-dir -r requirements.txt -c constraints-local.txt

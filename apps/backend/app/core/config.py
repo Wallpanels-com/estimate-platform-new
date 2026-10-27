@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     AUTO_MIGRATE: bool = False
     ENABLE_PERMANENT_DELETE: bool = False
     REQUIRE_ESTIMATE_REVISION: bool = True
+    BACKUP_ENABLED: bool = False
+    BACKUP_ENDPOINT: str = ""
+    BACKUP_BUCKET: str = ""
+    BACKUP_REGION: str = "auto"
+    BACKUP_ACCESS_KEY_ID: str = ""
+    BACKUP_SECRET_ACCESS_KEY: str = ""
+    BACKUP_ADDRESSING_STYLE: str = "path"
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod

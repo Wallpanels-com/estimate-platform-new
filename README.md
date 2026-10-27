@@ -172,3 +172,9 @@ SSH setup and the exact release sequence are documented in
 Additional details are in [architecture](docs/architecture.md), [QA](docs/qa.md),
 [managed Price Book](docs/price-book-managed.md), [Pre-Estimate V2](docs/pre-estimate-v2.md),
 and [Final Estimate corporate slides](docs/final-company-slides.md).
+
+## Corporate deployment
+
+The new corporate deployment and backup operations are documented in
+[Railway operations](docs/railway-operations.md). Secrets and employee passwords
+remain outside the repository.
