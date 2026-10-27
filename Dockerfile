@@ -5,6 +5,7 @@ COPY package.json package-lock.json ./
 COPY apps/frontend/package.json apps/frontend/package.json
 RUN npm ci
 COPY apps/frontend apps/frontend
+COPY apps/backend/app/data/category_icons.json apps/backend/app/data/category_icons.json
 RUN npm run build
 
 FROM python:3.12-slim
