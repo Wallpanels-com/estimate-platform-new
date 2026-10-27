@@ -779,5 +779,7 @@
   "Save all changed rates and parameters to the shared Price Book? All employees will use these values for new calculations. Saved estimates will not be repriced.": "Сохранить все изменённые ставки и параметры в общем справочнике? Все сотрудники будут использовать их для новых расчётов. Цены в сохранённых сметах не изменятся.",
   "A category cannot be placed inside itself or its descendants.": "Нельзя поместить категорию внутрь неё самой или её подкатегорий.",
   "Restore the parent category first.": "Сначала восстановите родительскую категорию.",
-  "Built-in categories must stay at the top level.": "Встроенные категории должны оставаться на верхнем уровне."
+  "Built-in categories must stay at the top level.": "Встроенные категории должны оставаться на верхнем уровне.",
+  "Changing a login signs this employee out. Their estimates and history are kept.": "После изменения логина сотрудник выйдет из аккаунта. Его сметы и история сохранятся.",
+  "This login is already in use.": "Этот логин уже используется."
 }

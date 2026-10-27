@@ -61,6 +61,13 @@ class UserCreate(PasswordInput):
 
 
 class UserUpdate(BaseModel):
+    email: str | None = Field(default=None, min_length=3, max_length=254)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_login(cls, value):
+        return login_identifier(value) if value is not None else None
+
     name: str | None = Field(default=None, min_length=1, max_length=120)
     role: Literal["user"] | None = None
     is_active: bool | None = None

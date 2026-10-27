@@ -39,9 +39,13 @@ async def update_user(user_id: uuid.UUID, data: UserUpdate, db: AsyncSession = D
     if not user:
         raise HTTPException(404, "User not found.")
     values = data.model_dump(exclude_unset=True, exclude_none=True)
+    if "email" in values and values["email"] != user.email:
+        duplicate = (await db.execute(select(User).where(User.email == values["email"], User.id != user.id))).scalar_one_or_none()
+        if duplicate:
+            raise HTTPException(409, "This login is already in use.")
     if user.id == actor.id and values.get("is_active") is False:
         raise HTTPException(409, "You cannot disable your own account.")
-    if any(key in values and values[key] != getattr(user, key) for key in ("role", "is_active")):
+    if any(key in values and values[key] != getattr(user, key) for key in ("email", "role", "is_active")):
         user.token_version += 1
     for key, value in values.items():
         setattr(user, key, value)

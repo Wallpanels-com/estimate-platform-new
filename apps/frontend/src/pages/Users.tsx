@@ -10,7 +10,7 @@ import Select from "../components/Select";
 
 export default function Users() {
   const { t } = useI18n();
-  const { user: me } = useAuth();
+  const { user: me, signOut } = useAuth();
   const client = useQueryClient();
   const query = useQuery({
     queryKey: ["team-users"],
@@ -41,6 +41,7 @@ export default function Users() {
         await post("/users", Object.fromEntries(form));
       else if (editing)
         await patch(`/users/${editing.id}`, {
+          email: form.get("email"),
           name: form.get("name"),
           role: form.get("role") || editing.role,
           is_active:
@@ -48,6 +49,17 @@ export default function Users() {
               ? editing.is_active
               : form.get("is_active") === "true",
         });
+      if (
+        passwordUser?.id === me?.id ||
+        (editing &&
+          editing !== "new" &&
+          editing.id === me?.id &&
+          String(form.get("email")).trim().toLowerCase() !== me.email)
+      ) {
+        signOut();
+        return;
+      }
+      await client.invalidateQueries({ queryKey: ["me"] });
       await client.invalidateQueries({ queryKey: ["team-users"] });
       setEditing(null);
       setPasswordUser(null);
@@ -144,16 +156,26 @@ export default function Users() {
                       maxLength={120}
                     />
                   </Field>
-                  {editing === "new" ? (
-                    <Field label="Login">
-                      <input
-                        name="email"
-                        type="text"
-                        autoComplete="off"
-                        required
-                      />
-                    </Field>
-                  ) : null}
+                  <Field
+                    label="Login"
+                    hint={
+                      editing !== "new"
+                        ? "Changing a login signs this employee out. Their estimates and history are kept."
+                        : undefined
+                    }
+                  >
+                    <input
+                      name="email"
+                      type="text"
+                      autoComplete="off"
+                      defaultValue={
+                        editing && editing !== "new" ? editing.email : ""
+                      }
+                      required
+                      minLength={3}
+                      maxLength={254}
+                    />
+                  </Field>
                   {editing !== "new" ? (
                     <Field label="Status">
                       <Select
