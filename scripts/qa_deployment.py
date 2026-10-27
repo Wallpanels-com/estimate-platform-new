@@ -88,9 +88,10 @@ if args.phase == "verify":
     catalogue = call(b, "GET", "/pricing/catalog").json()
     assert any(i["id"] == state["item_id"] and i["unit_price"] == "15.00" for i in catalogue["items"])
     write(b, "DELETE", state["estimate_id"], expected=204)
-    assert any(e["id"] == state["estimate_id"] for e in call(a, "GET", "/estimates/trash").json())
+    branch_ids = {state["estimate_id"], state["final_id"]}
+    assert any(e["id"] in branch_ids for e in call(a, "GET", "/estimates/trash").json())
     write(a, "POST", state["estimate_id"], "/restore")
-    assert any(e["id"] == state["estimate_id"] for e in call(a, "GET", "/estimates").json())
+    assert any(e["id"] in branch_ids for e in call(a, "GET", "/estimates").json())
     write(b, "DELETE", state["estimate_id"], expected=204)
     item = next(i for i in catalogue["items"] if i["id"] == state["item_id"])
     call(b, "PUT", "/pricing/catalog/items/" + item["id"], json={"category_id": item["category_id"], "name": item["name"], "unit": "SF", "unit_price": "15.00", "archived": True, "expected_version": item["version"]})

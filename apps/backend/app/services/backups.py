@@ -52,7 +52,7 @@ def client():
     return boto3.client("s3", endpoint_url=settings.BACKUP_ENDPOINT,
         region_name=settings.BACKUP_REGION, aws_access_key_id=settings.BACKUP_ACCESS_KEY_ID,
         aws_secret_access_key=settings.BACKUP_SECRET_ACCESS_KEY,
-        config=Config(s3={"addressing_style": settings.BACKUP_ADDRESSING_STYLE},
+        config=Config(s3={"addressing_style": "virtual" if settings.BACKUP_ADDRESSING_STYLE == "virtual-host" else settings.BACKUP_ADDRESSING_STYLE},
                       connect_timeout=15, read_timeout=120, retries={"max_attempts": 3}))
 
 
