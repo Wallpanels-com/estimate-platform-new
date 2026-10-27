@@ -1,5 +1,11 @@
 # Corporate deployment verification — 27 October 2026
 
+Historical launch results below predate the owner's later PDF storage policy.
+PDF presentations are now generated on demand only; saved PDF bytes have been
+removed and existing backups rewritten without PDFs. Estimate data, photos,
+audit metadata and retained XLSX versions remain. See the current policy in
+[Railway operations](railway-operations.md).
+
 Application release: `b7907980f9fee91b7ac5d8f769f532036cb93401`.
 Repository: `Wallpanels-com/estimate-platform-new`, branch `main`.
 Project: `76fff733-80e1-436c-8670-4f2d3e4fbd1f`, Wallpanels.com workspace.

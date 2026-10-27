@@ -1,4 +1,4 @@
-"""Back up the localhost database and complete storage as one stopped-app checkpoint."""
+"""Back up localhost data and retained files; generated PDFs are excluded."""
 import datetime
 import hashlib
 import json
@@ -33,12 +33,12 @@ if parsed.password:
 binary = shutil.which("pg_dump") or str(Path(env.get("LOCAL_PG_BIN", "")) / "pg_dump")
 subprocess.run([binary, "-Fc", "--no-owner", "--no-acl", "--file", str(target / "database.dump")], env=pg_env, check=True)
 with tarfile.open(target / "storage.tar.gz", "w:gz") as archive:
-    archive.add(storage, arcname="storage")
+    archive.add(storage, arcname="storage", filter=lambda member: None if Path(member.name).suffix.lower() == '.pdf' or member.name.startswith('storage/pdfs') else member)
 manifest = {"commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
             "source_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT)),
-            "storage_files": {}, "artifacts": {}}
+            "storage_files": {}, "artifacts": {}, "pdf_presentations_excluded": True}
 for path in storage.rglob("*"):
-    if path.is_file():
+    if path.is_file() and path.suffix.lower() != '.pdf' and path.relative_to(storage).parts[0] != 'pdfs':
         manifest["storage_files"][str(path.relative_to(storage))] = hashlib.sha256(path.read_bytes()).hexdigest()
 for path in target.iterdir():
     if path.is_file():

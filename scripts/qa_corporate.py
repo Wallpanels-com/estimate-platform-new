@@ -53,7 +53,7 @@ def main():
             assert all(entry in current_catalog[group] for entry in state["catalog_after"][group])
         media = call(sales, "GET", "/media/" + state["image_id"])
         assert hashlib.sha256(media.content).hexdigest() == state["photo_sha256"]
-        for doc in state["documents"]:
+        for doc in (d for d in state["documents"] if d.get("kind") != "pdf"):
             preview = call(sales, "GET", "/documents/" + doc["id"])
             downloaded = call(sales, "GET", "/documents/" + doc["id"] + "?download=true")
             assert preview.content == downloaded.content
@@ -128,14 +128,11 @@ def main():
         assert call(a, "POST", "/pricing/calc/" + kind, json=payload).json()["total"] == total
     pre = call(b, "GET", f"/pdf/{eid}/pre-estimate")
     assert len(PdfReader(io.BytesIO(pre.content)).pages) > 0
-    documents = [call(b, "POST", f"/estimates/{eid}/documents", 201, json={"kind": "pdf", "label": "Pre sent version"}).json(),
-                 call(b, "POST", f"/estimates/{eid}/documents", 201, json={"kind": "xlsx", "label": "Passport sent version"}).json()]
-    sheet = call(b, "GET", "/documents/" + documents[1]["id"])
+    documents = [call(b, "POST", f"/estimates/{eid}/documents", 201, json={"kind": "xlsx", "label": "Passport sent version"}).json()]
+    sheet = call(b, "GET", "/documents/" + documents[0]["id"])
     assert load_workbook(io.BytesIO(sheet.content)).active["C3"].value == "Corporate QA"
     final = call(b, "POST", f"/estimates/{eid}/mode", json={"mode": "final"}).json()
-    final_doc = call(b, "POST", f'/estimates/{final["id"]}/documents', 201, json={"kind": "pdf", "label": "Final sent version"}).json()
-    documents.append(final_doc)
-    result = call(b, "GET", "/documents/" + final_doc["id"])
+    result = call(b, "GET", f'/pdf/{final["id"]}/final-estimate')
     assert len(PdfReader(io.BytesIO(result.content)).pages) >= 16
     # A later saved change must never rewrite the issued PDF or XLSX.
     call(b, "PATCH", f'/estimates/{final["id"]}', json={"notes": "Edited after issuing"})

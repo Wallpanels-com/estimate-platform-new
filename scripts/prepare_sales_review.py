@@ -140,7 +140,6 @@ def main():
             assert hashlib.sha256(body).digest()==hashlib.sha256(source.read_bytes()).digest()
         pre=call(c,'GET',f'/pdf/{eid}/pre-estimate').content
         assert pre==call(clients[(index+1)%4],'GET',f'/pdf/{eid}/pre-estimate?download=true').content
-        pre_path=out/f'{index+1}-pre.pdf';pre_path.write_bytes(pre)
         pre_reader=PdfReader(io.BytesIO(pre));text=' '.join(p.extract_text() for p in pre_reader.pages)
         for zone in est['zones']:assert zone['label'].lower() in re.sub(r'\s+',' ',text).lower()
         sheet=call(c,'GET',f'/pdf/{eid}/passport').content
@@ -158,7 +157,6 @@ def main():
         final=get(fid)
         final_bytes=call(c,'GET',f'/pdf/{fid}/final-estimate').content
         assert final_bytes==call(clients[(index+1)%4],'GET',f'/pdf/{fid}/final-estimate?download=true').content
-        final_path=out/f'{index+1}-final.pdf';final_path.write_bytes(final_bytes)
         reader=PdfReader(io.BytesIO(final_bytes))
         assert [page_signature(page) for page in reader.pages[-13:]]==company.signatures
         summaries=[page for page in reader.pages[:-13] if 'investment summary' in re.sub(r'\s+',' ',page.extract_text()).lower()]

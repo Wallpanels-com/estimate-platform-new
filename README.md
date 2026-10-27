@@ -157,7 +157,9 @@ never upload `.env`, `.local`, raw client backups or employee passwords to GitHu
 See [deployment verification](docs/deployment-verification.md) for the release checks.
 
 All active employees now have one **User** role with equal shared access, personal
-credentials, attributed history and immutable saved PDF/XLSX versions. Corporate
+credentials, attributed history and immutable saved XLSX versions. PDF presentations
+are generated only for Preview/Download, then their temporary files are deleted;
+PDFs are never included in data backups. Corporate
 SSH setup and the exact release sequence are documented in
 [corporate release preparation](docs/corporate-release.md).
 

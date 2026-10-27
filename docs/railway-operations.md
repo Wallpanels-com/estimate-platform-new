@@ -33,6 +33,13 @@ visible. Reload before retrying a conflict; never silently overwrite it.
 
 ## Backups
 
+**Current owner policy (27 October 2026): PDF presentations are download-only.**
+Preview and Download generate a temporary file and remove it after delivery.
+PDF version storage is disabled on both frontend and backend. Only XLSX versions
+can be retained. Existing PDF bytes were removed from `/data/issued` and `/data/pdfs`;
+their small historical audit/metadata records remain, without a stored PDF.
+Old PDF download IDs return 410; use the current estimate's PDF buttons instead.
+
 `estimate-backups` is a separate private Railway Bucket in this new project.
 Only reference variables connect it to the application; credentials are never
 copied into source. Backups run daily while the single application replica is
@@ -43,11 +50,12 @@ Each archive contains:
 
 - A native PostgreSQL 18 custom-format dump from an exported repeatable-read
   snapshot, including users, prices, estimates, audit records and document versions.
-- Every file referenced by that snapshot, including photographs, voice files,
-  saved PDF/XLSX versions, plus exact release assets/templates and all 13 company slides.
+- Referenced photographs, voice files and saved XLSX versions. No generated PDF
+  files are included. Release assets/templates, including the corporate source
+  PDF, are kept in Git and the application image rather than duplicated in data backups.
 - A manifest with table counts, release SHA and individual SHA-256 checksums.
 
-Image and issued-document paths are immutable and old bytes are retained. Files
+Image and retained XLSX paths are immutable. Files
 are collected after the database snapshot; changed or missing files reject the
 backup. The uploaded archive is downloaded again and every checksum verified
 before success is recorded. No automatic backup deletion is enabled until a
@@ -60,6 +68,11 @@ Authenticated operations (all employees have the same rights):
 - `POST /api/v1/operations/backups?verify=true`: also restore the database into a
   new temporary `estimate_backup_verify_<random UUID>` database, compare every
   table count and Alembic version, then remove that temporary database only.
+- `POST /api/v1/operations/backups/remove-pdf-archives`: apply the PDF policy to
+  existing stored exports and private backup archives. Each old archive is
+  rewritten in place without PDFs or release assets, retaining and checksum-
+  verifying its original DB dump, photographs, audio and XLSX files. Only this
+  app's `wallpanels-backups/` prefix is processed.
 
 There is deliberately no endpoint to restore over the live database. A real
 disaster restore must use a new empty PostgreSQL database and a new empty file
@@ -79,7 +92,7 @@ backup implementation and are not claimed as configured.
 After restarting only the new application service, run the same command with
 `verify`. It checks seven logins, shared edits, conflict rejection, all three
 calculator results, catalogue editing/quotes, uploads, Pre/Final Preview versus
-Download byte equality, native 13-page corporate appendix, immutable versions,
+Download byte equality, native 13-page corporate appendix, immutable XLSX versions,
 XLSX, history, soft delete/restore and restart persistence. It archives its TEST
 catalogue and leaves its TEST estimate recoverable in Trash. Existing estimates
 are compared without being edited.
