@@ -1,10 +1,11 @@
 /** Exercise the real React item editor and picker in an isolated DOM; no browser or database writes. */
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, rm, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 import { JSDOM } from "jsdom";
+import postcss from "postcss";
 
 const dom = new JSDOM(
   '<!doctype html><html><body><div id="root"></div></body></html>',
@@ -53,7 +54,7 @@ const dir = await mkdtemp(resolve(".local/catalog-ui-"));
 try {
   const compiled = await build({
     stdin: {
-      contents: `export {default as CategoryForm} from './apps/frontend/src/components/pricebook/CategoryForm'; export {default as PriceBook} from './apps/frontend/src/pages/PriceBook'; export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
+      contents: `export {default as Photos} from './apps/frontend/src/components/Photos'; export {default as CategoryForm} from './apps/frontend/src/components/pricebook/CategoryForm'; export {default as PriceBook} from './apps/frontend/src/pages/PriceBook'; export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -70,6 +71,7 @@ try {
     AddItems,
     PriceBook,
     CategoryForm,
+    Photos,
     LanguageProvider,
     QueryClient,
     QueryClientProvider,
@@ -133,6 +135,10 @@ try {
     calculatorCalls;
   globalThis.fetch = async (url, options = {}) => {
     const path = String(url).replace("/api/v1", "");
+    if (path.startsWith("/media/"))
+      return new Response(new Uint8Array([0]), {
+        headers: { "Content-Type": "image/png" },
+      });
     const payload = options.body ? JSON.parse(options.body) : null;
     let body;
     if (path === "/pricing/config") {
@@ -551,8 +557,93 @@ try {
     archivedParent.id,
   );
   await act(async () => root.unmount());
+  // Regression: hidden upload fields must not create a layout box below a
+  // scroll rail. The visible Add/Replace actions must still open the chooser.
+  const sheet = postcss.parse(
+    await readFile("apps/frontend/src/styles.css", "utf8"),
+  );
+  const uploadStyle = document.createElement("style");
+  sheet.walkRules((rule) => {
+    if (
+      rule.selector === ".file-input" ||
+      rule.selector.replace(/\s/g, "") === "input,select,textarea"
+    )
+      uploadStyle.textContent += rule.toString();
+  });
+  document.head.append(uploadStyle);
+  for (const count of [0, 4]) {
+    const uploads = [];
+    root = createRoot(document.getElementById("root"));
+    await act(async () =>
+      root.render(
+        h(
+          LanguageProvider,
+          null,
+          h(Photos, {
+            zone: {
+              id: "photo-scroll-zone",
+              images: Array.from({ length: count }, (_, i) => ({
+                slot: i + 1,
+                id: `photo-${i + 1}`,
+              })),
+            },
+            busy: false,
+            finalMode: true,
+            onUpload: (slot, file) => uploads.push({ slot, file }),
+            onDelete: () => {},
+          }),
+        ),
+      ),
+    );
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    const fileInput = document.querySelector('input[type="file"]');
+    assert.equal(
+      dom.window.getComputedStyle(fileInput).display,
+      "none",
+      "Upload field must be excluded from scroll geometry",
+    );
+    let chooserOpened = 0;
+    fileInput.addEventListener("click", (e) => {
+      e.preventDefault();
+      chooserOpened++;
+    });
+    if (count === 0) await click(button("Add photo"));
+    else {
+      assert.equal(
+        button("Add photo"),
+        undefined,
+        "Four photos remains the maximum",
+      );
+      await click(
+        document.querySelectorAll(".photo-actions .action-menu-trigger")[2],
+      );
+      await click(
+        button(
+          "Replace photo",
+          document.querySelectorAll(".action-popover")[2],
+        ),
+      );
+    }
+    assert.equal(chooserOpened, 1);
+    const file = new dom.window.File(["photo bytes"], "photo.png", {
+      type: "image/png",
+    });
+    Object.defineProperty(fileInput, "files", {
+      value: [file],
+      configurable: true,
+    });
+    await act(async () =>
+      fileInput.dispatchEvent(new Event("change", { bubbles: true })),
+    );
+    assert.equal(uploads.length, 1);
+    assert.equal(uploads[0].slot, count === 0 ? 1 : 3);
+    assert.equal(uploads[0].file, file);
+    await act(async () => root.unmount());
+  }
   console.log(
-    "Catalogue UI tests passed: EN/RU search, keyboard selection/create, Price Book persistence callback, current-zone quote, retry without duplicate item, cancel, unchanged calculator routing, and EN/RU Price Book rate/category/subcategory/edit/archive confirmations.",
+    "Catalogue UI tests passed: EN/RU search, keyboard selection/create, Price Book persistence callback, current-zone quote, retry without duplicate item, cancel, unchanged calculator routing, and EN/RU Price Book rate/category/subcategory/edit/archive confirmations, and hidden photo upload/replace regression.",
   );
 } finally {
   await rm(dir, { recursive: true, force: true });

@@ -1232,12 +1232,9 @@ html[lang="ru"] .line-head {
 }
 
 .file-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  opacity: 0;
-  overflow: hidden;
+  /* Opened by the visible upload buttons. An absolute, transparent input can
+     escape a scroll rail and enlarge the document below the workspace. */
+  display: none;
 }
 .rail-footnote {
   color: var(--muted);
@@ -2651,6 +2648,15 @@ html[lang="ru"] .line-head {
   }
 }
 @media (min-width: 1100px) {
+  .builder-root {
+    overflow: clip;
+  }
+  .photo-rail,
+  .builder-main,
+  .zones-list,
+  .project-summary {
+    overscroll-behavior-y: contain;
+  }
   .zones-rail {
     overflow: hidden;
   }
