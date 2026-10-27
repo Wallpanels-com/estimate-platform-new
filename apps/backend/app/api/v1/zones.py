@@ -7,7 +7,7 @@ import uuid
 
 from app.core.database import get_db
 from app.models.user import User
-from app.models.estimate import Estimate, EstimateZone, LineItem
+from app.models.estimate import Estimate, EstimateZone, LineItem, EstimateImage
 from app.schemas.estimate import ZoneCreate, ZoneUpdate, ZoneOut
 from app.api.deps import get_current_user
 from app.api.v1.estimates import recalc_totals, load_estimate, touch
@@ -101,6 +101,17 @@ async def duplicate_zone(
             is_tbd=item.is_tbd,
         ))
 
+    from app.services.estimate_branches import image_copy
+    for image in src.images:
+        db.add(EstimateImage(estimate_id=estimate_id, zone_id=new_zone.id,
+                            slot=image.slot, original_name=image.original_name,
+                            file_path=image_copy(image.file_path, estimate_id, new_zone.id)))
+    layout = dict(est.pdf_layout or {})
+    choices = dict(layout.get('final_zone_photos', {}))
+    if str(src.id) in choices:
+        choices[str(new_zone.id)] = choices[str(src.id)]
+        layout['final_zone_photos'] = choices
+        est.pdf_layout = layout
     touch(est, current_user)
     await db.flush()
     est = await load_estimate(estimate_id, current_user, db)

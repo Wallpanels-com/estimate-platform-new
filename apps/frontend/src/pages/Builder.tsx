@@ -85,6 +85,10 @@ export default function Builder() {
     "calculator" | "manual" | "services" | null
   >(null);
   const [ai, setAi] = useState(false);
+  const capabilities = useQuery({
+    queryKey: ["auth-settings"],
+    queryFn: () => request<{ ai_enabled: boolean }>("/auth/settings"),
+  });
   const [busy, setBusy] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [exporting, setExporting] = useState<"pdf" | "xlsx" | null>(null);
@@ -533,11 +537,15 @@ export default function Builder() {
                         icon: <Plus size={16} />,
                         onSelect: () => setAdding("services"),
                       },
-                      {
-                        label: "AI description",
-                        icon: <Sparkles size={16} />,
-                        onSelect: () => setAi(true),
-                      },
+                      ...(capabilities.data?.ai_enabled
+                        ? [
+                            {
+                              label: "AI description",
+                              icon: <Sparkles size={16} />,
+                              onSelect: () => setAi(true),
+                            },
+                          ]
+                        : []),
                     ]}
                   />
                   <Button

@@ -23,7 +23,24 @@ RULES={rule.id:rule for rule in [
 ]}
 
 def calculate(identifier,config,**validated_parameters):
-    return RULES[identifier].calculate(config=config,**validated_parameters)
+    result = RULES[identifier].calculate(config=config,**validated_parameters)
+    if identifier == 'mirror' and result['line_items']:
+        # Keep the original formula/total, but persist installation separately so
+        # an ordinary quantity edit cannot discard the fixed installation fee.
+        from decimal import Decimal
+        item = dict(result['line_items'][0])
+        material = Decimal(str(item['quantity'])) * Decimal(str(item['unit_price']))
+        installation = Decimal(str(item['total_price'])) - material
+        item['total_price'] = float(material)
+        result = {**result, 'line_items': [item]}
+        if installation:
+            result['line_items'].append({
+                'section': 'Mirrors', 'name': 'Mirror Delivery & Installation',
+                'description': '', 'calc_type': 'fixed', 'quantity': 1,
+                'unit': 'ea', 'unit_price': float(installation),
+                'total_price': float(installation),
+            })
+    return result
 
 def definitions():
     return [{'id':r.id,'label':r.label,'unit':r.unit,'version':r.version} for r in RULES.values()]

@@ -301,60 +301,28 @@ async def duplicate_estimate(
     current_user: User = Depends(get_current_user),
 ):
     src = await load_estimate(estimate_id, current_user, db)
-    new_est = Estimate(
-        user_id=current_user.id,
-        type=src.type,
-        title=f"{src.title or 'Estimate'} (copy)",
-        client_name=src.client_name,
-        project_name=src.project_name,
-        prepared_by=user_display_name(current_user),
-        created_by_name=user_display_name(current_user),
-        updated_by_name=user_display_name(current_user),
-        notes=src.notes,
-        status="draft",
-    )
-    db.add(new_est)
+    if src.source_estimate_id:
+        src = await synchronize(db, src)
+    from copy import deepcopy
+    from app.services.estimate_branches import clone
+    new_est, mappings = await clone(db, src, src.type)
+    new_est.user_id = current_user.id
+    new_est.title = f"{src.title or 'Estimate'} (copy)"
+    new_est.prepared_by = user_display_name(current_user)
+    new_est.created_by_name = user_display_name(current_user)
+    new_est.updated_by_name = user_display_name(current_user)
+    new_est.status = "draft"
+    layout = deepcopy(src.pdf_layout or {})
+    layout['final_zone_photos'] = {
+        mappings['maps']['zones'][ident]: slot
+        for ident, slot in layout.get('final_zone_photos', {}).items()
+        if ident in mappings['maps']['zones']
+    }
+    new_est.pdf_layout = layout or None
+    new_est.cover_image_id = mappings['maps']['images'].get(str(src.cover_image_id)) if src.cover_image_id else None
     await db.flush()
-
-    for zone in src.zones:
-        new_zone = EstimateZone(
-            estimate_id=new_est.id,
-            sort_order=zone.sort_order,
-            zone_type=zone.zone_type,
-            label=zone.label,
-            room_name=zone.room_name,
-            wall_name=zone.wall_name,
-            wall_width_ft=zone.wall_width_ft,
-            wall_height_ft=zone.wall_height_ft,
-            square_footage=zone.square_footage,
-            linear_footage=zone.linear_footage,
-            notes=zone.notes,
-        )
-        db.add(new_zone)
-        await db.flush()
-        for item in zone.line_items:
-            db.add(LineItem(
-                estimate_id=new_est.id, zone_id=new_zone.id,
-                section=item.section, sort_order=item.sort_order, name=item.name,
-                description=item.description, calc_type=item.calc_type,
-                quantity=item.quantity, unit=item.unit, unit_price=item.unit_price,
-                total_price=item.total_price,
-            ))
-
-    # Direct (non-zone) line items
-    for item in src.line_items:
-        if item.zone_id is None:
-            db.add(LineItem(
-                estimate_id=new_est.id, zone_id=None,
-                section=item.section, sort_order=item.sort_order, name=item.name,
-                description=item.description, calc_type=item.calc_type,
-                quantity=item.quantity, unit=item.unit, unit_price=item.unit_price,
-                total_price=item.total_price,
-            ))
-
-    await db.flush()
-    new_est_full = await load_estimate(new_est.id, current_user, db)
-    recalc_totals(new_est_full)
+    full = await load_estimate(new_est.id, current_user, db)
+    recalc_totals(full)
     await db.commit()
     return await load_estimate(new_est.id, current_user, db)
 

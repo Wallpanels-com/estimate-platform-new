@@ -125,6 +125,7 @@ export default function PriceBook() {
       setRevision(result.revision);
       setDirty(false);
       await client.invalidateQueries({ queryKey: ["pricing-schema"] });
+      await client.invalidateQueries({ queryKey: ["quick-pricing"] });
       notify("Price book saved");
     } catch (err) {
       notify(errorMessage(err), true);
@@ -358,7 +359,7 @@ export default function PriceBook() {
                 {category.id === "quick_estimate" ? (
                   <p className="book-context-note">
                     {t(
-                      "Quick Estimate currently uses separate legacy template rates. These settings do not update all room-template calculations.",
+                      "Quick Estimate keeps its own room-template formulas and uses the saved rates below.",
                     )}
                   </p>
                 ) : null}

@@ -2,7 +2,7 @@ import Select from "../components/Select";
 import { useI18n } from "../lib/i18n";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, ArrowRight, Save } from "lucide-react";
 import { Button, Field, PageHeader, useNotice } from "../components/ui";
 import {
@@ -10,8 +10,9 @@ import {
   roomTypes,
   roomOptions,
   type QuickRoom,
+  type QuickPricing,
 } from "../lib/quickEstimate";
-import { post, patch, money, errorMessage } from "../lib/api";
+import { request, post, patch, money, errorMessage } from "../lib/api";
 import type { Estimate, Zone } from "../lib/types";
 import { useAuth } from "../lib/auth";
 import PreparedBy from "../components/PreparedBy";
@@ -28,8 +29,13 @@ export default function QuickEstimate() {
   const navigate = useNavigate();
   const client = useQueryClient();
   const { user } = useAuth();
+  const pricing = useQuery({
+    queryKey: ["quick-pricing"],
+    queryFn: () => request<QuickPricing>("/pricing/quick-config"),
+    refetchInterval: busy ? false : 8000,
+  });
   const subtotal = rooms
-    .flatMap(calculateRoom)
+    .flatMap((room) => calculateRoom(room, pricing.data))
     .reduce((sum, i) => sum + Number(i.total_price), 0);
   const total = subtotal * (1 + markup / 100) * (1 - discount / 100);
   useEffect(() => {
@@ -72,6 +78,7 @@ export default function QuickEstimate() {
     setBusy(true);
     let created: string | undefined;
     try {
+      const savedRates = await request<QuickPricing>("/pricing/quick-config");
       const estimate = await post<Estimate>("/estimates", {
         ...fields,
         type: "quick",
@@ -91,7 +98,7 @@ export default function QuickEstimate() {
               : null,
           sort_order: index,
         });
-        const items = calculateRoom(room);
+        const items = calculateRoom(room, savedRates);
         for (let i = 0; i < items.length; i++)
           await post(`/estimates/${estimate.id}/line-items`, {
             ...items[i],
@@ -191,7 +198,7 @@ export default function QuickEstimate() {
               </div>
             ) : (
               rooms.map((room, index) => {
-                const items = calculateRoom(room);
+                const items = calculateRoom(room, pricing.data);
                 return (
                   <section className="quick-room" key={room.id}>
                     <header>
@@ -396,7 +403,7 @@ export default function QuickEstimate() {
               <span>{r.label}</span>
               <strong>
                 {money(
-                  calculateRoom(r).reduce(
+                  calculateRoom(r, pricing.data).reduce(
                     (s, i) => s + Number(i.total_price),
                     0,
                   ),

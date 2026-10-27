@@ -49,12 +49,59 @@ export const buildoutTiers = [
   { max: 24, price: 5000 },
   { max: Infinity, price: 6000 },
 ];
-export function calculateRoom(room: QuickRoom): CalculatedItem[] {
+export interface QuickPricing {
+  quick_estimate?: {
+    wall_rate?: number;
+    mirror_rate?: number;
+    mirror_installation?: {
+      rate_small: number;
+      rate_large: number;
+      threshold_sf: number;
+    };
+    fixed_items?: Record<string, { price: number }>;
+    buildout_tiers?: { max_ft: number; price: number }[];
+  };
+  cabinet_types?: Record<string, { base_rate: number }>;
+}
+export function calculateRoom(
+  room: QuickRoom,
+  pricing?: QuickPricing,
+): CalculatedItem[] {
   const items: CalculatedItem[] = [];
   const o = room.options;
   const width = Number(room.width_ft) || 0;
   const sf = width * (Number(room.height_ft) || 0);
-  const r = quickRates;
+  const q = pricing?.quick_estimate;
+  const cabinetRate = (key: string, fallback: number) =>
+    pricing?.cabinet_types?.[key]?.base_rate ?? fallback;
+  const r = {
+    ...quickRates,
+    wall: q?.wall_rate ?? quickRates.wall,
+    mirror: q?.mirror_rate ?? quickRates.mirror,
+    mirrorSmall: q?.mirror_installation?.rate_small ?? quickRates.mirrorSmall,
+    mirrorLarge: q?.mirror_installation?.rate_large ?? quickRates.mirrorLarge,
+    mirrorThreshold:
+      q?.mirror_installation?.threshold_sf ?? quickRates.mirrorThreshold,
+    fireplace: q?.fixed_items?.efireplace_unit?.price ?? quickRates.fireplace,
+    fireplaceInstall:
+      q?.fixed_items?.fireplace_installation?.price ??
+      quickRates.fireplaceInstall,
+    bottleRack: q?.fixed_items?.bottle_racks?.price ?? quickRates.bottleRack,
+    tvStand: cabinetRate("tv_stand", quickRates.tvStand),
+    console: cabinetRate("entry_console", quickRates.console),
+    nightStand: cabinetRate("night_stands", quickRates.nightStand),
+    vanity: cabinetRate("vanity", quickRates.vanity),
+    deskBudget: cabinetRate("desk_budget", quickRates.deskBudget),
+    deskHigh: cabinetRate("desk_highend", quickRates.deskHigh),
+    bar: cabinetRate("bar_cabinetry", quickRates.bar),
+    builtin: cabinetRate("builtin_cabinetry", quickRates.builtin),
+    wardrobe: cabinetRate("wardrobe_closet", quickRates.wardrobe),
+  };
+  const tiers =
+    q?.buildout_tiers?.map((tier) => ({
+      max: tier.max_ft,
+      price: tier.price,
+    })) || buildoutTiers;
   const priced = (
     name: string,
     section: string,
@@ -147,7 +194,10 @@ export function calculateRoom(room: QuickRoom): CalculatedItem[] {
           "Construction",
           1,
           "ea",
-          buildoutTiers.find((t) => Number(o.buildout_ft) <= t.max)!.price,
+          (
+            tiers.find((t) => Number(o.buildout_ft) <= t.max) ||
+            tiers[tiers.length - 1]
+          ).price,
         );
       electrical();
       break;

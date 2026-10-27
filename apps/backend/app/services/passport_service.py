@@ -172,11 +172,31 @@ def _rebuild_left(ws, est, styles):
         row += 1
 
     # Grand total
+    base = "+".join(f"I{r}" for r in zone_total_rows) or "0"
+    adjustment_rows = []
+    markup = Decimal(str(getattr(est, "markup_pct", 0) or 0))
+    discount = Decimal(str(getattr(est, "discount_pct", 0) or 0))
+    factor = f"(1+{markup}/100)*(1-{discount}/100)"
+    adjustments = []
+    if markup:
+        adjustments.append((f"Markup ({markup:g}%)", f"=ROUND(({base})*{markup}/100,2)"))
+    if discount:
+        adjustments.append((f"Discount ({discount:g}%)", f"=ROUND(({base})*{factor},2)-ROUND(({base})*(1+{markup}/100),2)"))
+    if getattr(est, "manual_override", False):
+        final = Decimal(str(est.final_total))
+        adjustments.append(("Manual project adjustment", f"=ROUND({final}*{factor},2)-ROUND(({base})*{factor},2)"))
+    for label, formula in adjustments:
+        for c in range(C_ZONE, C_TOTAL + 1):
+            _apply(ws.cell(row=row, column=c), ZTOT[c])
+        ws.cell(row=row, column=C_PRICE).value = label
+        ws.cell(row=row, column=C_TOTAL).value = formula
+        adjustment_rows.append(row)
+        row += 1
     for c in range(C_ZONE, C_TOTAL + 1):
         _apply(ws.cell(row=row, column=c), GTOT[c])
     ws.cell(row=row, column=C_PRICE).value = "TOTAL Estimate"
     if zone_total_rows:
-        ws.cell(row=row, column=C_TOTAL).value = "=" + "+".join(f"I{r}" for r in zone_total_rows)
+        ws.cell(row=row, column=C_TOTAL).value = "=" + "+".join(f"I{r}" for r in zone_total_rows + adjustment_rows)
     else:
         ws.cell(row=row, column=C_TOTAL).value = _num(getattr(est, "final_total", 0)) or 0
     return row  # grand-total row

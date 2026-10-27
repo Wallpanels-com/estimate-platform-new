@@ -65,7 +65,8 @@ async def update_me(
 
 @router.get("/settings")
 async def auth_settings():
-    return {"self_registration": settings.ALLOW_SELF_REGISTRATION}
+    return {"self_registration": settings.ALLOW_SELF_REGISTRATION,
+            "ai_enabled": bool(settings.OPENAI_API_KEY and settings.OPENAI_API_KEY != "local-not-configured")}
 
 
 class ChangePassword(PasswordInput):
