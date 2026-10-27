@@ -111,7 +111,8 @@ export default function CategoryForm({
                   {orderedCategories(categories)
                     .filter(
                       (c) =>
-                        categoryAvailable(c, categories) &&
+                        (categoryAvailable(c, categories) ||
+                          c.id === category?.parent_id) &&
                         !categoryTrail(c, categories).some(
                           (ancestor) => ancestor.id === category?.id,
                         ),

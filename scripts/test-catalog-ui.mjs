@@ -53,7 +53,7 @@ const dir = await mkdtemp(resolve(".local/catalog-ui-"));
 try {
   const compiled = await build({
     stdin: {
-      contents: `export {default as PriceBook} from './apps/frontend/src/pages/PriceBook'; export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
+      contents: `export {default as CategoryForm} from './apps/frontend/src/components/pricebook/CategoryForm'; export {default as PriceBook} from './apps/frontend/src/pages/PriceBook'; export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -69,6 +69,7 @@ try {
   const {
     AddItems,
     PriceBook,
+    CategoryForm,
     LanguageProvider,
     QueryClient,
     QueryClientProvider,
@@ -515,6 +516,41 @@ try {
     assert.equal(categoryWrites.at(-1).expected_version, 2);
     await cleanup();
   }
+  // Editing an archived child must keep its archived parent selected.
+  const archivedParent = {
+    ...categories[0],
+    id: "archived-parent",
+    name: "Archived parent",
+    builtin: false,
+    archived: true,
+  };
+  const archivedChild = {
+    ...archivedParent,
+    id: "archived-child",
+    name: "Archived child",
+    parent_id: archivedParent.id,
+  };
+  localStorage.setItem("wallpanels.ui-language", "en");
+  root = createRoot(document.getElementById("root"));
+  await act(async () =>
+    root.render(
+      h(
+        LanguageProvider,
+        null,
+        h(CategoryForm, {
+          category: archivedChild,
+          categories: [...categories, archivedParent, archivedChild],
+          onClose: () => {},
+          onSaved: async () => {},
+        }),
+      ),
+    ),
+  );
+  assert.equal(
+    editor().querySelector('[name="parent_id"]').value,
+    archivedParent.id,
+  );
+  await act(async () => root.unmount());
   console.log(
     "Catalogue UI tests passed: EN/RU search, keyboard selection/create, Price Book persistence callback, current-zone quote, retry without duplicate item, cancel, unchanged calculator routing, and EN/RU Price Book rate/category/subcategory/edit/archive confirmations.",
   );
