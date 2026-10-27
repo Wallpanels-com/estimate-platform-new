@@ -12,14 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 from app.api.deps import get_current_user
 from app.api.v1.estimates import load_estimate
-from app.api.v1.pdf import _render_final
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
 from app.models.estimate import Estimate, EstimateImage
 from app.models.governance import AuditEvent, DocumentVersion
 from app.schemas.estimate import EstimateOut
-from app.services.pre_estimate_service import generate_pre_estimate
 from app.services.passport_service import generate_passport
 from app.services.estimate_branches import synchronize
 from app.core.estimate_routes import EstimateRoute
@@ -67,7 +65,7 @@ def document_row(row):
 @router.get("/estimates/{estimate_id}/documents")
 async def document_list(estimate_id: uuid.UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     await load_estimate(estimate_id, user, db)
-    rows = (await db.execute(select(DocumentVersion).where(DocumentVersion.estimate_id == estimate_id).order_by(desc(DocumentVersion.created_at)))).scalars().all()
+    rows = (await db.execute(select(DocumentVersion).where(DocumentVersion.estimate_id == estimate_id, DocumentVersion.kind != "pdf").order_by(desc(DocumentVersion.created_at)))).scalars().all()
     return [document_row(row) for row in rows]
 
 
@@ -78,6 +76,8 @@ class IssueDocument(BaseModel):
 
 @router.post("/estimates/{estimate_id}/documents", status_code=201)
 async def issue_document(estimate_id: uuid.UUID, data: IssueDocument, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    if data.kind == "pdf":
+        raise HTTPException(409, "PDF presentations are generated for preview and download only. Saving PDF versions is disabled.")
     est = await load_estimate(estimate_id, user, db)
     if est.deleted_at:
         raise HTTPException(409, "Restore this estimate before issuing a document.")
@@ -92,14 +92,8 @@ async def issue_document(estimate_id: uuid.UUID, data: IssueDocument, db: AsyncS
     target = directory / f"{ident}.{data.kind}"
     try:
         with tempfile.TemporaryDirectory(dir=directory) as work:
-            if data.kind == "xlsx":
-                generated = Path(work) / "passport.xlsx"
-                await run_in_threadpool(generate_passport, est, generated)
-            elif est.type != "final":
-                generated = Path(work) / "pre.pdf"
-                await run_in_threadpool(generate_pre_estimate, est, generated)
-            else:
-                generated = Path(await _render_final(est, work))
+            generated = Path(work) / "passport.xlsx"
+            await run_in_threadpool(generate_passport, est, generated)
             # Exclusive write: issued bytes never overwrite another version.
             with target.open("xb") as stream:
                 stream.write(generated.read_bytes())
@@ -119,6 +113,8 @@ async def download_document(document_id: uuid.UUID, download: bool = False, db: 
     record = await db.get(DocumentVersion, document_id)
     if not record:
         raise HTTPException(404, "Document not found.")
+    if record.kind == "pdf":
+        raise HTTPException(410, "PDF presentations are no longer stored. Open the estimate to preview or download its current PDF.")
     path = Path(record.file_path).resolve()
     if not path.is_relative_to(Path(settings.STORAGE_PATH).resolve()) or not path.is_file():
         raise HTTPException(503, "Saved document file is unavailable. Restore it from backup.")

@@ -79,7 +79,7 @@ if args.phase == "verify":
     for image in state["images"]:
         data = call(b, "GET", "/media/" + image["id"]).content
         assert hashlib.sha256(data).hexdigest() == image["sha256"]
-    for doc in state["documents"]:
+    for doc in (d for d in state["documents"] if d.get("kind") != "pdf"):
         preview = call(b, "GET", "/documents/" + doc["id"]).content
         download = call(a, "GET", "/documents/" + doc["id"] + "?download=true").content
         assert preview == download and hashlib.sha256(preview).hexdigest() == doc["sha256"]
@@ -171,13 +171,12 @@ def check_pdf(ident, kind):
 check_pdf(eid, "pre")
 sheet = call(a, "GET", f"/pdf/{eid}/passport")
 assert load_workbook(io.BytesIO(sheet.content)).active["C3"].value == "TEST WallPanels"
-for kind in ("pdf", "xlsx"):
+for kind in ("xlsx",):
     state["documents"].append(write(b, "POST", eid, "/documents", 201, json={"kind": kind, "label": "TEST sent version " + kind}).json())
 save_state(state)
 final = write(b, "POST", eid, "/mode", json={"mode": "final"}).json()
 fid = state["final_id"] = final["id"]
 check_pdf(fid, "final")
-state["documents"].append(write(b, "POST", fid, "/documents", 201, json={"kind": "pdf", "label": "TEST issued Final"}).json())
 write(b, "PATCH", fid, json={"notes": "TEST changed after issuing immutable documents"})
 write(b, "PATCH", eid, json={"notes": "TEST final persistence snapshot"})
 state["prepare_checks"] = checks; save_state(state)

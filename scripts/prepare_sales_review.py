@@ -146,7 +146,7 @@ def main():
         sheet=call(c,'GET',f'/pdf/{eid}/passport').content
         xlsx_path=out/f'{index+1}-pre.xlsx';xlsx_path.write_bytes(sheet)
         passport=check_passport(xlsx_path,est)
-        for kind in ('pdf','xlsx'):
+        for kind in ('xlsx',):
             label='TEST review - Pre '+kind.upper()
             existing=call(c,'GET',f'/estimates/{eid}/documents').json()
             if not any(d['label']==label for d in existing):write(c,'POST',eid,'/documents',201,json={'kind':kind,'label':label})
@@ -170,9 +170,6 @@ def main():
         assert sum(sizes)==len(final['zones']),sizes
         final_xlsx=out/f'{index+1}-final.xlsx';final_xlsx.write_bytes(call(c,'GET',f'/pdf/{fid}/passport').content)
         check_passport(final_xlsx,final)
-        existing=call(c,'GET',f'/estimates/{fid}/documents').json()
-        if not any(d['label']=='TEST review - Final PDF' for d in existing):
-            write(c,'POST',fid,'/documents',201,json={'kind':'pdf','label':'TEST review - Final PDF'})
         write(c,'POST',fid,'/mode',json={'mode':'pre'})
         project.update(final_id=fid,pre_pages=len(pre_reader.pages),final_pages=len(reader.pages),summary_distribution=sizes,passport=passport,verified=True)
         save()

@@ -44,7 +44,7 @@ export default function EstimateRecords({
     queryKey: ["documents", id],
     queryFn: () => request<Saved[]>(`/estimates/${id}/documents`),
   });
-  async function issue(kind: "pdf" | "xlsx") {
+  async function issue(kind: "xlsx") {
     setBusy(true);
     setError("");
     try {
@@ -130,14 +130,10 @@ export default function EstimateRecords({
           <>
             <p className="form-hint">
               {t(
-                "Save the current document as an immutable version before sending it. Later edits do not change saved files.",
+                "PDF presentations are generated only for preview and download. Only XLSX versions can be saved here.",
               )}
             </p>
             <div className="record-actions">
-              <Button busy={busy} onClick={() => issue("pdf")}>
-                <Archive size={16} />
-                {t("Save PDF version")}
-              </Button>
               <Button busy={busy} onClick={() => issue("xlsx")}>
                 <Archive size={16} />
                 {t("Save XLSX version")}

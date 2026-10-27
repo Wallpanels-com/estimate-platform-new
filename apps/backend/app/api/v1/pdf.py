@@ -85,22 +85,16 @@ async def generate(
     if getattr(estimate, 'source_estimate_id', None):
         estimate = await synchronize(db, estimate)
         await db.commit()
-    output_dir = os.path.join(settings.STORAGE_PATH, "pdfs", str(estimate_id))
-    if estimate.type == 'final':
-        pdf_path = await _render_final(estimate, output_dir)
-    elif estimate.type == 'pre':
-        pdf_path = await run_in_threadpool(
-            generate_pre_estimate, estimate, Path(output_dir) / 'pre-estimate.pdf'
-        )
-    else:
-        pdf_path = generate_pdf(estimate, output_dir)
-
-    pdf_file = PdfFile(estimate_id=estimate_id, file_path=pdf_path)
-    db.add(pdf_file)
-    await db.flush()
-    await db.commit()
-
-    return {"pdf_file_id": str(pdf_file.id), "status": "ready"}
+    # Compatibility endpoint: validate a fresh render without retaining a file
+    # or creating a persistent PdfFile record. Downloads always render current data.
+    mode = 'final' if estimate.type == 'final' else 'pre'
+    with tempfile.TemporaryDirectory(prefix="wallpanels-validate-") as output_dir:
+        if mode == 'final':
+            await _render_final(estimate, output_dir)
+        else:
+            await run_in_threadpool(generate_pre_estimate, estimate, Path(output_dir) / 'pre-estimate.pdf')
+    endpoint = f"/api/v1/pdf/{estimate_id}/{mode}-estimate"
+    return {"status": "ready", "preview_url": endpoint, "download_url": endpoint + "?download=true"}
 
 
 @router.get("/{estimate_id}/download")
@@ -119,24 +113,7 @@ async def download(
     if estimate.type == 'final':
         # Legacy download links must not serve an older PDF without corporate slides.
         return await final_estimate(estimate_id, True, db, current_user)
-    if estimate.type == 'pre':
-        return await pre_estimate(estimate_id, True, db, current_user)
-
-    pdf_result = await db.execute(
-        select(PdfFile)
-        .where(PdfFile.estimate_id == estimate_id)
-        .order_by(PdfFile.created_at.desc())
-    )
-    pdf_file = pdf_result.scalars().first()
-    if not pdf_file or not os.path.exists(pdf_file.file_path):
-        raise HTTPException(status_code=404, detail="PDF not generated yet")
-
-    # Name the download after the estimate's title (as shown on the site), not the UUID.
-    return FileResponse(
-        pdf_file.file_path,
-        media_type="application/pdf",
-        filename=f"{_safe_name(estimate)}.pdf",
-    )
+    return await pre_estimate(estimate_id, True, db, current_user)
 
 
 @router.get("/{estimate_id}/passport")

@@ -41,19 +41,14 @@ class ReleasePricing(unittest.TestCase):
 
 
 class QuickSavedDocument(unittest.IsolatedAsyncioTestCase):
-    async def test_quick_without_photos_is_saved_as_preliminary_pdf(self):
+    async def test_pdf_versions_are_rejected_without_creating_files(self):
         import uuid
         from app.api.v1 import governance
         with tempfile.TemporaryDirectory() as directory:
-            est=Object(id=uuid.uuid4(),type='quick',deleted_at=None,source_estimate_id=None)
-            db=Object(execute=AsyncMock(return_value=Object(scalar=lambda:0)),add=Mock(),flush=AsyncMock(),commit=AsyncMock())
-            def render(estimate,path):
-                Path(path).write_bytes(b'%PDF-quick-preliminary-test')
-            with patch.object(governance,'load_estimate',AsyncMock(return_value=est)), \
-                 patch.object(governance.settings,'STORAGE_PATH',directory), \
-                 patch.object(governance.EstimateOut,'model_validate',return_value=Object(model_dump=lambda **kw:{})), \
-                 patch.object(governance,'generate_pre_estimate',side_effect=render) as pre, \
-                 patch.object(governance,'_render_final',AsyncMock(side_effect=AssertionError('Quick must not require Final photos'))):
-                result=await governance.issue_document(est.id,governance.IssueDocument(kind='pdf',label='TEST quick'),db,Object(name='Employee',email='employee'))
-                self.assertEqual(result['kind'],'pdf')
-                pre.assert_called_once()
+            with patch.object(governance,'load_estimate',AsyncMock()) as load, patch.object(governance.settings,'STORAGE_PATH',directory):
+                from fastapi import HTTPException
+                with self.assertRaises(HTTPException) as caught:
+                    await governance.issue_document(uuid.uuid4(),governance.IssueDocument(kind='pdf',label='TEST'),Object(),Object())
+                self.assertEqual(caught.exception.status_code,409)
+                load.assert_not_awaited()
+                self.assertEqual(list(Path(directory).rglob('*')),[])

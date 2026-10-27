@@ -19,3 +19,14 @@ async def create(verify: bool = False):
         return await run_in_threadpool(backups.create_backup, verify)
     except Exception:
         raise HTTPException(503, "Backup could not be completed. No existing data was changed; check backup storage and retry.") from None
+
+
+@router.post("/remove-pdf-archives")
+async def remove_pdf_archives():
+    from app.services.pdf_retention import apply_policy
+    try:
+        return await run_in_threadpool(apply_policy)
+    except Exception as error:
+        import logging
+        logging.getLogger(__name__).error("PDF policy cleanup failed (%s)", type(error).__name__)
+        raise HTTPException(503, "PDF archive cleanup did not complete. Estimate data and photographs were not changed. Retry after any active backup completes.") from None

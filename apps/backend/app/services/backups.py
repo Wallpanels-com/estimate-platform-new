@@ -143,8 +143,9 @@ def create_backup(verify=False):
                 snapshot = cursor.fetchone()[0]
                 counts = row_counts(cursor)
                 references = set()
-                for table in ("estimate_images", "voice_files", "pdf_files", "document_versions"):
-                    cursor.execute(sql.SQL("SELECT file_path FROM {} WHERE file_path IS NOT NULL").format(sql.Identifier(table)))
+                for table in ("estimate_images", "voice_files", "document_versions"):
+                    condition = sql.SQL(" AND kind <> 'pdf'") if table == 'document_versions' else sql.SQL("")
+                    cursor.execute(sql.SQL("SELECT file_path FROM {} WHERE file_path IS NOT NULL").format(sql.Identifier(table)) + condition)
                     references.update(row[0] for row in cursor.fetchall())
                 pg_command("pg_dump", options, "-Fc", "--no-owner", "--no-acl", "--snapshot=" + snapshot, "-f", str(dump))
             connection.rollback()
@@ -152,17 +153,14 @@ def create_backup(verify=False):
             phase = "file snapshot"
             for name in sorted(references):
                 path = Path(name).resolve()
+                if path.suffix.lower() == '.pdf':
+                    continue
                 if not path.is_relative_to(storage) or not path.is_file():
                     raise RuntimeError("A saved document or uploaded file is missing. Backup was not accepted.")
                 paths["storage/" + str(path.relative_to(storage))] = path
-            # Include the exact templates and corporate PDF used by this release.
-            backend = Path(__file__).resolve().parents[2]
-            for folder in (backend / "assets", backend / "app/templates"):
-                for path in folder.rglob("*"):
-                    if path.is_file():
-                        paths["release/" + str(path.relative_to(backend))] = path
             manifest = {"created_at": datetime.now(timezone.utc).isoformat(), "tables": counts,
-                        "commit": os.environ.get("RAILWAY_GIT_COMMIT_SHA", "local"), "files": {}}
+                        "commit": os.environ.get("RAILWAY_GIT_COMMIT_SHA", "local"), "files": {},
+                        "pdf_presentations_excluded": True, "release_assets_in_git": True}
             archive = work / "backup.tar.gz"
             with tarfile.open(archive, "w:gz") as output:
                 for name, path in paths.items():
@@ -187,7 +185,7 @@ def create_backup(verify=False):
             phase = "private bucket upload"
             with archive.open("rb") as stream:
                 s3.put_object(Bucket=settings.BACKUP_BUCKET, Key=key, Body=stream,
-                              Metadata={"sha256": digest, "backup-id": ident})
+                              Metadata={"sha256": digest, "backup-id": ident, "pdf-presentations-excluded": "true"})
             remote = s3.head_object(Bucket=settings.BACKUP_BUCKET, Key=key)
             if remote["ContentLength"] != archive.stat().st_size or remote["Metadata"].get("sha256") != digest:
                 raise RuntimeError("Remote backup verification failed.")
@@ -203,7 +201,7 @@ def create_backup(verify=False):
                         raise RuntimeError("Stored backup contains a damaged file.")
             row = {"id": ident, "key": key, "created_at": manifest["created_at"], "sha256": digest,
                    "bytes": archive.stat().st_size, "files": len(paths), "tables": counts,
-                   "restore_tested": verify, "download_verified": True}
+                   "restore_tested": verify, "download_verified": True, "pdf_presentations_excluded": True}
             previous = status()
             save_status({"enabled": True, "last_success_at": row["created_at"], "last_error": None,
                          "backups": [row, *previous.get("backups", [])][:100]})

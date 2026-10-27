@@ -1,4 +1,7 @@
 {
+  "PDF presentations are generated only for preview and download. Only XLSX versions can be saved here.": "PDF-презентации создаются только для предпросмотра и скачивания. Здесь можно сохранить только версию XLSX.",
+  "PDF presentations are generated for preview and download only. Saving PDF versions is disabled.": "PDF-презентации создаются только для предпросмотра и скачивания. Сохранение PDF-версий отключено.",
+  "PDF presentations are no longer stored. Open the estimate to preview or download its current PDF.": "PDF-презентации больше не хранятся. Откройте смету для предпросмотра или скачивания актуального PDF.",
   "Quick Estimate keeps its own room-template formulas and uses the saved rates below.": "Быстрая смета сохраняет свои формулы помещений и использует сохранённые ниже ставки.",
   "Interface language": "Язык интерфейса",
   "Interface language. Presentations stay in English.": "Язык интерфейса. Презентации всегда на английском.",
