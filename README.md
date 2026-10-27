@@ -27,7 +27,7 @@ wallpanels-estimate-platform/
 ├── tests/                        backend, pricing and PDF regression tests
 ├── Dockerfile                    single frontend/backend production image
 ├── docker-compose.yml            optional local PostgreSQL
-├── railway.toml                  future Railway build/health configuration
+├── railway.toml                  Railway build, migrations and health configuration
 ├── package.json                  root commands and npm workspace
 └── .env.example                  environment contract without credentials
 ```
@@ -82,7 +82,7 @@ an existing shared PostgreSQL cluster and does not delete data.
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection. Standard `postgresql://` provider URLs and explicit `postgresql+asyncpg://` URLs are accepted. |
 | `SECRET_KEY` | Private JWT signing secret. Generate a long random value per environment. |
-| `STORAGE_PATH` | Persistent uploads and generated export directory. Local default: `.local/storage`; future Railway volume: `/data`. |
+| `STORAGE_PATH` | Persistent uploads and generated export directory. Local default: `.local/storage`; corporate Railway volume: `/data`. |
 | `ALLOWED_ORIGINS` | Comma-separated browser origins. Single-origin production does not need a wildcard. |
 | `OPENAI_API_KEY` | Optional AI/voice feature key. The rest of the app works without it. |
 | `MAX_UPLOAD_SIZE_MB` | Upload limit; defaults to 20. |
@@ -141,28 +141,20 @@ Business rules and client data have different lifecycles:
 Back up PostgreSQL and `STORAGE_PATH` together. A database dump alone is not a
 complete client-data backup because image records point to files in storage.
 
-## Future Railway deployment
+## Corporate Railway deployment
 
-No Railway project or production service is connected by this repository. The
-checked-in `Dockerfile` and `railway.toml` only prepare the build and health check.
-Before the first deployment:
+The owner-authorized new deployment is available at
+https://estimate-platform-production.up.railway.app with mandatory employee login.
+It uses a separate PostgreSQL 18 database, a persistent `/data` volume and a private
+Railway backup bucket. The existing production platform is not connected or changed.
+Docker builds, migrations, seven employee logins, exports, shared edits and restart
+persistence have been checked on this new deployment. Backup restoration was tested
+in a newly created disposable database, never over the working database.
 
-1. Create a separate production PostgreSQL database and a persistent volume mounted
-   at `/data`.
-2. Set `DATABASE_URL`, a new `SECRET_KEY`, `STORAGE_PATH=/data`, and production
-   `ALLOWED_ORIGINS` in Railway variables.
-3. Restore approved production data and storage through a documented migration;
-   never upload the local `.env`, `.local` folder or raw client backup to GitHub.
-4. Review/apply the prepared Alembic migrations on the new target database. The app
-   never mutates schema at startup.
-5. Enable backup schedules, rehearse recovery, review retention and run a security
-   review before exposing the service publicly.
-6. Run the verification suite and a staging smoke test for Estimates, photos, Price
-   Book, Pre/Final PDF and XLSX.
-
-The current code is ready to live in one private corporate GitHub repository. It is
-not yet approved for public production traffic; the remaining production controls
-above are intentionally documented rather than silently assumed.
+Local customer estimates and local account databases are not automatically imported
+by a Git push. Transfer approved data and matching storage as a separate migration;
+never upload `.env`, `.local`, raw client backups or employee passwords to GitHub.
+See [deployment verification](docs/deployment-verification.md) for the release checks.
 
 All active employees now have one **User** role with equal shared access, personal
 credentials, attributed history and immutable saved PDF/XLSX versions. Corporate
@@ -173,7 +165,7 @@ Additional details are in [architecture](docs/architecture.md), [QA](docs/qa.md)
 [managed Price Book](docs/price-book-managed.md), [Pre-Estimate V2](docs/pre-estimate-v2.md),
 and [Final Estimate corporate slides](docs/final-company-slides.md).
 
-## Corporate deployment
+## Operations
 
 The new corporate deployment and backup operations are documented in
 [Railway operations](docs/railway-operations.md). Secrets and employee passwords

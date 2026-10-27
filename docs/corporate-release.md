@@ -1,5 +1,11 @@
 # Corporate GitHub and Railway release preparation
 
+This document records the earlier preparation checklist. The owner subsequently
+authorized deployment on 27 October 2026. For the actual new corporate resources,
+backup implementation and completed verification, use
+[Railway operations](railway-operations.md) and
+[deployment verification](deployment-verification.md).
+
 ## Scope and current state
 
 Target repository: **Wallpanels-com/estimate-platform-new**.
