@@ -95,7 +95,7 @@ async def issue_document(estimate_id: uuid.UUID, data: IssueDocument, db: AsyncS
             if data.kind == "xlsx":
                 generated = Path(work) / "passport.xlsx"
                 await run_in_threadpool(generate_passport, est, generated)
-            elif est.type == "pre":
+            elif est.type != "final":
                 generated = Path(work) / "pre.pdf"
                 await run_in_threadpool(generate_pre_estimate, est, generated)
             else:

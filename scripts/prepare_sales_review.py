@@ -89,7 +89,7 @@ def main():
                         zid=write(c,'POST',eid,'/zones',201,json={'label':label,'zone_type':kind,'sort_order':n}).json()['id']
                     project['zones'].append({'id':zid});save()
                 zid=project['zones'][n]['id']
-                sf=Decimal(90+n*13+index*11);lf=Decimal(6+n+index)
+                sf=Decimal(12+n+index if kind=='mirror' else 90+n*13+index*11);lf=Decimal(6+n+index)
                 write(c,'PATCH',eid,'/zones/'+zid,json={'label':label,'zone_type':kind,'sort_order':n,'square_footage':str(sf) if kind!='cabinet' else None,'linear_footage':str(lf) if kind=='cabinet' else None})
                 options={'square_footage':float(sf)} if kind=='wall' else {'square_footage':float(12+n+index)} if kind=='mirror' else {'linear_footage':float(lf),'cabinet_type':'tv_stand' if n==6 else 'kitchen_island'}
                 result=call(c,'POST','/pricing/calc/'+kind,json=options).json()
@@ -161,7 +161,7 @@ def main():
         final_path=out/f'{index+1}-final.pdf';final_path.write_bytes(final_bytes)
         reader=PdfReader(io.BytesIO(final_bytes))
         assert [page_signature(page) for page in reader.pages[-13:]]==company.signatures
-        summaries=[page for page in reader.pages[:-13] if 'Investment summary' in page.extract_text()]
+        summaries=[page for page in reader.pages[:-13] if 'investment summary' in re.sub(r'\s+',' ',page.extract_text()).lower()]
         sizes=[]
         for page in summaries:
             text=re.sub(r'\s+',' ',page.extract_text()).lower()

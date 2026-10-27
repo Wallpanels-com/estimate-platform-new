@@ -117,7 +117,7 @@ export default function Builder() {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [busy, saveFailed]);
-  const pdfMode: EstimatePdfMode = estimate?.type === "pre" ? "pre" : "final";
+  const pdfMode: EstimatePdfMode = estimate?.type === "final" ? "final" : "pre";
   const pdfId = estimate?.id;
   const pdfRevision = estimate?.updated_at
     ? `${estimate.updated_at}${pdfMode === "final" ? ":final-sparse-summary-v9" : ":pre-clean-title-v4"}`
@@ -326,14 +326,14 @@ export default function Builder() {
           </span>
           <div className="segments type-switch" aria-label={t("Estimate type")}>
             <button
-              aria-pressed={estimate.type === "pre"}
+              aria-pressed={pdfMode === "pre"}
               disabled={busy || exporting === "pdf"}
               onClick={() => switchMode("pre")}
             >
               {t("Pre-estimate")}
             </button>
             <button
-              aria-pressed={estimate.type !== "pre"}
+              aria-pressed={pdfMode === "final"}
               disabled={busy || exporting === "pdf"}
               onClick={() => switchMode("final")}
             >
@@ -754,7 +754,7 @@ export default function Builder() {
                 {t("Zones with unconfirmed pricing: {0}.", pendingZoneCount)}
               </p>
             ) : null}
-            {estimate.type === "pre" ? (
+            {pdfMode === "pre" ? (
               <p className="summary-note">
                 {t("Pre-estimate PDF range")}
                 <br />
@@ -771,7 +771,7 @@ export default function Builder() {
               disabled={busy}
             >
               <Eye size={16} aria-hidden="true" />
-              {estimate.type === "pre"
+              {pdfMode === "pre"
                 ? t("Preview Pre-estimate")
                 : t("Preview Final Estimate")}
             </Button>
@@ -782,7 +782,7 @@ export default function Builder() {
               onClick={() => exportFile("pdf")}
             >
               <Download size={16} />
-              {estimate.type === "pre"
+              {pdfMode === "pre"
                 ? t("Download estimate PDF")
                 : t("Download Final PDF")}
             </Button>

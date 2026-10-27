@@ -10,6 +10,7 @@ from app.services.passport_service import generate_passport
 from app.services.final_pricing import quote
 from check_passport import cell_value
 from openpyxl import load_workbook
+from unittest.mock import AsyncMock, Mock, patch
 
 
 class ReleasePricing(unittest.TestCase):
@@ -37,3 +38,22 @@ class ReleasePricing(unittest.TestCase):
                 grand = next(row[8].coordinate for row in sheet if row[6].value == 'TOTAL Estimate')
                 self.assertEqual(cell_value(sheet,grand), quote(est).grand_total)
                 self.assertEqual(sheet['M5'].value, '='+grand)
+
+
+class QuickSavedDocument(unittest.IsolatedAsyncioTestCase):
+    async def test_quick_without_photos_is_saved_as_preliminary_pdf(self):
+        import uuid
+        from app.api.v1 import governance
+        with tempfile.TemporaryDirectory() as directory:
+            est=Object(id=uuid.uuid4(),type='quick',deleted_at=None,source_estimate_id=None)
+            db=Object(execute=AsyncMock(return_value=Object(scalar=lambda:0)),add=Mock(),flush=AsyncMock(),commit=AsyncMock())
+            def render(estimate,path):
+                Path(path).write_bytes(b'%PDF-quick-preliminary-test')
+            with patch.object(governance,'load_estimate',AsyncMock(return_value=est)), \
+                 patch.object(governance.settings,'STORAGE_PATH',directory), \
+                 patch.object(governance.EstimateOut,'model_validate',return_value=Object(model_dump=lambda **kw:{})), \
+                 patch.object(governance,'generate_pre_estimate',side_effect=render) as pre, \
+                 patch.object(governance,'_render_final',AsyncMock(side_effect=AssertionError('Quick must not require Final photos'))):
+                result=await governance.issue_document(est.id,governance.IssueDocument(kind='pdf',label='TEST quick'),db,Object(name='Employee',email='employee'))
+                self.assertEqual(result['kind'],'pdf')
+                pre.assert_called_once()
