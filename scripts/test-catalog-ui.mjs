@@ -197,7 +197,21 @@ try {
         ...book,
         categories: [...book.categories.filter((c) => c.id !== id), body],
       };
-    } else if (path === "/pricing/schema") body = schema;
+    } else if (path === "/pricing/schema")
+      body = {
+        ...schema,
+        cabinet: {
+          ...schema.cabinet,
+          types: config.cabinet?.types
+            ? Object.entries(config.cabinet.types).map(([key, value]) => ({
+                key,
+                label: value.label,
+                label_ru: value.label_ru,
+                rate: value.base_rate,
+              }))
+            : schema.cabinet.types,
+        },
+      };
     else if (path === "/pricing/catalog" && !payload) body = book;
     else if (path === "/pricing/catalog/items") {
       creates.push(payload);
@@ -343,6 +357,21 @@ try {
     if (confirmation && confirm) await click(confirmation);
   }
   const picker = () => document.querySelector('input[role="combobox"]');
+
+  // Focus/click stays open; dismissal is explicit rather than native auto light-dismiss.
+  await mount();
+  await act(async () => picker().focus());
+  const focusedMenu = picker().closest(".choice").querySelector(".choice-menu");
+  assert.equal(focusedMenu.getAttribute("popover"), "manual");
+  await click(picker());
+  assert.equal(focusedMenu.dataset.open, "true");
+  await act(async () =>
+    document.body.dispatchEvent(
+      new MouseEvent("pointerdown", { bubbles: true }),
+    ),
+  );
+  assert.notEqual(focusedMenu.dataset.open, "true");
+  await cleanup();
 
   // Search saved EN/RU names, exclude archived entries, and add the server quote.
   for (const lang of ["en", "ru"]) {
@@ -609,6 +638,7 @@ try {
       undefined,
     );
     assert.equal(document.querySelector(".page-header p"), null);
+    assert.equal(document.querySelector(".book-view-tabs"), null);
     assert.equal(document.querySelector(".rate-parameters"), null);
 
     await input(
@@ -728,6 +758,36 @@ try {
   await submit();
   assert.equal(calculatorPayloads[0].mirror_type, "rustic");
   assert.equal(calculatorPayloads[0].square_footage, 10);
+  await cleanup();
+  // Create a supported LF cabinet type, persist shared rates, and select it immediately.
+  config = {
+    ...config,
+    cabinet: { types: { tv_stand: { label: "TV stand", base_rate: 700 } } },
+  };
+  rateWrites = [];
+  await mount("en", "calculator", "cabinet");
+  await click(document.querySelector('[aria-label="Add cabinet type"]'));
+  await input(editor().querySelector('[name="name"]'), "Display cabinet");
+  await input(editor().querySelector('[name="name_ru"]'), "Витрина");
+  await input(editor().querySelector('[name="rate"]'), "925");
+  await submit(false);
+  assert.equal(rateWrites.length, 0);
+  await click(button("Confirm save", editor()));
+  const cabinetKey = Object.keys(config.cabinet.types).find((key) =>
+    key.startsWith("custom_"),
+  );
+  assert.ok(cabinetKey);
+  assert.equal(config.cabinet.types[cabinetKey].base_rate, 925);
+  assert.equal(config.cabinet.types.tv_stand.base_rate, 700);
+  assert.equal(rateWrites[0].expected_revision, "test-revision");
+  assert.equal(
+    editor().querySelector('[name="cabinet_type"]').value,
+    cabinetKey,
+  );
+  await input(editor().querySelector('[name="linear_footage"]'), "4");
+  await submit();
+  assert.equal(calculatorPayloads[0].cabinet_type, cabinetKey);
+  assert.equal(calculatorPayloads[0].linear_footage, 4);
   await cleanup();
   localStorage.setItem("wallpanels.ui-language", "en");
   // Regression: hidden upload fields must not create a layout box below a

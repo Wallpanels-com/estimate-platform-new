@@ -1,6 +1,8 @@
 import Select, { Combobox } from "./Select";
 import CatalogPicker from "./pricebook/CatalogPicker";
 import ItemForm from "./pricebook/ItemForm";
+import CabinetTypeForm from "./pricebook/CabinetTypeForm";
+import { Plus } from "lucide-react";
 import SearchSelect from "./SearchSelect";
 import {
   type BookData,
@@ -65,6 +67,8 @@ export default function AddItems({
 
   const [tab, setTab] = useState(initial);
   const [type, setType] = useState(zone.zone_type);
+  const [cabinetType, setCabinetType] = useState("");
+  const [creatingCabinet, setCreatingCabinet] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<{
@@ -453,17 +457,32 @@ export default function AddItems({
                   ) : type === "cabinet" ? (
                     <>
                       <Field key="cabinet-type" label={t("Cabinet type")}>
-                        <Select name="cabinet_type">
-                          <option value="">{t("Standard cabinetry")}</option>
-                          {s.cabinet.types.map((v) => (
-                            <option key={v.key} value={v.key}>
-                              {language === "ru"
-                                ? v.label_ru || t(v.label)
-                                : v.label}{" "}
-                              · {money(v.rate)}/LF
-                            </option>
-                          ))}
-                        </Select>
+                        <div className="search-select">
+                          <Select
+                            name="cabinet_type"
+                            value={cabinetType}
+                            onChange={(event) =>
+                              setCabinetType(event.target.value)
+                            }
+                          >
+                            <option value="">{t("Standard cabinetry")}</option>
+                            {s.cabinet.types.map((v) => (
+                              <option key={v.key} value={v.key}>
+                                {language === "ru"
+                                  ? v.label_ru || t(v.label)
+                                  : v.label}{" "}
+                                · {money(v.rate)}/LF
+                              </option>
+                            ))}
+                          </Select>
+                          <Button
+                            aria-label={t("Add cabinet type")}
+                            title={t("Add cabinet type")}
+                            onClick={() => setCreatingCabinet(true)}
+                          >
+                            <Plus size={18} aria-hidden="true" />
+                          </Button>
+                        </div>
                       </Field>
                       <label className="check-label">
                         <input type="checkbox" name="budget" />
@@ -601,6 +620,19 @@ export default function AddItems({
           </>
         )}
       </Modal>
+      {creatingCabinet ? (
+        <CabinetTypeForm
+          onClose={() => setCreatingCabinet(false)}
+          onSaved={async (key) => {
+            await client.invalidateQueries({ queryKey: ["pricing-config"] });
+            await client.invalidateQueries({ queryKey: ["quick-pricing"] });
+            const updated = await schema.refetch();
+            if (updated.error) throw updated.error;
+            setCabinetType(key);
+            setResult(null);
+          }}
+        />
+      ) : null}
       {createItem && catalog.data ? (
         <ItemForm
           categoryId={

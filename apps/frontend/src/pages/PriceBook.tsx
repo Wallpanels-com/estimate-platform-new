@@ -6,8 +6,6 @@ import {
   Pencil,
   Plus,
   Save,
-  SlidersHorizontal,
-  BookOpen,
   Trash2,
 } from "lucide-react";
 import { request, errorMessage } from "../lib/api";
@@ -52,8 +50,7 @@ export default function PriceBook() {
   const { t, language } = useI18n();
   const client = useQueryClient(),
     notify = useNotice();
-  const [tab, setTab] = useState("wall"),
-    [view, setView] = useState("rates");
+  const [tab, setTab] = useState("wall");
   const [config, setConfig] = useState<PricingConfig | null>(null),
     [revision, setRevision] = useState("");
   const [dirty, setDirty] = useState(false),
@@ -107,13 +104,11 @@ export default function PriceBook() {
   const items = (catalog.data?.items || []).filter(
     (i) => i.category_id === category?.id,
   );
-  const activeCount = items.filter((i) => !i.archived).length;
   useEffect(() => {
     setActionError("");
   }, [confirmRates, archiveTarget, deleteTarget]);
   function select(c: BookCategory) {
     setTab(c.id);
-    setView(c.builtin ? "rates" : "items");
   }
   function change(path: string[], value: JsonValue) {
     setConfig((previous) => {
@@ -180,7 +175,6 @@ export default function PriceBook() {
       setArchiveTarget(null);
       if (kind === "category" && archived && !showArchived) {
         setTab("wall");
-        setView("rates");
       }
       notify(archived ? "Entry archived" : "Entry restored");
     } catch (err) {
@@ -202,7 +196,6 @@ export default function PriceBook() {
       await refreshCatalogue();
       if (deleteTarget.kind === "category") {
         setTab("wall");
-        setView("rates");
       }
       setDeleteTarget(null);
       notify("Entry permanently deleted");
@@ -275,7 +268,6 @@ export default function PriceBook() {
                   setShowArchived(e.target.checked);
                   if (!e.target.checked && category.archived) {
                     setTab("wall");
-                    setView("rates");
                   }
                 }}
               />
@@ -377,31 +369,6 @@ export default function PriceBook() {
               </p>
             ) : null}
             {category.builtin ? (
-              <div
-                className="book-view-tabs"
-                role="group"
-                aria-label={t("Price Book view")}
-              >
-                <button
-                  type="button"
-                  aria-pressed={view === "rates"}
-                  onClick={() => setView("rates")}
-                >
-                  <SlidersHorizontal size={16} />
-                  {t("Rates & parameters")}
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={view === "items"}
-                  onClick={() => setView("items")}
-                >
-                  <BookOpen size={16} />
-                  {t("Estimate items")}
-                  <span>{activeCount}</span>
-                </button>
-              </div>
-            ) : null}
-            {category.builtin && view === "rates" ? (
               <form onSubmit={save} className="book-rate-form">
                 {category.id === "quick_estimate" ? (
                   <p className="book-context-note">
@@ -443,7 +410,8 @@ export default function PriceBook() {
                   </Button>
                 </footer>
               </form>
-            ) : (
+            ) : null}
+            {!category.builtin || items.length > 0 ? (
               <>
                 <p className="book-context-note">
                   {t(
@@ -474,7 +442,7 @@ export default function PriceBook() {
                   disabled={busy}
                 />
               </>
-            )}
+            ) : null}
           </div>
         </div>
       )}
@@ -505,7 +473,6 @@ export default function PriceBook() {
           onClose={() => setItemForm(null)}
           onSaved={async () => {
             await refreshCatalogue();
-            setView("items");
             notify("Catalogue item saved");
           }}
         />

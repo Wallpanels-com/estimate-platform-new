@@ -824,5 +824,8 @@
   "Applied only to Final Estimate PDF. Saved item and zone prices stay unchanged.": "Только для PDF финальной сметы. Цены позиций и зон на сайте не меняются.",
   "The corporate slides PDF is unavailable. Restore the company slides file to generate the presentation.": "Корпоративный PDF недоступен. Восстановите файл корпоративных слайдов для формирования презентации.",
   "The corporate slides PDF is damaged or invalid. The presentation was not generated.": "Корпоративный PDF повреждён или имеет неверный формат. Презентация не сформирована.",
-  "The presentation PDF could not be assembled. No incomplete PDF was returned.": "Не удалось собрать PDF. Неполная презентация не будет скачана."
+  "The presentation PDF could not be assembled. No incomplete PDF was returned.": "Не удалось собрать PDF. Неполная презентация не будет скачана.",
+  "Add cabinet type": "Добавить вид мебели",
+  "Save cabinet type": "Сохранить вид мебели",
+  "Save cabinet type?": "Сохранить новый вид мебели?"
 }

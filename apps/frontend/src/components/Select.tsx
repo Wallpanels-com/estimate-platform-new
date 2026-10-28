@@ -87,13 +87,24 @@ export function useChoices(
   }, []);
   useEffect(() => {
     const node = menu.current!;
-    node.setAttribute("popover", "auto");
+    // Native auto light-dismiss can close a list opened by input focus during
+    // the same pointer click. Keep the top layer, but own dismissal explicitly.
+    node.setAttribute("popover", "manual");
     const toggle = () => setOpen(node.matches(":popover-open"));
     node.addEventListener("toggle", toggle);
     return () => node.removeEventListener("toggle", toggle);
   }, []);
   useEffect(() => {
     if (!open) return;
+    const outside = (event: Event) => {
+      if (!(event.target instanceof Node)) return;
+      if (
+        menu.current?.contains(event.target) ||
+        trigger.current?.closest(".choice")?.contains(event.target)
+      )
+        return;
+      close();
+    };
     const dismiss = (event: Event) => {
       if (
         event.type === "scroll" &&
@@ -107,9 +118,13 @@ export function useChoices(
     };
     window.addEventListener("resize", dismiss);
     document.addEventListener("scroll", dismiss, true);
+    document.addEventListener("pointerdown", outside, true);
+    document.addEventListener("focusin", outside);
     return () => {
       window.removeEventListener("resize", dismiss);
       document.removeEventListener("scroll", dismiss, true);
+      document.removeEventListener("pointerdown", outside, true);
+      document.removeEventListener("focusin", outside);
     };
   }, [open, close, position]);
   useEffect(() => {
