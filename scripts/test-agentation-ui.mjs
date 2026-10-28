@@ -8,7 +8,13 @@ import { JSDOM } from "jsdom";
 const dom = new JSDOM('<div id="root"></div>', {
   url: "http://localhost:5190",
 });
-for (const key of ["window", "document", "HTMLElement", "Node"])
+for (const key of [
+  "window",
+  "document",
+  "HTMLElement",
+  "Node",
+  "MutationObserver",
+])
   globalThis[key] = dom.window[key];
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 globalThis.feedbackAuth = { token: null };
@@ -40,8 +46,8 @@ try {
               "export const useLocation=()=>({pathname:globalThis.feedbackPath || '/'})",
             loader: "js",
           }));
-          b.onResolve({ filter: /^react$/ }, () => ({
-            path: "react",
+          b.onResolve({ filter: /^react(?:-dom)?$/ }, (args) => ({
+            path: args.path,
             external: true,
           }));
           b.onLoad({ filter: /lib\/auth\.tsx$/ }, () => ({
@@ -53,7 +59,7 @@ try {
             namespace: "fixture",
           }));
           b.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({
-            contents: `import {createElement} from 'react'; globalThis.feedbackLoads++; export function Agentation(){return createElement('button',{'data-toolbar':true},'Agentation')}`,
+            contents: `import {createElement} from 'react'; import {createPortal} from 'react-dom'; globalThis.feedbackLoads++; export function Agentation({portalContainer}){return createPortal(createElement('button',{'data-toolbar':true},'Agentation'),portalContainer || document.body)}`,
             loader: "jsx",
           }));
         },
@@ -91,13 +97,53 @@ try {
   });
   assert.ok(document.querySelector("[data-toolbar]"));
   assert.equal(globalThis.feedbackLoads, 1);
+  const modal = document.createElement("dialog");
+  const nested = document.createElement("dialog");
+  async function mutate(change) {
+    await act(async () => {
+      change();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+  }
+  await mutate(() => {
+    document.body.append(modal);
+    modal.open = true;
+  });
+  assert.equal(
+    document.querySelector("[data-toolbar]").closest("dialog"),
+    modal,
+  );
+  await mutate(() => {
+    document.body.append(nested);
+    nested.open = true;
+  });
+  assert.equal(
+    document.querySelector("[data-toolbar]").closest("dialog"),
+    nested,
+  );
+  await mutate(() => {
+    nested.open = false;
+  });
+  assert.equal(
+    document.querySelector("[data-toolbar]").closest("dialog"),
+    modal,
+  );
+  await mutate(() => {
+    modal.remove();
+    nested.remove();
+  });
+  assert.equal(
+    document.querySelector("[data-toolbar]").parentElement,
+    document.body,
+  );
+
   await render({ token: "team", user });
   assert.equal(document.querySelector("[data-toolbar]"), null);
   await render({ token: null });
   assert.equal(document.querySelector("[data-toolbar]"), null);
   await act(async () => root.unmount());
   console.log(
-    "Agentation isolation passed: only enabled owner mounts/loads toolbar; loading, other users and logout hide it.",
+    "Agentation isolation passed: only enabled owner mounts/loads toolbar; loading, other users and logout hide it; toolbar follows open/nested/closed dialogs.",
   );
 } finally {
   await rm(dir, { recursive: true, force: true });

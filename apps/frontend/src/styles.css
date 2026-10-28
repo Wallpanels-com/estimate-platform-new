@@ -3172,7 +3172,7 @@ html[lang="ru"] .line-head {
 }
 .rate-row-core {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 148px 118px;
+  grid-template-columns: minmax(0, 1fr) 148px;
   gap: 16px;
   align-items: end;
 }
@@ -3200,41 +3200,7 @@ html[lang="ru"] .line-head {
   font-size: 11px;
   pointer-events: none;
 }
-.rate-parameters {
-  min-width: 0;
-  align-self: end;
-}
-.rate-parameters > summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: var(--control);
-  color: var(--muted);
-  font-size: 12px;
-  list-style: none;
-}
-.rate-parameters > summary::-webkit-details-marker {
-  display: none;
-}
-.rate-parameters > summary:hover {
-  color: var(--bronze-dark);
-}
-.rate-parameters[open] {
-  grid-column: 1 / -1;
-  padding: 12px 16px;
-  background: #faf8f4;
-  border-radius: 5px;
-}
-.rate-parameters[open] > summary {
-  margin-bottom: 12px;
-  min-height: 24px;
-}
-.rate-parameter-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
-}
+
 .rate-parameter-grid .rate-list,
 .rate-parameter-grid .rate-grid {
   grid-column: 1 / -1;
@@ -3571,12 +3537,6 @@ html[lang="ru"] .line-head {
     grid-template-columns: minmax(0, 1fr) 130px;
     gap: 14px;
   }
-  .rate-parameters {
-    grid-column: 1 / -1;
-  }
-  .rate-parameters > summary {
-    min-height: 24px;
-  }
   .book-category-header {
     flex-wrap: wrap;
   }
@@ -3631,9 +3591,6 @@ html[lang="ru"] .line-head {
     grid-row: 2 / 4;
   }
   .rate-row-core {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .rate-parameter-grid {
     grid-template-columns: minmax(0, 1fr);
   }
   .book-save-bar {

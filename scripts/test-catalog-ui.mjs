@@ -136,7 +136,14 @@ try {
   let config = {
     wall: {
       base_rates: { large: 40, medium: 45, small: 50 },
-      addons_sf: { led: { label: "LED", price: 5 } },
+      addons_sf: {
+        led: {
+          label: "LED",
+          price: 5,
+          describable: true,
+          label_ru: "Подсветка",
+        },
+      },
     },
   };
   let book,
@@ -462,7 +469,14 @@ try {
     config = {
       wall: {
         base_rates: { large: 40, medium: 45, small: 50 },
-        addons_sf: { led: { label: "LED", price: 5 } },
+        addons_sf: {
+          led: {
+            label: "LED",
+            price: 5,
+            describable: true,
+            label_ru: "Подсветка",
+          },
+        },
       },
     };
     rateWrites = [];
@@ -484,6 +498,13 @@ try {
       await new Promise((r) => setTimeout(r, 20));
     });
     const ru = language === "ru";
+    assert.equal(
+      button(ru ? "Восстановить базовые цены" : "Restore defaults"),
+      undefined,
+    );
+    assert.equal(document.querySelector(".page-header p"), null);
+    assert.equal(document.querySelector(".rate-parameters"), null);
+
     await input(
       document.querySelector('.book-rate-form input[type="number"]'),
       "41",
@@ -503,6 +524,12 @@ try {
     assert.equal(rateWrites.length, 1);
     assert.equal(rateWrites[0].config.wall.base_rates.large, 41);
     assert.equal(rateWrites[0].expected_revision, "test-revision");
+    assert.deepEqual(
+      rateWrites[0].config.wall.addons_sf.led,
+      { label: "LED", price: 5, describable: true, label_ru: "Подсветка" },
+      "Hiding rate parameters must preserve their saved values",
+    );
+
     assert.equal(
       button(ru ? "Добавить подкатегорию" : "Add subcategory"),
       undefined,

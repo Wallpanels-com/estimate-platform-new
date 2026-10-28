@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { Coins, Settings2, Layers3, Plus } from "lucide-react";
+import { Coins, Layers3, Plus } from "lucide-react";
 import type { JsonValue, PricingConfig } from "../../lib/types";
 import { useI18n } from "../../lib/i18n";
 import { Button, Field } from "../ui";
@@ -203,9 +203,6 @@ function Branch({
       "default_price",
       "price_adder",
     ].find((k) => typeof value[k] === "number");
-    const extra = Object.keys(value).filter(
-      (k) => k !== "label" && k !== amountKey,
-    );
     return (
       <div className="rate-entry">
         <div className="rate-row-core">
@@ -224,25 +221,6 @@ function Branch({
               onChange={onChange}
               upgrades={upgrades}
             />
-          ) : null}
-          {extra.length ? (
-            <details className="rate-parameters">
-              <summary>
-                <Settings2 size={15} />
-                {t("Parameters")}
-              </summary>
-              <div className="rate-parameter-grid">
-                {extra.map((key) => (
-                  <Branch
-                    key={key}
-                    value={value[key]}
-                    path={[...path, key]}
-                    onChange={onChange}
-                    upgrades={upgrades}
-                  />
-                ))}
-              </div>
-            </details>
           ) : null}
         </div>
       </div>

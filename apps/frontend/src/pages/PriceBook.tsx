@@ -5,13 +5,12 @@ import {
   ArchiveRestore,
   Pencil,
   Plus,
-  RotateCcw,
   Save,
   SlidersHorizontal,
   BookOpen,
   Trash2,
 } from "lucide-react";
-import { request, post, errorMessage } from "../lib/api";
+import { request, errorMessage } from "../lib/api";
 import type { JsonValue, PricingConfig } from "../lib/types";
 import {
   type BookData,
@@ -59,7 +58,6 @@ export default function PriceBook() {
     [revision, setRevision] = useState("");
   const [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
-    [reset, setReset] = useState(false),
     [showArchived, setShowArchived] = useState(false),
     [confirmRates, setConfirmRates] = useState(false),
     [actionError, setActionError] = useState(""),
@@ -112,7 +110,7 @@ export default function PriceBook() {
   const activeCount = items.filter((i) => !i.archived).length;
   useEffect(() => {
     setActionError("");
-  }, [confirmRates, reset, archiveTarget, deleteTarget]);
+  }, [confirmRates, archiveTarget, deleteTarget]);
   function select(c: BookCategory) {
     setTab(c.id);
     setView(c.builtin ? "rates" : "items");
@@ -214,40 +212,9 @@ export default function PriceBook() {
       setBusy(false);
     }
   }
-  async function resetDefaults() {
-    setBusy(true);
-    setActionError("");
-    try {
-      const result = await post<ConfigResponse>("/pricing/config/reset");
-      client.setQueryData(["pricing-config"], result);
-      setConfig(structuredClone(result.config));
-      setRevision(result.revision);
-      setDirty(false);
-      await client.invalidateQueries({ queryKey: ["pricing-schema"] });
-      await client.invalidateQueries({ queryKey: ["quick-pricing"] });
-      setReset(false);
-      notify("Default pricing restored");
-    } catch (err) {
-      setActionError(errorMessage(err));
-      notify(errorMessage(err), true);
-    } finally {
-      setBusy(false);
-    }
-  }
   return (
     <>
-      <PageHeader
-        title={t("Price book")}
-        description={t(
-          "Manage calculation rates and ready-to-use estimate items.",
-        )}
-        actions={
-          <Button onClick={() => setReset(true)} disabled={busy || !config}>
-            <RotateCcw size={16} />
-            {t("Restore defaults")}
-          </Button>
-        }
-      />
+      <PageHeader title={t("Price book")} />
       {query.isLoading || catalog.isLoading ? (
         <Loading />
       ) : query.error || catalog.error || !config || !category ? (
@@ -620,20 +587,6 @@ export default function PriceBook() {
         >
           {t(
             "Save all changed rates and parameters to the shared Price Book? All employees will use these values for new calculations. Saved estimates will not be repriced.",
-          )}
-        </Confirm>
-      ) : null}
-      {reset ? (
-        <Confirm
-          title={t("Restore default pricing?")}
-          action={t("Restore defaults")}
-          busy={busy}
-          onClose={() => setReset(false)}
-          error={actionError}
-          onConfirm={resetDefaults}
-        >
-          {t(
-            "Original calculation rates will be restored. Your custom categories, catalogue items and saved estimates will be kept.",
           )}
         </Confirm>
       ) : null}
