@@ -54,7 +54,7 @@ const dir = await mkdtemp(resolve(".local/catalog-ui-"));
 try {
   const compiled = await build({
     stdin: {
-      contents: `export {default as Photos} from './apps/frontend/src/components/Photos'; export {default as CategoryForm} from './apps/frontend/src/components/pricebook/CategoryForm'; export {default as PriceBook} from './apps/frontend/src/pages/PriceBook'; export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
+      contents: `export {default as ItemForm} from './apps/frontend/src/components/pricebook/ItemForm'; export {default as ItemNameFields} from './apps/frontend/src/components/pricebook/ItemNameFields'; export {default as Photos} from './apps/frontend/src/components/Photos'; export {default as CategoryForm} from './apps/frontend/src/components/pricebook/CategoryForm'; export {default as PriceBook} from './apps/frontend/src/pages/PriceBook'; export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -69,6 +69,8 @@ try {
   await writeFile(resolve(dir, "app.mjs"), compiled.outputFiles[0].contents);
   const {
     AddItems,
+    ItemNameFields,
+    ItemForm,
     PriceBook,
     CategoryForm,
     Photos,
@@ -130,6 +132,7 @@ try {
     services: {},
   };
   let calculatorPayloads = [];
+  let itemUpdates = [];
   let deletions = [];
   let categoryWrites = [],
     rateWrites = [];
@@ -201,6 +204,12 @@ try {
       const item = { ...payload, id: "new-item", version: 1 };
       book = { ...book, items: [...book.items, item] };
       body = item;
+    } else if (
+      path.startsWith("/pricing/catalog/items/") &&
+      options.method === "PUT"
+    ) {
+      itemUpdates.push(payload);
+      body = { ...payload, id: "saved-item", version: 2 };
     } else if (path.endsWith("/quote")) {
       const item = book.items.find((i) => path.includes(`/${i.id}/`));
       assert.ok(item);
@@ -462,6 +471,97 @@ try {
   await click(button("Добавить новую позицию"));
   assert.equal(editor().querySelector('[name="name"]').value, "Карниз");
   await cleanup();
+  // Automatic names stay local, ignore stale responses and respect manual edits.
+  let pendingOld;
+  window.Translator = {
+    create: async () => ({
+      translate: async (text) => {
+        if (text === "Old slow name")
+          return new Promise((resolve) => {
+            pendingOld = resolve;
+          });
+        return text === "Floating shelf" ? "Парящая полка" : "Новое название";
+      },
+    }),
+  };
+  let translatingName = false;
+  root = createRoot(document.getElementById("root"));
+  await act(async () =>
+    root.render(
+      h(
+        LanguageProvider,
+        null,
+        h(
+          "form",
+          null,
+          h(ItemNameFields, {
+            initialName: "",
+            initialRussian: "",
+            onTranslating: (value) => {
+              translatingName = value;
+            },
+          }),
+        ),
+      ),
+    ),
+  );
+  const enName = () => document.querySelector('[name="name"]');
+  const ruName = () => document.querySelector('[name="name_ru"]');
+  const settleName = () =>
+    act(async () => {
+      await new Promise((r) => setTimeout(r, 500));
+    });
+  await input(enName(), "Floating shelf");
+  assert.equal(translatingName, true);
+  await settleName();
+  assert.equal(ruName().value, "Парящая полка");
+  await input(enName(), "Old slow name");
+  await settleName();
+  await input(enName(), "New fast name");
+  await settleName();
+  await act(async () => pendingOld("Устаревшее название"));
+  assert.equal(ruName().value, "Новое название");
+  await input(ruName(), "Ручное название");
+  await input(enName(), "Other name");
+  await settleName();
+  assert.equal(ruName().value, "Ручное название");
+  delete window.Translator;
+  await input(ruName(), "");
+  await settleName();
+  assert.match(document.body.textContent, /Автоперевод недоступен/);
+  assert.equal(translatingName, false);
+  await act(async () => root.unmount());
+
+  // Removing description controls must never erase existing bilingual content.
+  localStorage.setItem("wallpanels.ui-language", "en");
+  const describedItem = {
+    ...existing,
+    description: "Keep original English details",
+    description_ru: "Сохранить русские детали",
+  };
+  root = createRoot(document.getElementById("root"));
+  await act(async () =>
+    root.render(
+      h(
+        LanguageProvider,
+        null,
+        h(ItemForm, {
+          item: describedItem,
+          categoryId: "wall",
+          categories,
+          onClose: () => {},
+          onSaved: async () => {},
+        }),
+      ),
+    ),
+  );
+  assert.equal(editor().querySelector('[name="description"]'), null);
+  assert.equal(editor().querySelector('[name="description_ru"]'), null);
+  await submit();
+  assert.equal(itemUpdates.at(-1).description, describedItem.description);
+  assert.equal(itemUpdates.at(-1).description_ru, describedItem.description_ru);
+  await act(async () => root.unmount());
+
   // Exercise the actual Price Book page, including confirmations before writes.
   for (const language of ["en", "ru"]) {
     localStorage.setItem("wallpanels.ui-language", language);

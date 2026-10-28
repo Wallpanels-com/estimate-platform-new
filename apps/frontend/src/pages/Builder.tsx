@@ -711,24 +711,6 @@ export default function Builder() {
                 <Settings2 size={16} aria-hidden="true" />
               </Button>
             </div>
-            <details className="summary-breakdown">
-              <summary>
-                {t("Zone breakdown")}
-                <span>{zones.length}</span>
-              </summary>
-              <div className="summary-rows">
-                {zones.map((z) => (
-                  <div key={z.id}>
-                    <span title={z.label}>{z.label}</span>
-                    <strong>
-                      {pricingPending(z)
-                        ? t("Pricing pending")
-                        : money(z.subtotal)}
-                    </strong>
-                  </div>
-                ))}
-              </div>
-            </details>
             {Number(estimate.markup_pct) ? (
               <div className="summary-adjustment">
                 <span>
@@ -764,37 +746,55 @@ export default function Builder() {
             {pdfMode === "final" ? (
               <PdfChecks checks={finalChecks.data} />
             ) : null}
-            <Button
-              className="full-width"
-              variant="primary"
-              onClick={() => setProposal(true)}
-              disabled={busy}
+            <div
+              className="summary-document-actions"
+              role="group"
+              aria-label={t("Estimate documents")}
             >
-              <Eye size={16} aria-hidden="true" />
-              {pdfMode === "pre"
-                ? t("Preview Pre-estimate")
-                : t("Preview Final Estimate")}
-            </Button>
-            <Button
-              className="full-width"
-              busy={exporting === "pdf"}
-              disabled={!!exporting || busy}
-              onClick={() => exportFile("pdf")}
-            >
-              <Download size={16} />
-              {pdfMode === "pre"
-                ? t("Download estimate PDF")
-                : t("Download Final PDF")}
-            </Button>
-            <Button
-              className="full-width"
-              busy={exporting === "xlsx"}
-              disabled={!!exporting || busy}
-              onClick={() => exportFile("xlsx")}
-            >
-              <FileSpreadsheet size={16} />
-              {t("Project passport (XLSX)")}
-            </Button>
+              <Button
+                variant="primary"
+                onClick={() => setProposal(true)}
+                disabled={busy}
+                aria-label={
+                  pdfMode === "pre"
+                    ? t("Preview Pre-estimate")
+                    : t("Preview Final Estimate")
+                }
+                title={
+                  pdfMode === "pre"
+                    ? t("Preview Pre-estimate")
+                    : t("Preview Final Estimate")
+                }
+              >
+                <Eye size={20} aria-hidden="true" />
+              </Button>
+              <Button
+                busy={exporting === "pdf"}
+                disabled={!!exporting || busy}
+                onClick={() => exportFile("pdf")}
+                aria-label={
+                  pdfMode === "pre"
+                    ? t("Download estimate PDF")
+                    : t("Download Final PDF")
+                }
+                title={
+                  pdfMode === "pre"
+                    ? t("Download estimate PDF")
+                    : t("Download Final PDF")
+                }
+              >
+                <Download size={20} aria-hidden="true" />
+              </Button>
+              <Button
+                busy={exporting === "xlsx"}
+                disabled={!!exporting || busy}
+                onClick={() => exportFile("xlsx")}
+                aria-label={t("Project passport (XLSX)")}
+                title={t("Project passport (XLSX)")}
+              >
+                <FileSpreadsheet size={20} aria-hidden="true" />
+              </Button>
+            </div>
           </section>
         </aside>
       </div>

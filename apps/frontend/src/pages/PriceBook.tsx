@@ -296,18 +296,6 @@ export default function PriceBook() {
                     </p>
                   ) : null}
                   <h2>{name}</h2>
-                  <p>
-                    {(language === "ru"
-                      ? category.description_ru || category.description
-                      : category.description) ||
-                      t(
-                        category.calculator_id
-                          ? "Existing calculator rules and catalogue items."
-                          : category.id === "quick_estimate"
-                            ? "Separate room-template settings. Existing Quick formulas are preserved."
-                            : "Catalogue entries and their applicable settings.",
-                      )}
-                  </p>
                 </div>
               </div>
               <div className="book-category-actions">

@@ -137,9 +137,7 @@ export default function Estimates({ trash = false }: { trash?: boolean }) {
         description={
           trash
             ? t("Deleted estimates remain available for restoration.")
-            : t(
-                "Project scopes, considered pricing, and client-ready estimates.",
-              )
+            : undefined
         }
         actions={
           !trash ? (

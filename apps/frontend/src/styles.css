@@ -1708,43 +1708,6 @@ html[lang="ru"] .line-head {
   padding: 0;
   color: var(--muted);
 }
-.summary-breakdown {
-  font-size: 12px;
-  color: var(--muted);
-}
-.summary-breakdown summary {
-  cursor: pointer;
-  padding: 8px 0;
-}
-.summary-breakdown summary span {
-  float: right;
-  font-variant-numeric: tabular-nums;
-}
-.summary-breakdown .summary-rows {
-  padding-top: 10px;
-}
-.summary-rows {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.summary-rows > div {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  font-size: 11px;
-  align-items: baseline;
-}
-.summary-rows > div > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted);
-}
-.summary-rows strong {
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
 .summary-adjustment {
   display: flex;
   justify-content: space-between;
@@ -1780,10 +1743,19 @@ html[lang="ru"] .line-head {
   line-height: 1.7;
   margin-bottom: 8px;
 }
-.project-summary > .button {
-  margin-top: 8px;
-  font-size: 12px;
+.summary-document-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
 }
+.summary-document-actions > .button {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0;
+}
+
 .workspace-tabs {
   display: none;
 }

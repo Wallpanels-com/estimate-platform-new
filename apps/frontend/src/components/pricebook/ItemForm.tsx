@@ -11,6 +11,7 @@ import { post, request, errorMessage } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
 import { Button, ErrorNotice, Field, Modal, Confirm } from "../ui";
 import Select from "../Select";
+import ItemNameFields from "./ItemNameFields";
 
 export default function ItemForm({
   item,
@@ -32,15 +33,19 @@ export default function ItemForm({
   const { t, language } = useI18n();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const [translating, setTranslating] = useState(false);
   const [mode, setMode] = useState(item?.pricing_mode || "unit");
   const [parameters, setParameters] = useState(item?.parameters || []);
   const [saved, setSaved] = useState<BookItem | null>(null);
   const [pending, setPending] = useState<Record<string, unknown> | null>(null);
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (translating || busy) return;
     const form = Object.fromEntries(new FormData(event.currentTarget));
     const payload = {
       ...form,
+      description: item?.description || "",
+      description_ru: item?.description_ru || "",
       pricing_mode: mode,
       unit: mode === "fixed" ? "Fixed" : form.unit,
       unit_price: mode === "unpriced" ? null : form.unit_price,
@@ -109,21 +114,11 @@ export default function ItemForm({
               className="form-grid book-item-form"
               disabled={busy || Boolean(saved)}
             >
-              <Field label={t("Item name (EN)")}>
-                <input
-                  name="name"
-                  defaultValue={item?.name ?? initialName}
-                  required
-                  maxLength={200}
-                />
-              </Field>
-              <Field label={t("Item name (RU)")}>
-                <input
-                  name="name_ru"
-                  defaultValue={item?.name_ru}
-                  maxLength={200}
-                />
-              </Field>
+              <ItemNameFields
+                initialName={item?.name ?? initialName}
+                initialRussian={item?.name_ru || ""}
+                onTranslating={setTranslating}
+              />
               <Field label={t("Category")}>
                 <Select
                   name="category_id"
@@ -154,22 +149,6 @@ export default function ItemForm({
                   <option value="material">{t("Material")}</option>
                   <option value="service">{t("Service")}</option>
                 </Select>
-              </Field>
-              <Field label={t("Description (EN)")}>
-                <textarea
-                  name="description"
-                  defaultValue={item?.description}
-                  maxLength={2000}
-                  rows={2}
-                />
-              </Field>
-              <Field label={t("Description (RU)")}>
-                <textarea
-                  name="description_ru"
-                  defaultValue={item?.description_ru}
-                  maxLength={2000}
-                  rows={2}
-                />
               </Field>
               <Field label={t("Pricing method")}>
                 <Select
@@ -293,7 +272,12 @@ export default function ItemForm({
             <Button onClick={onClose} disabled={busy}>
               {t("Cancel")}
             </Button>
-            <Button type="submit" variant="primary" busy={busy}>
+            <Button
+              type="submit"
+              variant="primary"
+              busy={busy}
+              disabled={translating}
+            >
               {t(saved && addToZone ? "Add saved item to zone" : "Save item")}
             </Button>
           </footer>

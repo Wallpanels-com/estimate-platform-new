@@ -815,5 +815,9 @@
   "Delete permanently": "Удалить безвозвратно",
   "This entry will be available in new estimates again.": "Запись снова станет доступна для новых смет.",
   "This category and its items will be hidden from new estimates. Existing estimates are unchanged. You can restore the category later.": "Категория и её позиции будут скрыты при добавлении в новые сметы. Существующие сметы не изменятся. Категорию можно восстановить.",
-  "Mirror types": "Виды зеркал"
+  "Mirror types": "Виды зеркал",
+  "Estimate documents": "Документы сметы",
+  "Translating locally in your browser…": "Переводим в вашем браузере…",
+  "Automatic translation is unavailable in this browser. Enter the Russian name manually.": "Автоперевод недоступен в этом браузере. Введите русское название вручную.",
+  "Translated automatically. You can correct the Russian name.": "Перевод заполняется автоматически. Русское название можно исправить."
 }
