@@ -6,6 +6,7 @@ export interface User {
   role: string;
   is_active: boolean;
   onboarding_completed: boolean;
+  agentation_enabled?: boolean;
 }
 export interface LineItem {
   id: string;
@@ -127,6 +128,9 @@ export interface PricingSchema {
     string,
     { label: string; label_ru?: string; default_price: number; unit: string }
   >;
-  materials: Record<string, { label: string; label_ru?: string; addon_key: string | null }>;
+  materials: Record<
+    string,
+    { label: string; label_ru?: string; addon_key: string | null }
+  >;
   colors: { group: string; options: string[] }[];
 }

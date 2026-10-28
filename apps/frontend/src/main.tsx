@@ -13,6 +13,7 @@ import { AuthProvider, useAuth } from "./lib/auth";
 import { Loading, NoticeProvider } from "./components/ui";
 import Shell from "./components/Shell";
 import Auth from "./pages/Auth";
+import StaffFeedback from "./components/StaffFeedback";
 import Estimates from "./pages/Estimates";
 import "./styles.css";
 import { LanguageProvider } from "./lib/i18n";
@@ -78,6 +79,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <AuthProvider>
               <ScrollToTop />
               <App />
+              <StaffFeedback />
             </AuthProvider>
           </BrowserRouter>
         </NoticeProvider>

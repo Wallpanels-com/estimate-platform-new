@@ -44,9 +44,15 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
     return TokenResponse(access_token=token)
 
 
+def user_profile(user: User) -> UserOut:
+    profile = UserOut.model_validate(user)
+    profile.agentation_enabled = bool(user.is_active and settings.AGENTATION_USER_ID and user.id == settings.AGENTATION_USER_ID)
+    return profile
+
+
 @router.get("/me", response_model=UserOut)
 async def me(current_user: User = Depends(get_current_user)):
-    return current_user
+    return user_profile(current_user)
 
 
 @router.patch("/me", response_model=UserOut)
@@ -60,7 +66,7 @@ async def update_me(
         setattr(current_user, field, value)
     await db.flush()
     await db.commit()
-    return current_user
+    return user_profile(current_user)
 
 
 @router.get("/settings")

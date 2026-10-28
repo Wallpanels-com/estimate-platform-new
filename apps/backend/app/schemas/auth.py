@@ -36,6 +36,7 @@ class UserOut(BaseModel):
     role: str
     is_active: bool
     onboarding_completed: bool
+    agentation_enabled: bool = False
     created_at: datetime
 
     class Config:

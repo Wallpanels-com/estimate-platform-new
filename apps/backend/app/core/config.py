@@ -1,6 +1,7 @@
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from typing import Literal
+from uuid import UUID
 
 
 class Settings(BaseSettings):
@@ -10,6 +11,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
     OPENAI_API_KEY: str = ""
     FRONTEND_DIST: str = ""
+    AGENTATION_USER_ID: UUID | None = None
     STORAGE_PATH: str = "/data"
     MAX_UPLOAD_SIZE_MB: int = 20
     PRE_ESTIMATE_DESIGN: Literal["v1", "v2"] = "v2"
