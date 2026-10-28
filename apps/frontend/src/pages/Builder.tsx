@@ -18,7 +18,6 @@ import {
   ChevronUp,
   ChevronDown,
   Check,
-  Sparkles,
   Pencil,
   Image,
   List,
@@ -85,10 +84,6 @@ export default function Builder() {
     "calculator" | "manual" | "services" | null
   >(null);
   const [ai, setAi] = useState(false);
-  const capabilities = useQuery({
-    queryKey: ["auth-settings"],
-    queryFn: () => request<{ ai_enabled: boolean }>("/auth/settings"),
-  });
   const [busy, setBusy] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [exporting, setExporting] = useState<"pdf" | "xlsx" | null>(null);
@@ -120,7 +115,12 @@ export default function Builder() {
   const pdfMode: EstimatePdfMode = estimate?.type === "final" ? "final" : "pre";
   const pdfId = estimate?.id;
   const pdfRevision = estimate?.updated_at
-    ? `${estimate.updated_at}${pdfMode === "final" ? ":final-sparse-summary-v9" : ":pre-clean-title-v4"}`
+    ? JSON.stringify([
+        estimate.updated_at,
+        Number(estimate.markup_pct || 0),
+        Number(estimate.discount_pct || 0),
+        pdfMode === "final" ? "final-speed-v10" : "pre-speed-v5",
+      ])
     : undefined;
   const pdfFilename = estimatePdfFilename(
     pdfMode,
@@ -142,8 +142,11 @@ export default function Builder() {
     if (!pdfId || !pdfRevision)
       return Promise.reject(new Error("Estimate is not loaded."));
     if (pdfMode === "final") {
-      const checks = await request<ExportChecks>(`/pdf/${pdfId}/final-check`);
-      client.setQueryData(["final-check", pdfId, pdfRevision], checks);
+      const checks = await client.fetchQuery({
+        queryKey: ["final-check", pdfId, pdfRevision],
+        queryFn: () => request<ExportChecks>(`/pdf/${pdfId}/final-check`),
+        staleTime: 0,
+      });
       if (checks.errors.length)
         throw new Error(checks.errors.map((issue) => t(issue)).join(" "));
     }
@@ -153,6 +156,17 @@ export default function Builder() {
       revision: pdfRevision,
     });
   }, [pdfId, pdfMode, pdfRevision, client, t, saveFailed, busy]);
+  const warmedPdf = useRef<string | null>(null);
+  const preparePdf = () => {
+    if (busy || saveFailed || !pdfId || !pdfRevision) return;
+    const key = JSON.stringify([pdfId, pdfMode, pdfRevision]);
+    if (warmedPdf.current === key) return;
+    warmedPdf.current = key;
+    // Intent-only preparation: never render on every keystroke or autosave.
+    void loadPdf().catch(() => {
+      if (warmedPdf.current === key) warmedPdf.current = null;
+    });
+  };
   const zones = estimate?.zones || [];
   const zone = zones.find((z) => z.id === params.get("zone")) || zones[0];
   async function refresh() {
@@ -340,14 +354,6 @@ export default function Builder() {
               {t("Final")}
             </button>
           </div>
-          <Button
-            variant="ghost"
-            aria-label={t("Edit estimate details, markup and discount")}
-            title={t("Estimate details")}
-            onClick={() => setDetails(true)}
-          >
-            <Settings2 size={18} />
-          </Button>
         </div>
       </header>
       {records ? (
@@ -523,31 +529,6 @@ export default function Builder() {
                   <span>{n(zone.line_items.length, "line items")}</span>
                 </div>
                 <div className="button-row">
-                  <ActionMenu
-                    label={t("More scope actions")}
-                    disabled={busy}
-                    actions={[
-                      {
-                        label: "Add manual item",
-                        icon: <Plus size={16} />,
-                        onSelect: () => setAdding("manual"),
-                      },
-                      {
-                        label: "Add service",
-                        icon: <Plus size={16} />,
-                        onSelect: () => setAdding("services"),
-                      },
-                      ...(capabilities.data?.ai_enabled
-                        ? [
-                            {
-                              label: "AI description",
-                              icon: <Sparkles size={16} />,
-                              onSelect: () => setAi(true),
-                            },
-                          ]
-                        : []),
-                    ]}
-                  />
                   <Button
                     variant="primary"
                     onClick={() => setAdding("calculator")}
@@ -700,19 +681,18 @@ export default function Builder() {
             className="project-summary"
             aria-label={t("Project summary")}
           >
-            <div className="summary-heading">
-              <h2>{t("Summary")}</h2>
+            <div className="grand-total builder-grand-total">
+              <span>{t("Grand total")}</span>
               <Button
+                className="grand-total-settings"
                 variant="ghost"
                 aria-label={t("Adjust markup and discount")}
                 title={t("Markup & discount")}
                 onClick={() => setDetails(true)}
+                disabled={busy}
               >
                 <Settings2 size={16} aria-hidden="true" />
               </Button>
-            </div>
-            <div className="grand-total">
-              <span>{t("Grand total")}</span>
               <strong>{money(total)}</strong>
             </div>
             {pendingZoneCount ? (
@@ -738,6 +718,8 @@ export default function Builder() {
               <Button
                 variant="primary"
                 onClick={() => setProposal(true)}
+                onPointerEnter={preparePdf}
+                onFocus={preparePdf}
                 disabled={busy}
                 aria-label={
                   pdfMode === "pre"

@@ -22,6 +22,10 @@ Both `/pdf/{id}/final-estimate` and `/pdf/{id}/pre-estimate` serve the complete 
 
 Client JPEGs are embedded without re-encoding; other raster samples may use reversible PNG predictors. No images are downsampled. Fonts and text remain in their existing format. A 12-zone/12-photo local Final fixture fell from 56.17 MB to 7.23 MB; a Pre fixture with the appendix is 2.14 MB. These are examples, not a hard cap: large original uploads can still produce larger files. Generated PDFs remain temporary/download-only.
 
+Preview preparation uses binary PDF streams and native PNG pixel verification rather than repeated Python PNG decoding. A bounded 16 MiB RAM cache stores only packed image samples, keyed by their pixel digest and dimensions. Versioned artwork is prepared once at startup; customer PDFs are never persisted or added to backups. The generic post-render object-deduplication pass was removed because it decoded every image again; slightly larger files remain lossless.
+
+The open Builder retains its last two PDF Blobs and shares them between preview/download. Keys include estimate, mode, saved revision, markup and discount. Changed data cannot reuse the previous snapshot. Preparation starts on preview hover/focus rather than on every edit. Local 12-zone checks: Final about 2 seconds after startup artwork preparation, Pre about 0.8 seconds; these are measurements, not network-latency guarantees.
+
 The frontend still shares one exact PDF Blob between preview, the preview's download link and the Builder's download button for the same estimate revision. It now displays the backend's actionable error if the corporate asset is missing, corrupted, has a checksum mismatch, has a wrong page count or has inconsistent geometry. No incomplete presentation is returned.
 
 ## Initial implementation verification (October 25, original corporate asset)

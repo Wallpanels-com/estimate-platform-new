@@ -1693,29 +1693,6 @@ html[lang="ru"] .line-head {
   border-top: 1px solid var(--border);
   background: #eff1e9;
 }
-.project-summary h2 {
-  font-size: 14px;
-  margin: 0;
-}
-.summary-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.summary-heading .button {
-  width: var(--control);
-  padding: 0;
-  color: var(--muted);
-}
-.summary-adjustment {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--muted);
-  font-size: 11px;
-  margin: 7px 0;
-}
 .grand-total {
   display: flex;
   justify-content: space-between;
@@ -3738,4 +3715,23 @@ html[lang="ru"] .line-head {
   color: var(--muted);
   font-size: 0.875em;
   opacity: 0.8;
+}
+
+.builder-grand-total {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--control);
+  align-items: center;
+  gap: 4px 12px;
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+.builder-grand-total strong {
+  grid-column: 1 / -1;
+}
+.builder-grand-total .grand-total-settings {
+  width: var(--control);
+  padding: 0;
+  justify-self: end;
+  color: var(--muted);
 }

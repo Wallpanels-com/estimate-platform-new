@@ -19,6 +19,8 @@ assert.equal(await load(pre), shown, 'Download after preview reuses the exact Bl
 assert.equal(calls, 1);
 const finalSource = { ...pre, mode: 'final' };
 assert.notEqual(await load(finalSource), shown, 'Final never reuses a Pre-Estimate');
+assert.equal(await load(pre), shown, 'Returning to unchanged Pre reuses its snapshot');
+assert.equal(calls, 2, 'Switching between unchanged modes does not render again');
 const edited = { ...finalSource, revision: 'r2' };
 const editedPdf = await load(edited);
 assert.notEqual(editedPdf, await load({ ...edited, id: 'two' }), 'Another estimate invalidates the snapshot');

@@ -5,6 +5,7 @@ from pathlib import Path
 import tempfile
 from unittest import TestCase
 from unittest.mock import patch
+from collections import OrderedDict
 
 from PIL import Image
 from pypdf import PdfReader, PdfWriter
@@ -15,9 +16,26 @@ from test_final_company_slides import make_pdf
 from app.services import final_estimate_service as assembly
 from app.services import pre_estimate_service as pre
 from app.services.pdf_optimization import image_reader, optimize
+from app.services import pdf_optimization as packing
 
 
 class LosslessProposals(TestCase):
+    def test_missing_warmup_assets_do_not_prevent_application_startup(self):
+        with patch.object(packing.Image, 'open', side_effect=FileNotFoundError), self.assertLogs(packing.__name__, level='WARNING') as logs:
+            packing.warm_static_images()
+        self.assertEqual(len(logs.output), 3)
+
+    def test_image_cache_is_bounded_and_never_reuses_changed_pixels(self):
+        with patch.object(packing, '_packed_images', OrderedDict()), patch.object(packing, '_packed_bytes', 0), patch.object(packing, '_PACKED_BUDGET', 64):
+            raw = bytes([10, 20, 30]) * 64
+            first = packing._png_samples(raw, 8, 8, 3)
+            with patch.object(packing.Image, 'frombytes', side_effect=AssertionError('Cache miss')):
+                self.assertEqual(packing._png_samples(raw, 8, 8, 3), first)
+            for value in range(10):
+                changed = bytes([value, 0, 0]) * 64
+                self.assertNotEqual(packing._png_samples(changed, 8, 8, 3), first)
+                self.assertLessEqual(packing._packed_bytes, 64)
+
     def test_png_predictors_preserve_all_samples_alpha_content_and_links(self):
         with tempfile.TemporaryDirectory() as folder:
             folder = Path(folder)

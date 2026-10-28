@@ -43,17 +43,23 @@ export async function fetchEstimatePdf(
   return response.blob();
 }
 
-// One snapshot per open Builder. Preview and both download controls share these
-// exact bytes. A different estimate, mode or revision cannot reuse an old PDF.
+// Keep the last two snapshots in this open Builder only. Pre/Final can be
+// revisited without another render; a different revision always needs fresh bytes.
 export function createEstimatePdfLoader(fetchPdf = fetchEstimatePdf) {
-  let current: { key: string; promise: Promise<Blob> } | null = null;
+  const snapshots = new Map<string, Promise<Blob>>();
   return (source: EstimatePdfSource): Promise<Blob> => {
     const key = JSON.stringify([source.id, source.mode, source.revision]);
-    if (current?.key === key) return current.promise;
+    const cached = snapshots.get(key);
+    if (cached) {
+      snapshots.delete(key);
+      snapshots.set(key, cached);
+      return cached;
+    }
     const promise = Promise.resolve().then(() => fetchPdf(source));
-    current = { key, promise };
+    snapshots.set(key, promise);
+    while (snapshots.size > 2) snapshots.delete(snapshots.keys().next().value!);
     void promise.catch(() => {
-      if (current?.promise === promise) current = null;
+      if (snapshots.get(key) === promise) snapshots.delete(key);
     });
     return promise;
   };

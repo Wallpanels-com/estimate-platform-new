@@ -28,6 +28,9 @@ async def lifespan(app: FastAPI):
             raise RuntimeError("Database migrations are required. Run the approved Alembic upgrade before starting the application.")
 
     import asyncio
+    from starlette.concurrency import run_in_threadpool
+    from app.services.pdf_optimization import warm_static_images
+    await run_in_threadpool(warm_static_images)
     from app.services.backups import daily_backups
     backup_task = asyncio.create_task(daily_backups()) if settings.BACKUP_ENABLED else None
     try:

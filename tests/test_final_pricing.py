@@ -12,6 +12,21 @@ from fastapi import HTTPException
 
 
 class FinalPricing(TestCase):
+    def test_markup_discount_matrix_uses_fresh_totals_without_changing_base_prices(self):
+        for markup in (0, 10, 50, 200):
+            for discount in (0, 5, 100):
+                with self.subTest(markup=markup, discount=discount):
+                    est = fixtures.estimate([fixtures.zone(count=3)])
+                    est.markup_pct, est.discount_pct = markup, discount
+                    before = deepcopy(est)
+                    result = quote(est)
+                    expected = (est.subtotal * (1 + Decimal(markup) / 100)
+                                * (1 - Decimal(discount) / 100)).quantize(Decimal('0.01'))
+                    self.assertEqual(result.grand_total, expected)
+                    self.assertEqual(sum(result.item_prices.values()), expected)
+                    self.assertEqual(sum(result.zone_prices.values()), expected)
+                    self.assertEqual(est, before)
+
     def test_cent_allocation_markup_discount_once_and_saved_prices_unchanged(self):
         z = fixtures.zone(count=3)
         for i in z.line_items:
