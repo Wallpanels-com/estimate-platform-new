@@ -31,6 +31,15 @@ try {
       {
         name: "auth-fixture",
         setup(b) {
+          b.onResolve({ filter: /^react-router-dom$/ }, () => ({
+            path: "router",
+            namespace: "router-fixture",
+          }));
+          b.onLoad({ filter: /.*/, namespace: "router-fixture" }, () => ({
+            contents:
+              "export const useLocation=()=>({pathname:globalThis.feedbackPath || '/'})",
+            loader: "js",
+          }));
           b.onResolve({ filter: /^react$/ }, () => ({
             path: "react",
             external: true,
