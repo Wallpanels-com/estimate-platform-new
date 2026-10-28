@@ -20,7 +20,6 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas
 
 from .pre_estimate_v1 import (
-    _contain,
     _fonts,
     _item_detail,
     _pending,
@@ -31,6 +30,7 @@ from .pre_estimate_v1 import (
     money,
     number,
 )
+from .pdf_optimization import contained as _contain
 
 W, H, M = 1152, 648, 64
 INK = HexColor("#292724")

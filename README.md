@@ -133,7 +133,8 @@ The frontend and `/api/v1` are then served from `http://localhost:8010`.
 Business rules and client data have different lifecycles:
 
 - Pricing defaults, rule engine code, PDF layouts, fonts, logo files, XLSX template,
-  the shared Final title and the 13 corporate slides are versioned in this repo.
+  the shared Final title and the 13 corporate slides (appended to both Pre and
+  Final presentations) are versioned in this repo.
 - Users, Estimates, Zones, Line Items and managed Price Book records live in
   PostgreSQL.
 - Uploaded photos and generated PDFs/XLSX live under `STORAGE_PATH`.

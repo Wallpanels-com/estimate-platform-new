@@ -130,7 +130,9 @@ export default function EstimateForm({
             <>
               <Field
                 label={t("Markup (%)")}
-                hint={t("Applied to client PDF prices.")}
+                hint={t(
+                  "Applied only to Final Estimate PDF. Saved item and zone prices stay unchanged.",
+                )}
               >
                 <input
                   type="number"

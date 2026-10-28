@@ -267,9 +267,9 @@ export default function Builder() {
       </div>
     );
   const subtotal = zones.reduce((sum, z) => sum + Number(z.subtotal), 0);
-  const marked = subtotal * (1 + Number(estimate.markup_pct || 0) / 100);
-  const discount = (marked * Number(estimate.discount_pct || 0)) / 100;
-  const total = marked - discount;
+  // Saved base totals stay visible in the workspace. PDF adjustments are display-only.
+  const total = Number(estimate.final_total ?? subtotal);
+  const prePdfTotal = subtotal * (1 - Number(estimate.discount_pct || 0) / 100);
   const pendingZoneCount = zones.filter((z) =>
     z.line_items.some((i) => i.is_tbd),
   ).length;
@@ -711,22 +711,6 @@ export default function Builder() {
                 <Settings2 size={16} aria-hidden="true" />
               </Button>
             </div>
-            {Number(estimate.markup_pct) ? (
-              <div className="summary-adjustment">
-                <span>
-                  {t("Markup")} {Number(estimate.markup_pct)}%
-                </span>
-                <span>{money(marked - subtotal)}</span>
-              </div>
-            ) : null}
-            {Number(estimate.discount_pct) ? (
-              <div className="summary-adjustment">
-                <span>
-                  {t("Discount")} {Number(estimate.discount_pct)}%
-                </span>
-                <span>−{money(discount)}</span>
-              </div>
-            ) : null}
             <div className="grand-total">
               <span>{t("Grand total")}</span>
               <strong>{money(total)}</strong>
@@ -740,7 +724,7 @@ export default function Builder() {
               <p className="summary-note">
                 {t("Pre-estimate PDF range")}
                 <br />
-                {money(total * 0.9)} – {money(total * 1.15)}
+                {money(prePdfTotal * 0.9)} – {money(prePdfTotal * 1.15)}
               </p>
             ) : null}
             {pdfMode === "final" ? (

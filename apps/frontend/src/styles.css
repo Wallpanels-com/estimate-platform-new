@@ -3733,3 +3733,9 @@ html[lang="ru"] .line-head {
 .search-select:has(> .choice:only-child) {
   grid-template-columns: minmax(0, 1fr);
 }
+
+.book-item-form input[name="name_ru"]::placeholder {
+  color: var(--muted);
+  font-size: 0.875em;
+  opacity: 0.8;
+}

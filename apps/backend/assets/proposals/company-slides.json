@@ -1,7 +1,23 @@
 {
-  "version": "v3",
+  "version": "v3-compressed-approved",
   "pages": 13,
-  "sha256": "a5ccab103eb00ec97bab802f5cbc07347f2b14f451695ce716ed61c7354cbb55",
-  "source": "v3_company.pdf",
-  "format": "16:9"
+  "sha256": "1548803e25f92b922f0c67fb6e44fa336cf2808e182c4391010cf13eea3b0e3b",
+  "source": "v3_company (2)_compressed.pdf",
+  "format": "16:9",
+  "compression": "User-supplied compressed corporate PDF; copied byte-for-byte, with no further image recompression.",
+  "page_signatures": [
+    "1f74456244a6be3ec812c3e8dd5420f7b89396695cbbd77cf80a6a0e2dcd4df2",
+    "2184112eb798c40b4819a4b1fadc40c34af914dd597663a8c588900f5e4c1cdf",
+    "eb3ca264315fe284dc0a51ecb6f39e25124c3f2efa62b81e7059171ceb93b9c3",
+    "72316dada60bc417e35bcd3e120a3333c6426f1a95fcde851b715c4d9c659711",
+    "660e03ecc1afa7debb3a0539d469c2b890eea41741c6d9c165e524e5be5ebe68",
+    "8bc0d829ba6d3a1e36a225daaef71d7b75cb9a97e5da43e507af1fd848da5486",
+    "1e24cb55369cbf051adc270729b8a36adf089ec5791e337d736de260fcb47e28",
+    "905c34790ed260e8753e816eb31e5288e33986b3256c89f0be70b026fa2294e9",
+    "18b3bb21258343b20a117b286533decbf32312657276e2e68f20a6b32a6b52f2",
+    "268e2960cb7986333d1f128a4239ca4f0b82141623acc389bb97ffa3a5a7fe25",
+    "947a8399c65c8bbae61a6f24d932973a4f23e1eb2b552601ff83b092d1a1da68",
+    "62541cb430fbf1d78de9141c5b7f6ea064e4c3771d8d1cc539d5dafa958f811f",
+    "7d74a1f46cb1a18bfb9c9e17f3bfdd78d963abaebdd9d66eda73172f6991b9a1"
+  ]
 }

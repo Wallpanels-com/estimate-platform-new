@@ -1,16 +1,16 @@
-# Corporate appendix for Final Estimate
+# Corporate appendix for Pre-Estimate and Final Estimate
 
 ## Asset
 
-The permanent asset is `apps/backend/assets/proposals/company-slides.pdf`, copied byte-for-byte from the supplied `v3_company.pdf`. Its companion `company-slides.json` pins the SHA-256 and expected 13 pages. The PDF is 1440 × 810 pt (16:9), unencrypted, with all pages in the original order. Its existing slides contain raster artwork; the assembler preserves the original embedded streams without rasterizing or recompressing them again.
+The permanent asset is `apps/backend/assets/proposals/company-slides.pdf`, copied byte-for-byte from the user-approved `v3_company (2)_compressed.pdf` on October 28. Its companion `company-slides.json` pins the SHA-256, expected 13 pages and content/resource signatures. The PDF is 1440 × 810 pt (16:9), unencrypted, with its original crop-box origin and page order preserved. It weighs 1,949,021 bytes. Its embedded corporate images are not recompressed or rasterized again.
 
-SHA-256: `a5ccab103eb00ec97bab802f5cbc07347f2b14f451695ce716ed61c7354cbb55`.
+SHA-256: `1548803e25f92b922f0c67fb6e44fa336cf2808e182c4391010cf13eea3b0e3b`.
 
-The asset directory is inside the backend package and is included by its existing Docker `COPY . .` instruction. No deployment was performed.
+The asset directory is inside the backend package and included by Docker. Generation has no dependency on the original Downloads folder.
 
 ## Assembly and delivery
 
-`app/services/final_estimate_service.py` calls the existing, unchanged `pdf_service.generate_pdf`, then assembles the final file using the pinned free `pypdf==6.10.0` dependency:
+`final_estimate_layout.generate_final_client` and the selected Pre renderer generate client pages. Both then use the shared assembler in `final_estimate_service.py` and pinned free `pypdf==6.10.0`:
 
 1. Render the unique client pages in a temporary directory.
 2. Remove any exact corporate pages already present, using content/resource fingerprints rather than page count or titles. Full, partial and repeated copies are handled.
@@ -18,11 +18,13 @@ The asset directory is inside the backend package and is included by its existin
 4. Clone all 13 corporate pages directly, in source order, without overlays, resizing, re-encoding or added page labels.
 5. Reopen the completed file and check page count, common geometry and the 13 corporate fingerprints. Only then replace the output atomically. A failed merge cannot replace an existing complete file.
 
-The read-only `/pdf/{id}/final-estimate` route serves this file for inline preview and for `?download=true`. Existing Final `/generate` and `/download` routes also use the assembler, so stale legacy downloads cannot bypass the appendix. Pre-Estimate and XLSX generation are unchanged.
+Both `/pdf/{id}/final-estimate` and `/pdf/{id}/pre-estimate` serve the complete presentation for inline preview and `?download=true`. Compatibility `/generate` and `/download` routes also use the assembler. XLSX generation is unchanged. Final-only markup is hidden from Pre through a read-only view; saved line/zone prices and workspace totals remain base amounts. Existing discount behavior in PDF/XLSX remains intact.
+
+Client JPEGs are embedded without re-encoding; other raster samples may use reversible PNG predictors. No images are downsampled. Fonts and text remain in their existing format. A 12-zone/12-photo local Final fixture fell from 56.17 MB to 7.23 MB; a Pre fixture with the appendix is 2.14 MB. These are examples, not a hard cap: large original uploads can still produce larger files. Generated PDFs remain temporary/download-only.
 
 The frontend still shares one exact PDF Blob between preview, the preview's download link and the Builder's download button for the same estimate revision. It now displays the backend's actionable error if the corporate asset is missing, corrupted, has a checksum mismatch, has a wrong page count or has inconsistent geometry. No incomplete presentation is returned.
 
-## Local verification
+## Initial implementation verification (October 25, original corporate asset)
 
 - 43 backend tests pass, including the new assembly, idempotence, partial/repeated appendix, scaling/rotation, missing/corrupt asset, atomic-output and route tests.
 - Frontend PDF-source tests verify identical preview/download bytes, routing, retries and readable server errors; the production build passes.

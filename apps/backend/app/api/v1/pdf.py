@@ -172,6 +172,9 @@ async def pre_estimate(
     temporary = tempfile.TemporaryDirectory(prefix="wallpanels-proposal-")
     try:
         path = await run_in_threadpool(generate_pre_estimate, estimate, Path(temporary.name) / "proposal.pdf")
+    except FinalEstimatePdfError as error:
+        temporary.cleanup()
+        raise HTTPException(status_code=503, detail=str(error)) from error
     except Exception:
         temporary.cleanup()
         raise

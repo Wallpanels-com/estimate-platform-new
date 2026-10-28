@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from "react";
-import { Plus, X } from "lucide-react";
 import {
   type BookCategory,
   type BookItem,
@@ -35,7 +34,7 @@ export default function ItemForm({
     [error, setError] = useState("");
   const [translating, setTranslating] = useState(false);
   const [mode, setMode] = useState(item?.pricing_mode || "unit");
-  const [parameters, setParameters] = useState(item?.parameters || []);
+  const parameters = item?.parameters || [];
   const [saved, setSaved] = useState<BookItem | null>(null);
   const [pending, setPending] = useState<Record<string, unknown> | null>(null);
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -203,69 +202,6 @@ export default function ItemForm({
                   disabled={mode === "fixed"}
                 />
               </Field>
-              <div className="span-all book-specifications">
-                <div className="book-subheading">
-                  <h3>{t("Specifications")}</h3>
-                  <Button
-                    variant="ghost"
-                    disabled={parameters.length >= 12}
-                    onClick={() =>
-                      setParameters((old) => [...old, { name: "", value: "" }])
-                    }
-                  >
-                    <Plus size={15} />
-                    {t("Add parameter")}
-                  </Button>
-                </div>
-                {parameters.map((p, index) => (
-                  <div className="book-specification" key={index}>
-                    <Field label={t("Parameter name (EN)")}>
-                      <input
-                        value={p.name}
-                        required
-                        maxLength={80}
-                        onChange={(e) =>
-                          setParameters((old) =>
-                            old.map((v, i) =>
-                              i === index ? { ...v, name: e.target.value } : v,
-                            ),
-                          )
-                        }
-                      />
-                    </Field>
-                    <Field label={t("Parameter value (EN)")}>
-                      <input
-                        value={p.value}
-                        required
-                        maxLength={300}
-                        onChange={(e) =>
-                          setParameters((old) =>
-                            old.map((v, i) =>
-                              i === index ? { ...v, value: e.target.value } : v,
-                            ),
-                          )
-                        }
-                      />
-                    </Field>
-                    <Button
-                      variant="ghost"
-                      aria-label={t("Remove parameter {0}", index + 1)}
-                      onClick={() =>
-                        setParameters((old) =>
-                          old.filter((_, i) => i !== index),
-                        )
-                      }
-                    >
-                      <X size={16} />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              <p className="form-hint span-all">
-                {t(
-                  "English names and specifications are used in estimates and presentations. These items do not change automatic calculator rules.",
-                )}
-              </p>
             </fieldset>
           </div>
           <footer className="modal-footer">

@@ -528,7 +528,9 @@ try {
   delete window.Translator;
   await input(ruName(), "");
   await settleName();
-  assert.match(document.body.textContent, /Автоперевод недоступен/);
+  assert.match(ruName().title, /Автоперевод недоступен/);
+  assert.equal(ruName().placeholder, "Заполняется автоматически");
+  assert.equal(document.querySelector("small"), null);
   assert.equal(translatingName, false);
   await act(async () => root.unmount());
 
@@ -538,6 +540,7 @@ try {
     ...existing,
     description: "Keep original English details",
     description_ru: "Сохранить русские детали",
+    parameters: [{ name: "Finish", value: "Oak" }],
   };
   root = createRoot(document.getElementById("root"));
   await act(async () =>
@@ -557,9 +560,12 @@ try {
   );
   assert.equal(editor().querySelector('[name="description"]'), null);
   assert.equal(editor().querySelector('[name="description_ru"]'), null);
+  assert.equal(editor().querySelector(".book-specifications"), null);
+  assert.equal(editor().querySelector(".form-hint"), null);
   await submit();
   assert.equal(itemUpdates.at(-1).description, describedItem.description);
   assert.equal(itemUpdates.at(-1).description_ru, describedItem.description_ru);
+  assert.deepEqual(itemUpdates.at(-1).parameters, describedItem.parameters);
   await act(async () => root.unmount());
 
   // Exercise the actual Price Book page, including confirmations before writes.

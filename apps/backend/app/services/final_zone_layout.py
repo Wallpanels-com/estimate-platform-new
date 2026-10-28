@@ -417,19 +417,12 @@ def paginate(zone, number, quote, selected_slot=None, photo_required=True):
 
 
 def contained(c, photo, x, y, w, h):
-    with Image.open(photo.path) as source:
-        mode = (
-            "RGBA"
-            if "A" in source.getbands() or "transparency" in source.info
-            else "RGB"
-        )
-        im = ImageOps.exif_transpose(source).convert(mode)
-        iw, ih = im.size
-        factor = min(w / iw, h / ih)
-        dw, dh = iw * factor, ih * factor
-        c.drawImage(
-            ImageReader(im), x + (w - dw) / 2, y + (h - dh) / 2, dw, dh, mask="auto"
-        )
+    from .pdf_optimization import image_reader
+    image = image_reader(photo.path)
+    iw, ih = image.getSize()
+    scale = min(w / iw, h / ih)
+    dw, dh = iw * scale, ih * scale
+    c.drawImage(image, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh, mask="auto")
 
 
 def draw_total(c, page, quote):

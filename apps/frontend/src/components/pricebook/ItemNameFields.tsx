@@ -131,18 +131,17 @@ export default function ItemNameFields({
           maxLength={200}
         />
       </Field>
-      <Field
-        label={t("Item name (RU)")}
-        hint={t(
-          status === "pending"
-            ? "Translating locally in your browser…"
-            : status === "unavailable"
-              ? "Automatic translation is unavailable in this browser. Enter the Russian name manually."
-              : "Translated automatically. You can correct the Russian name.",
-        )}
-      >
+      <Field label={t("Item name (RU)")}>
         <input
           name="name_ru"
+          placeholder={t("Filled automatically")}
+          title={
+            status === "unavailable"
+              ? t(
+                  "Automatic translation is unavailable in this browser. Enter the Russian name manually.",
+                )
+              : undefined
+          }
           value={nameRu}
           onChange={(e) => {
             manual.current = Boolean(e.target.value.trim());

@@ -56,14 +56,12 @@ def line(c, x, y, width):
 
 
 def contained(c, path, x, y, w, h):
-    with Image.open(path) as original:
-        image = ImageOps.exif_transpose(original).convert("RGBA")
-        iw, ih = image.size
-        ratio = min(w / iw, h / ih)
-        dw, dh = iw * ratio, ih * ratio
-        c.drawImage(
-            ImageReader(image), x + (w - dw) / 2, y + (h - dh) / 2, dw, dh, mask="auto"
-        )
+    from .pdf_optimization import image_reader
+    image = image_reader(path)
+    iw, ih = image.getSize()
+    scale = min(w / iw, h / ih)
+    dw, dh = iw * scale, ih * scale
+    c.drawImage(image, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh, mask="auto")
 
 
 def background(c, index):

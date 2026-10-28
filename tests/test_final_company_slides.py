@@ -130,7 +130,10 @@ class FinalCompanySlides(TestCase):
         final.compose_final_pdf(self.client, right, self.company)
         self.assertEqual(left.read_bytes(), right.read_bytes())
 
-    def test_pinned_company_asset_is_the_original_thirteen_page_file(self):
+    def test_pinned_company_asset_is_the_approved_compressed_thirteen_page_file(self):
         company = final.load_company_slides()
         self.assertEqual(len(company.reader.pages), 13)
-        self.assertEqual(company.digest, 'a5ccab103eb00ec97bab802f5cbc07347f2b14f451695ce716ed61c7354cbb55')
+        manifest = json.loads(final.COMPANY_MANIFEST.read_text())
+        self.assertEqual(company.digest, '1548803e25f92b922f0c67fb6e44fa336cf2808e182c4391010cf13eea3b0e3b')
+        self.assertEqual(company.digest, manifest['sha256'])
+        self.assertEqual(company.signatures, manifest['page_signatures'])

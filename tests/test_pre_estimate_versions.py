@@ -212,12 +212,19 @@ class PreEstimateVersions(TestCase):
                 router, "design_version", return_value=version
             ), patch(
                 f"app.services.pre_estimate_{version}.generate_pre_estimate",
-                return_value="ok",
-            ) as renderer:
+                return_value="client.pdf",
+            ) as renderer, patch.object(router, "load_company_slides"), patch.object(
+                router, "compose_final_pdf", return_value="ok"
+            ) as composer:
                 self.assertEqual(
                     router.generate_pre_estimate("estimate", "output"), "ok"
                 )
-                renderer.assert_called_once_with("estimate", "output")
+                renderer.assert_called_once()
+                view, path = renderer.call_args.args
+                self.assertEqual(view._estimate, "estimate")
+                self.assertEqual(view.markup_pct, 0)
+                self.assertEqual(path.name, "client.pdf")
+                composer.assert_called_once()
 
     def test_shared_image_is_not_misrepresented_as_five_zone_photos(self):
         est = example()

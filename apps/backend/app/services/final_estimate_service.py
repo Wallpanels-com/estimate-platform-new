@@ -1,4 +1,4 @@
-"""Final-only assembly. The original client renderer and corporate asset stay intact."""
+"""Shared lossless proposal assembly; client slides followed by 13 corporate pages."""
 from dataclasses import dataclass
 from hashlib import sha256
 from io import BytesIO
@@ -13,6 +13,7 @@ from pypdf import PdfReader, PdfWriter, Transformation
 from pypdf.generic import ArrayObject, DictionaryObject, RectangleObject, StreamObject
 
 from app.services.final_estimate_layout import generate_final_client
+from app.services.pdf_optimization import optimize
 
 ASSET_DIRECTORY = Path(__file__).resolve().parents[2] / 'assets' / 'proposals'
 COMPANY_PDF = ASSET_DIRECTORY / 'company-slides.pdf'
@@ -49,8 +50,10 @@ def _resource_signature(value, cache, active):
         return 'cycle'
     active.add(key)
     if isinstance(value, DictionaryObject):
+        # Compare decoded content: lossless packing may change filters, never pixels.
+        ignored = ('/Length', '/P', '/Filter', '/DecodeParms') if isinstance(value, StreamObject) else ('/Length', '/P')
         data = {str(k): _resource_signature(v, cache, active)
-                for k, v in sorted(value.items()) if str(k) not in ('/Length', '/P')}
+                for k, v in sorted(value.items()) if str(k) not in ignored}
         if isinstance(value, StreamObject):
             data['stream-sha256'] = sha256(value.get_data()).hexdigest()
     else:
@@ -82,11 +85,11 @@ def load_company_slides(asset_path=None, manifest_path=None):
         manifest = json.loads(manifest_path.read_text())
     except OSError as error:
         raise FinalEstimatePdfError(
-            'The corporate slides PDF is unavailable. Restore the company slides file to generate a Final Estimate.'
+            'The corporate slides PDF is unavailable. Restore the company slides file to generate the presentation.'
         ) from error
     except (ValueError, UnicodeError) as error:
         raise FinalEstimatePdfError(
-            'The corporate slides PDF is damaged or invalid. Final Estimate was not generated.'
+            'The corporate slides PDF is damaged or invalid. The presentation was not generated.'
         ) from error
     try:
         digest = sha256(contents).hexdigest()
@@ -114,7 +117,7 @@ def load_company_slides(asset_path=None, manifest_path=None):
         raise
     except Exception as error:
         raise FinalEstimatePdfError(
-            'The corporate slides PDF is damaged or invalid. Final Estimate was not generated.'
+            'The corporate slides PDF is damaged or invalid. The presentation was not generated.'
         ) from error
 
 
@@ -175,6 +178,7 @@ def compose_final_pdf(client_path, output_path, company=None):
             '/WallPanelsClientPages': str(len(client_pages)),
         })
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        optimize(writer)
         writer.write(pending)
         verified = PdfReader(pending, strict=True)
         if (len(verified.pages) != len(client_pages) + COMPANY_PAGE_COUNT
@@ -188,7 +192,7 @@ def compose_final_pdf(client_path, output_path, company=None):
         raise
     except Exception as error:
         raise FinalEstimatePdfError(
-            'The Final Estimate PDF could not be assembled. No incomplete PDF was returned.'
+            'The presentation PDF could not be assembled. No incomplete PDF was returned.'
         ) from error
     finally:
         pending.unlink(missing_ok=True)
