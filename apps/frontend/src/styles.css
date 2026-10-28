@@ -3128,6 +3128,13 @@ html[lang="ru"] .line-head {
   border-radius: 5px;
   color: #514a3f;
 }
+.rate-section > header .rate-add {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  min-height: 32px;
+  width: 32px;
+  padding: 0;
+}
 .rate-section > header h3 {
   font-size: 13px;
   text-wrap: initial;

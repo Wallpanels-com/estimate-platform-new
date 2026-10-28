@@ -52,6 +52,8 @@ def category_change(config, payload, ident=None):
     result=deepcopy(config);book=read_catalog(config)
     old=category(config,ident) if ident else None
     data=payload.model_dump(exclude={'expected_version'})
+    if data.get("parent_id"):
+        raise HTTPException(422,"Subcategories are not supported. Choose a top-level category.")
     if old:
         version_check(old,payload.expected_version)
         if old['builtin'] and data['archived']:raise HTTPException(409,'Built-in categories cannot be archived.')
@@ -138,8 +140,38 @@ async def save_legacy(db, incoming, user, expected=None, reset=False):
     await lock_config(db)
     current=await get_pricing_config(db)
     if expected is not None and revision(current)!=expected:raise HTTPException(409,'Pricing changed elsewhere. Reload before saving your rates.')
-    config=deepcopy(DEFAULT_PRICING_CONFIG) if reset else legacy_config(incoming)
+    from app.services.managed_rates import with_managed_rates, validate_additions
+    config=with_managed_rates(DEFAULT_PRICING_CONFIG) if reset else legacy_config(incoming)
+    validate_additions(config)
     validate_legacy(config)
     if CATALOG_KEY in current:config[CATALOG_KEY]=deepcopy(current[CATALOG_KEY])
     row=await save_pricing_config(db,config,user)
-    return {'config':row.config,'is_default':legacy_config(row.config)==DEFAULT_PRICING_CONFIG,'revision':revision(row.config),'updated_by':row.updated_by_name,'updated_at':row.updated_at}
+    return {'config':row.config,'is_default':legacy_config(row.config)==with_managed_rates(DEFAULT_PRICING_CONFIG),'revision':revision(row.config),'updated_by':row.updated_by_name,'updated_at':row.updated_at}
+
+
+def remove_entry(config, kind, ident, expected):
+    result=deepcopy(config);book=read_catalog(config)
+    if kind=='items':
+        entry=next((i for i in book['items'] if i['id']==ident),None)
+        if entry is None:raise HTTPException(404,'Price Book item not found.')
+        version_check(entry,expected)
+        if not entry['archived'] and category_available(config,entry['category_id']):raise HTTPException(409,'Archive the item before permanently deleting it.')
+        book['items']=[i for i in book['items'] if i['id']!=ident]
+    else:
+        entry=category(config,ident);version_check(entry,expected)
+        if entry['builtin']:raise HTTPException(409,'Built-in categories cannot be deleted.')
+        if category_available(config,ident):raise HTTPException(409,'Archive the category before permanently deleting it.')
+        deleted={ident}
+        while True:
+            following=deleted|{c['id'] for c in book['categories'] if c.get('parent_id') in deleted}
+            if following==deleted:break
+            deleted=following
+        book['categories']=[c for c in book['categories'] if c['id'] not in deleted]
+        book['items']=[i for i in book['items'] if i['category_id'] not in deleted]
+    result[CATALOG_KEY]=book
+    return result
+
+async def delete_entry(db,kind,ident,expected,user):
+    await lock_config(db)
+    config=await get_pricing_config(db)
+    await save_pricing_config(db,remove_entry(config,kind,ident,expected),user)

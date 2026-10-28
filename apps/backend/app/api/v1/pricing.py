@@ -4,12 +4,13 @@ from typing import List, Optional, Union
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.rule_engine import calc_wall, calc_cabinet, calc_mirror, get_pricing_schema
-from app.services.pricing_config import get_pricing_config, save_pricing_config, reset_pricing_config, DEFAULT_PRICING_CONFIG
+from app.services.pricing_config import save_pricing_config, reset_pricing_config, DEFAULT_PRICING_CONFIG
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.services.pricebook_service import legacy_config, revision, save_legacy
 from app.services.calculator_registry import calculate, definitions
+from app.services.managed_rates import pricing_schema as managed_schema, get_config as get_pricing_config, with_managed_rates
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])
 
@@ -21,6 +22,7 @@ class FixedAddon(BaseModel):
 
 class WallCalcRequest(BaseModel):
     square_footage: float
+    base_rate_key: str | None = None
     addons_sf: List[str] = []
     addons_fixed: List[Union[str, FixedAddon]] = []
     panel_name: Optional[str] = None
@@ -38,6 +40,7 @@ class CabinetCalcRequest(BaseModel):
 
 class MirrorCalcRequest(BaseModel):
     square_footage: float
+    mirror_type: str | None = None
 
 
 @router.get("/schema")
@@ -46,7 +49,7 @@ async def pricing_schema(
     current_user: User = Depends(get_current_user),
 ):
     config = await get_pricing_config(db)
-    return get_pricing_schema(config)
+    return managed_schema(config)
 
 
 @router.post("/calc/wall")
@@ -57,7 +60,7 @@ async def calculate_wall(
 ):
     config = await get_pricing_config(db)
     addons_fixed = [a.model_dump() if isinstance(a, FixedAddon) else a for a in data.addons_fixed]
-    return calculate("wall", config, square_footage=data.square_footage, addons_sf=data.addons_sf, addons_fixed=addons_fixed,
+    return calculate("wall", config, square_footage=data.square_footage, base_rate_key=data.base_rate_key, addons_sf=data.addons_sf, addons_fixed=addons_fixed,
         panel_name=data.panel_name, panel_color=data.panel_color,
         panel_coverage_pct=data.panel_coverage_pct,
     )
@@ -80,7 +83,7 @@ async def calculate_mirror(
     current_user: User = Depends(get_current_user),
 ):
     config = await get_pricing_config(db)
-    return calculate("mirror", config, square_footage=data.square_footage)
+    return calculate("mirror", config, square_footage=data.square_footage, mirror_type=data.mirror_type)
 
 
 # ─── PRICING CONFIG MANAGEMENT (Rule Engine editor) ───────────
@@ -101,7 +104,7 @@ async def get_config(
 ):
     """Returns the active pricing config plus whether it's the built-in default."""
     config = await get_pricing_config(db)
-    is_default = (legacy_config(config) == DEFAULT_PRICING_CONFIG)
+    is_default = (legacy_config(config) == with_managed_rates(DEFAULT_PRICING_CONFIG))
     return {"config": config, "is_default": is_default, "defaults": DEFAULT_PRICING_CONFIG, "revision": revision(config)}
 
 

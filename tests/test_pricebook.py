@@ -9,7 +9,7 @@ os.environ.setdefault('SECRET_KEY','unit-tests-only')
 from fastapi import HTTPException
 from pydantic import ValidationError
 from app.schemas.pricebook import CategoryInput,ItemInput,CATEGORY_ICONS
-from app.services.pricebook_service import category_change,item_change,quote,categories,legacy_config,revision,validate_legacy
+from app.services.pricebook_service import category_change,item_change,quote,categories,legacy_config,revision,validate_legacy,remove_entry
 from app.services.pricing_config import DEFAULT_PRICING_CONFIG
 from app.services.calculator_registry import definitions,calculate
 
@@ -37,40 +37,25 @@ class PriceBookContracts(unittest.TestCase):
         self.assertEqual(error.exception.status_code,409)
         with self.assertRaises(HTTPException):category_change(self.config,CategoryInput(name='wall PANELS'))
         with self.assertRaises(HTTPException):category_change(self.config,CategoryInput(name='Walls',archived=True),'wall')
-    def test_subcategories_move_archive_restore_and_quote(self):
-        config,child=category_change(self.config,CategoryInput(name='Slats',parent_id=self.cid))
-        config,grandchild=category_change(config,CategoryInput(name='Oak',parent_id=child))
-        config,item=item_change(config,ItemInput(category_id=grandchild,name='Oak panels',unit='SF',unit_price='12.50'))
-        snapshot=quote(config,item['id'],Decimal('4'))
-        self.assertEqual(snapshot['total_price'],'50.00')
-        # Hiding a parent must prevent quoting and restoring active items under it.
-        config,_=category_change(config,CategoryInput(name='Acoustic work',archived=True,expected_version=1),self.cid)
-        with self.assertRaises(HTTPException):quote(config,item['id'],Decimal('4'))
-        with self.assertRaises(HTTPException):item_change(config,ItemInput(category_id=grandchild,name='Invalid',unit_price='12'))
-        self.assertEqual(next(c for c in categories(config) if c['id']==grandchild)['archived'],False)
-        config,_=category_change(config,CategoryInput(name='Acoustic work',expected_version=2),self.cid)
-        self.assertEqual(quote(config,item['id'],Decimal('4')),snapshot)
-        # Reparenting a custom subtree retains items and formulas.
-        config,_=category_change(config,CategoryInput(name='Slats renamed',parent_id='wall',expected_version=1),child)
-        self.assertEqual(next(c for c in categories(config) if c['id']==child)['parent_id'],'wall')
-        self.assertEqual(quote(config,item['id'],Decimal('4')),snapshot)
-        self.assertEqual(legacy_config(config),DEFAULT_PRICING_CONFIG)
+    def test_subcategories_are_disabled(self):
+        with self.assertRaises(HTTPException) as error:
+            category_change(self.config,CategoryInput(name='Nested',parent_id=self.cid))
+        self.assertEqual(error.exception.status_code,422)
 
-    def test_subcategory_cycles_missing_parent_and_sibling_names(self):
-        config,child=category_change(self.config,CategoryInput(name='Oak',parent_id=self.cid))
-        for payload,ident in [
-            (CategoryInput(name='Acoustic work',parent_id=child),self.cid),
-            (CategoryInput(name='Oak',parent_id=child),child),
-            (CategoryInput(name='Bad',parent_id='missing'),None),
-            (CategoryInput(name='Wall panels',parent_id=child),'wall'),
-            (CategoryInput(name='oak',parent_id=self.cid),None),
-        ]:
-            with self.assertRaises(HTTPException):category_change(config,payload,ident)
-        # Same material group name is valid under a different parent.
-        config,other=category_change(config,CategoryInput(name='Oak',parent_id='wall'))
-        self.assertNotEqual(other,child)
-        config,_=category_change(config,CategoryInput(name='Acoustic work',archived=True),self.cid)
-        with self.assertRaises(HTTPException):category_change(config,CategoryInput(name='Hidden child',parent_id=child))
+    def test_permanent_delete_requires_archive_and_version_and_keeps_quote_snapshot(self):
+        config,item=item_change(self.config,ItemInput(category_id=self.cid,name='Acoustic panel',unit='SF',unit_price='12.50'))
+        snapshot=quote(config,item['id'],Decimal('4'))
+        with self.assertRaises(HTTPException):remove_entry(config,'categories',self.cid,1)
+        with self.assertRaises(HTTPException):remove_entry(config,'items',item['id'],1)
+        archived,_=category_change(config,CategoryInput(name='Acoustic work',archived=True,expected_version=1),self.cid)
+        with self.assertRaises(HTTPException) as stale:remove_entry(archived,'categories',self.cid,1)
+        self.assertEqual(stale.exception.status_code,409)
+        deleted=remove_entry(archived,'categories',self.cid,2)
+        self.assertFalse(any(c['id']==self.cid for c in categories(deleted)))
+        self.assertEqual(snapshot['total_price'],'50.00')
+        self.assertEqual(legacy_config(deleted),DEFAULT_PRICING_CONFIG)
+        with self.assertRaises(HTTPException):quote(deleted,item['id'],Decimal('4'))
+        with self.assertRaises(HTTPException):remove_entry(config,'categories','wall',0)
 
     def test_quote_unit_fixed_unpriced_and_snapshot(self):
         config,item=item_change(self.config,ItemInput(category_id=self.cid,name='Acoustic installation',name_ru='Монтаж',description='Scope',unit='SF',unit_price='12.55',parameters=[{'name':'Finish','value':'Oak'}]))

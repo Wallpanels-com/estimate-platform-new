@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.pricebook import CategoryInput, ItemInput, QuoteInput
 from app.services.pricing_config import get_pricing_config
-from app.services.pricebook_service import categories, read_catalog, update_category, update_item, quote
+from app.services.pricebook_service import categories, read_catalog, update_category, update_item, quote, delete_entry
 
 router=APIRouter(prefix='/pricing/catalog',tags=['price-book'])
 
@@ -35,3 +35,11 @@ async def edit_item(ident:str,data:ItemInput,db:AsyncSession=Depends(get_db),use
 @router.post('/items/{ident}/quote')
 async def quote_item(ident:str,data:QuoteInput,db:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
     return quote(await get_pricing_config(db),ident,data.quantity)
+
+@router.delete('/categories/{ident}',status_code=204)
+async def delete_category(ident:str,expected_version:int=Query(ge=0),db:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
+    await delete_entry(db,'categories',ident,expected_version,display(user))
+
+@router.delete('/items/{ident}',status_code=204)
+async def delete_item(ident:str,expected_version:int=Query(ge=1),db:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
+    await delete_entry(db,'items',ident,expected_version,display(user))

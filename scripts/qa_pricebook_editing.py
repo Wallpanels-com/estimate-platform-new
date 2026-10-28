@@ -1,4 +1,4 @@
-"""Check shared category/subcategory editing using only newly created TEST entries."""
+"""Check flat categories, archive/delete and supported calculator rates using only newly created TEST entries."""
 import argparse
 import json
 from pathlib import Path
@@ -39,12 +39,12 @@ def main():
     try:
         parent = call(a,'POST','/pricing/catalog/categories',201,json={'name':prefix,'name_ru':'ТЕСТ редактирования справочника','icon':'folder'})
         created_categories.add(parent['id'])
-        child = call(b,'POST','/pricing/catalog/categories',201,json={'name':'Acoustic finishes','name_ru':'Акустическая отделка','parent_id':parent['id'],'icon':'panels'})
+        child = call(b,'POST','/pricing/catalog/categories',201,json={'name':prefix+' finishes','name_ru':'Акустическая отделка','icon':'panels'})
         created_categories.add(child['id'])
-        grandchild = call(a,'POST','/pricing/catalog/categories',201,json={'name':'Oak finishes','parent_id':child['id']})
+        grandchild = call(a,'POST','/pricing/catalog/categories',201,json={'name':prefix+' oak'})
         created_categories.add(grandchild['id'])
         call(b,'PUT',f"/pricing/catalog/categories/{parent['id']}",422,json=cat_body(parent,parent_id=grandchild['id']))
-        renamed = call(b,'PUT',f"/pricing/catalog/categories/{child['id']}",json=cat_body(child,name='Acoustic wall finishes',name_ru='Акустические стеновые покрытия'))
+        renamed = call(b,'PUT',f"/pricing/catalog/categories/{child['id']}",json=cat_body(child,name=prefix+' wall finishes',name_ru='Акустические стеновые покрытия'))
         call(a,'PUT',f"/pricing/catalog/categories/{child['id']}",409,json=cat_body(child,name='Stale edit'))
         entry = call(b,'POST','/pricing/catalog/items',201,json={'category_id':grandchild['id'],'name':'TEST Acoustic panel','unit':'SF','unit_price':'12.50','default_quantity':'2'})
         created_items.add(entry['id'])
@@ -57,28 +57,39 @@ def main():
         fixed = call(a,'POST','/pricing/catalog/items',201,json={'category_id':child['id'],'name':'TEST Installation','unit':'Fixed','pricing_mode':'fixed','unit_price':'100','default_quantity':'1'})
         created_items.add(fixed['id'])
         assert call(b,'POST',f"/pricing/catalog/items/{fixed['id']}/quote",json={'quantity':'9'})['total_price'] == '100.00'
-        archived = call(a,'PUT',f"/pricing/catalog/categories/{parent['id']}",json=cat_body(parent,archived=True))
+        archived = call(a,'PUT',f"/pricing/catalog/categories/{grandchild['id']}",json=cat_body(grandchild,archived=True))
         call(b,'POST',f"/pricing/catalog/items/{entry['id']}/quote",409,json={'quantity':'4'})
         call(b,'POST','/pricing/catalog/items',409,json={'category_id':grandchild['id'],'name':'Invalid hidden item','unit_price':'1'})
-        restored = call(b,'PUT',f"/pricing/catalog/categories/{parent['id']}",json=cat_body(archived,archived=False))
+        restored = call(b,'PUT',f"/pricing/catalog/categories/{grandchild['id']}",json=cat_body(archived,archived=False))
         assert call(a,'POST',f"/pricing/catalog/items/{entry['id']}/quote",json={'quantity':'4'})['total_price'] == '61.00'
-        moved = call(a,'PUT',f"/pricing/catalog/categories/{grandchild['id']}",json=cat_body(grandchild,parent_id=parent['id']))
-        catalog = call(b,'GET','/pricing/catalog')
-        assert next(c for c in catalog['categories'] if c['id']==moved['id'])['parent_id']==parent['id']
-        assert next(i for i in catalog['items'] if i['id']==edited['id'])['unit_price']=='15.25'
-        print(json.dumps({'checks':checks,'cross_user_persistence':True,'nested_categories':True,'cycle_and_conflict_protection':True,
-                          'legacy_rates_unchanged':call(a,'GET','/pricing/config')['revision']==before}))
+        call(a,'POST','/pricing/catalog/categories',422,json={'name':prefix+' nested','parent_id':parent['id']})
+        call(a,'DELETE',f"/pricing/catalog/items/{edited['id']}?expected_version={edited['version']}",409)
+        archived_item=call(b,'PUT',f"/pricing/catalog/items/{edited['id']}",json=item_body(edited,archived=True))
+        call(a,'DELETE',f"/pricing/catalog/items/{edited['id']}?expected_version={edited['version']}",409)
+        call(a,'DELETE',f"/pricing/catalog/items/{edited['id']}?expected_version={archived_item['version']}",204)
+        call(b,'POST',f"/pricing/catalog/items/{edited['id']}/quote",404,json={'quantity':'1'})
+        config=call(a,'GET','/pricing/config')['config']
+        for key in ['rustic','bronze','clear']:
+            quote=call(b,'POST','/pricing/calc/mirror',json={'square_footage':10,'mirror_type':key})
+            assert quote['total']==10*config['mirror']['types'][key]['rate']+config['mirror']['minimum']
+            assert quote['line_items'][0]['name']==config['mirror']['types'][key]['label']
+        shelf=call(a,'POST','/pricing/calc/cabinet',json={'linear_footage':2,'cabinet_type':'shelving_unit'})
+        assert shelf['total']==2*config['cabinet']['types']['shelving_unit']['base_rate']
+        print(json.dumps({'checks':checks,'cross_user_persistence':True,'flat_categories_only':True,'archive_restore_delete':True,
+                          'mirror_types_and_shelving':True,'legacy_rates_unchanged':call(a,'GET','/pricing/config')['revision']==before}))
     finally:
         # Preserve recoverability. Never modify pre-existing or staff-created entries.
         catalog = call(a,'GET','/pricing/catalog')
         for item in catalog['items']:
             if item['id'] in created_items:
-                call(a,'PUT',f"/pricing/catalog/items/{item['id']}",json=item_body(item,archived=True))
+                archived=call(a,'PUT',f"/pricing/catalog/items/{item['id']}",json=item_body(item,archived=True))
+                call(a,'DELETE',f"/pricing/catalog/items/{item['id']}?expected_version={archived['version']}",204)
         for category in reversed(catalog['categories']):
             if category['id'] in created_categories:
-                call(a,'PUT',f"/pricing/catalog/categories/{category['id']}",json=cat_body(category,archived=True))
+                archived=call(a,'PUT',f"/pricing/catalog/categories/{category['id']}",json=cat_body(category,archived=True))
+                call(a,'DELETE',f"/pricing/catalog/categories/{category['id']}?expected_version={archived['version']}",204)
         for client in clients: client.close()
-        print('Only newly created TEST entries were archived; existing catalogue data was not edited.')
+        print('Only newly created TEST entries were archived and deleted; existing catalogue data was not edited.')
 
 
 if __name__ == '__main__':

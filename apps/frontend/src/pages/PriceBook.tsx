@@ -9,6 +9,7 @@ import {
   Save,
   SlidersHorizontal,
   BookOpen,
+  Trash2,
 } from "lucide-react";
 import { request, post, errorMessage } from "../lib/api";
 import type { JsonValue, PricingConfig } from "../lib/types";
@@ -37,6 +38,10 @@ import {
 import CategoryForm from "../components/pricebook/CategoryForm";
 import ItemForm from "../components/pricebook/ItemForm";
 import CatalogItems from "../components/pricebook/CatalogItems";
+import RateEntryForm, {
+  supportedGroup,
+  type RateGroup,
+} from "../components/pricebook/RateEntryForm";
 import RateEditor from "../components/pricebook/RateEditor";
 
 type ConfigResponse = {
@@ -58,11 +63,15 @@ export default function PriceBook() {
     [showArchived, setShowArchived] = useState(false),
     [confirmRates, setConfirmRates] = useState(false),
     [actionError, setActionError] = useState(""),
-    [newParent, setNewParent] = useState<string | null>(null);
+    [deleteTarget, setDeleteTarget] = useState<{
+      kind: "category" | "item";
+      entry: BookCategory | BookItem;
+    } | null>(null);
   const [categoryForm, setCategoryForm] = useState<BookCategory | "new" | null>(
       null,
     ),
     [itemForm, setItemForm] = useState<BookItem | "new" | null>(null);
+  const [rateGroup, setRateGroup] = useState<RateGroup | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<
     | { kind: "category"; entry: BookCategory; restore?: boolean }
     | { kind: "item"; entry: BookItem; restore?: boolean }
@@ -103,7 +112,7 @@ export default function PriceBook() {
   const activeCount = items.filter((i) => !i.archived).length;
   useEffect(() => {
     setActionError("");
-  }, [confirmRates, reset, archiveTarget]);
+  }, [confirmRates, reset, archiveTarget, deleteTarget]);
   function select(c: BookCategory) {
     setTab(c.id);
     setView(c.builtin ? "rates" : "items");
@@ -179,6 +188,28 @@ export default function PriceBook() {
     } catch (err) {
       setActionError(errorMessage(err));
       notify(errorMessage(err), true);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function permanentlyDelete() {
+    if (!deleteTarget || busy) return;
+    setBusy(true);
+    setActionError("");
+    try {
+      await request(
+        `/pricing/catalog/${deleteTarget.kind === "category" ? "categories" : "items"}/${deleteTarget.entry.id}?expected_version=${deleteTarget.entry.version}`,
+        { method: "DELETE" },
+      );
+      await refreshCatalogue();
+      if (deleteTarget.kind === "category") {
+        setTab("wall");
+        setView("rates");
+      }
+      setDeleteTarget(null);
+      notify("Entry permanently deleted");
+    } catch (err) {
+      setActionError(errorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -262,7 +293,6 @@ export default function PriceBook() {
               <Button
                 className="book-add-category"
                 onClick={() => {
-                  setNewParent(null);
                   setCategoryForm("new");
                 }}
               >
@@ -314,27 +344,19 @@ export default function PriceBook() {
                 </div>
               </div>
               <div className="book-category-actions">
-                <Button
-                  disabled={!categoryAvailable(category, categories)}
-                  onClick={() => {
-                    setNewParent(category.id);
-                    setCategoryForm("new");
-                  }}
-                >
-                  <Plus size={16} />
-                  {t("Add subcategory")}
-                </Button>
-                <Button
-                  variant="ghost"
-                  aria-label={t("Edit category")}
-                  title={t("Edit category")}
-                  onClick={() => setCategoryForm(category)}
-                >
-                  <Pencil size={17} />
-                </Button>
-                {!category.builtin ? (
+                {!category.archived ? (
                   <Button
                     variant="ghost"
+                    aria-label={t("Edit category")}
+                    title={t("Edit category")}
+                    onClick={() => setCategoryForm(category)}
+                  >
+                    <Pencil size={17} />
+                  </Button>
+                ) : null}
+                {!category.builtin ? (
+                  <Button
+                    variant={category.archived ? "secondary" : "ghost"}
                     aria-label={t(
                       category.archived
                         ? "Restore category"
@@ -360,20 +382,36 @@ export default function PriceBook() {
                     }
                   >
                     {category.archived ? (
-                      <ArchiveRestore size={17} />
+                      <>
+                        <ArchiveRestore size={17} />
+                        {t("Restore")}
+                      </>
                     ) : (
                       <Archive size={17} />
                     )}
                   </Button>
                 ) : null}
-                <Button
-                  variant="primary"
-                  onClick={() => setItemForm("new")}
-                  disabled={!categoryAvailable(category, categories)}
-                >
-                  <Plus size={16} />
-                  {t("Add item")}
-                </Button>
+                {category.archived && !category.builtin ? (
+                  <Button
+                    variant="danger"
+                    onClick={() =>
+                      setDeleteTarget({ kind: "category", entry: category })
+                    }
+                  >
+                    <Trash2 size={16} />
+                    {t("Delete permanently")}
+                  </Button>
+                ) : null}
+                {!category.archived ? (
+                  <Button
+                    variant="primary"
+                    onClick={() => setItemForm("new")}
+                    disabled={!categoryAvailable(category, categories)}
+                  >
+                    <Plus size={16} />
+                    {t("Add item")}
+                  </Button>
+                ) : null}
               </div>
             </header>
             {!categoryAvailable(category, categories) ? (
@@ -421,6 +459,15 @@ export default function PriceBook() {
                   config={config}
                   categoryId={category.id}
                   onChange={change}
+                  onAdd={(path, title) => {
+                    if (supportedGroup(path)) setRateGroup({ path, title });
+                    else {
+                      setItemForm("new");
+                      notify(
+                        "This group uses a fixed formula. Add a catalogue item for other work.",
+                      );
+                    }
+                  }}
                 />
                 <footer className="book-save-bar">
                   <span role="status">
@@ -449,11 +496,18 @@ export default function PriceBook() {
                   )}
                 </p>
                 <CatalogItems
-                  items={items}
+                  items={
+                    category.archived
+                      ? items.map((item) => ({ ...item, archived: true }))
+                      : items
+                  }
                   showArchived={showArchived}
                   onEdit={setItemForm}
                   onArchive={(item) =>
                     setArchiveTarget({ kind: "item", entry: item })
+                  }
+                  onDelete={(item) =>
+                    setDeleteTarget({ kind: "item", entry: item })
                   }
                   onRestore={(item) =>
                     setArchiveTarget({
@@ -462,18 +516,24 @@ export default function PriceBook() {
                       restore: true,
                     })
                   }
-                  disabled={busy || !categoryAvailable(category, categories)}
+                  disabled={busy}
                 />
               </>
             )}
           </div>
         </div>
       )}
+      {rateGroup && config ? (
+        <RateEntryForm
+          group={rateGroup}
+          config={config}
+          onChange={change}
+          onClose={() => setRateGroup(null)}
+        />
+      ) : null}
       {categoryForm ? (
         <CategoryForm
           category={categoryForm === "new" ? undefined : categoryForm}
-          categories={categories}
-          parentId={newParent}
           onClose={() => setCategoryForm(null)}
           onSaved={async (c) => {
             await refreshCatalogue();
@@ -522,10 +582,29 @@ export default function PriceBook() {
           </strong>
           {t(
             archiveTarget.restore
-              ? "This entry will be available again if its parent categories are active."
+              ? "This entry will be available in new estimates again."
               : archiveTarget.kind === "category"
-                ? "This category, its subcategories and their items will be hidden from new estimates. Existing estimates are unchanged. You can restore the category later."
+                ? "This category and its items will be hidden from new estimates. Existing estimates are unchanged. You can restore the category later."
                 : "Archived entries are hidden from new estimates. Existing estimates are unchanged, and you can restore this entry later.",
+          )}
+        </Confirm>
+      ) : null}
+      {deleteTarget ? (
+        <Confirm
+          title={t("Permanently delete this entry?")}
+          action={t("Delete permanently")}
+          busy={busy}
+          error={actionError}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={permanentlyDelete}
+        >
+          <strong className="book-confirm-name">
+            {localized(deleteTarget.entry, language, t)}
+          </strong>
+          {t(
+            deleteTarget.kind === "category"
+              ? "This category and all its catalogue items will be permanently deleted. This cannot be undone. Saved estimates are unchanged."
+              : "This catalogue item will be permanently deleted. This cannot be undone. Saved estimates are unchanged.",
           )}
         </Confirm>
       ) : null}

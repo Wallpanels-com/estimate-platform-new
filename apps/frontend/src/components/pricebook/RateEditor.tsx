@@ -1,9 +1,13 @@
-import { Coins, Settings2, Layers3 } from "lucide-react";
+import { createContext, useContext } from "react";
+import { Coins, Settings2, Layers3, Plus } from "lucide-react";
 import type { JsonValue, PricingConfig } from "../../lib/types";
 import { useI18n } from "../../lib/i18n";
-import { Field } from "../ui";
+import { Button, Field } from "../ui";
 import Select from "../Select";
 
+const RateLabels = createContext<
+  Record<string, { label: string; label_ru?: string }>
+>({});
 type Change = (path: string[], value: JsonValue) => void;
 const isObject = (value: JsonValue): value is Record<string, JsonValue> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -36,6 +40,7 @@ const labels: Record<string, string> = {
   options: "Option keys",
   group: "Group",
   tier: "Material tier",
+  label_ru: "Name (RU)",
 };
 const human = (key: string) =>
   labels[key] || key.replace(/_/g, " ").replace(/^./, (s) => s.toUpperCase());
@@ -86,13 +91,20 @@ function Scalar({
   onChange: Change;
   upgrades: Record<string, JsonValue>;
 }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const savedLabel = useContext(RateLabels)[path.join(".")];
   const key = path.at(-1)!;
-  const caption = /^\d+$/.test(key)
-    ? t("Entry {0}", Number(key) + 1)
-    : t(human(key));
+  const caption = savedLabel
+    ? language === "ru"
+      ? savedLabel.label_ru || savedLabel.label
+      : savedLabel.label
+    : /^\d+$/.test(key)
+      ? t("Entry {0}", Number(key) + 1)
+      : t(human(key));
   const accessible = path
-    .map(human)
+    .map((part) =>
+      part === "types" && path[0] === "mirror" ? "Mirror types" : human(part),
+    )
     .map((key) => t(key))
     .join(" / ");
   if (typeof value === "boolean")
@@ -186,6 +198,7 @@ function Branch({
   if (isObject(value) && typeof value.label === "string") {
     const amountKey = [
       "price",
+      "rate",
       "base_rate",
       "default_price",
       "price_adder",
@@ -270,16 +283,29 @@ function Branch({
     <Scalar value={value} path={path} onChange={onChange} upgrades={upgrades} />
   );
 }
-export default function RateEditor({
+function RateEditorContent({
   config,
   categoryId,
   onChange,
+  onAdd,
 }: {
   config: PricingConfig;
   categoryId: string;
   onChange: Change;
+  onAdd: (path: string[], title: string) => void;
 }) {
   const { t } = useI18n();
+  const add = (path: string[], title: string) => (
+    <Button
+      variant="ghost"
+      className="rate-add"
+      aria-label={t("Add rate: {0}", t(title))}
+      title={t("Add rate: {0}", t(title))}
+      onClick={() => onAdd(path, title)}
+    >
+      <Plus size={18} />
+    </Button>
+  );
   const current = config[categoryId];
   const wall = config.wall;
   const upgrades =
@@ -287,12 +313,23 @@ export default function RateEditor({
   if (categoryId === "colors" && Array.isArray(current))
     return (
       <div className="rate-sections">
+        <section className="rate-section">
+          <header>
+            <Layers3 size={17} />
+            <h3>{t("Finish groups")}</h3>
+            {add([categoryId], "Finish groups")}
+          </header>
+        </section>
         {current.map((group, index) =>
           isObject(group) ? (
             <section className="rate-section" key={index}>
               <header>
                 <Layers3 size={17} />
                 <h3>{t(String(group.group))}</h3>
+                {add(
+                  [categoryId, String(index), "options"],
+                  String(group.group),
+                )}
               </header>
               <div className="rate-section-body rate-grid">
                 <Scalar
@@ -341,6 +378,12 @@ export default function RateEditor({
                   : "Material library",
               )}
             </h3>
+            {add(
+              [categoryId],
+              categoryId === "services"
+                ? "Service templates"
+                : "Material library",
+            )}
           </header>
           <div className="rate-section-body">
             <Branch
@@ -360,6 +403,14 @@ export default function RateEditor({
           <header>
             <Coins size={17} />
             <h3>{t("Base rates")}</h3>
+            {add(
+              categoryId === "cabinet"
+                ? ["cabinet", "types"]
+                : categoryId === "mirror"
+                  ? ["mirror", "types"]
+                  : [categoryId],
+              "Base rates",
+            )}
           </header>
           <div className="rate-section-body rate-grid">
             {simple.map(([key, v]) => (
@@ -378,7 +429,19 @@ export default function RateEditor({
         <section className="rate-section" key={key}>
           <header>
             <Layers3 size={17} />
-            <h3>{t(human(key))}</h3>
+            <h3>
+              {t(
+                categoryId === "mirror" && key === "types"
+                  ? "Mirror types"
+                  : human(key),
+              )}
+            </h3>
+            {add(
+              [categoryId, key],
+              categoryId === "mirror" && key === "types"
+                ? "Mirror types"
+                : human(key),
+            )}
           </header>
           <div className="rate-section-body">
             <Branch
@@ -396,5 +459,22 @@ export default function RateEditor({
         )}
       </p>
     </div>
+  );
+}
+
+export default function RateEditor(
+  props: Parameters<typeof RateEditorContent>[0],
+) {
+  return (
+    <RateLabels.Provider
+      value={
+        (props.config._rate_labels || {}) as Record<
+          string,
+          { label: string; label_ru?: string }
+        >
+      }
+    >
+      <RateEditorContent {...props} />
+    </RateLabels.Provider>
   );
 }

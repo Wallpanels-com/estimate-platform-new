@@ -1,32 +1,20 @@
 import { useState, type FormEvent } from "react";
-import {
-  type BookCategory,
-  type CategoryIcon,
-  categoryAvailable,
-  categoryLabel,
-  categoryTrail,
-  orderedCategories,
-} from "../../lib/pricebook";
+import { type BookCategory, type CategoryIcon } from "../../lib/pricebook";
 import { post, request, errorMessage } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
 import { Button, ErrorNotice, Field, Modal, Confirm } from "../ui";
-import Select from "../Select";
 import CategoryIconPicker from "./CategoryIconPicker";
 
 export default function CategoryForm({
   category,
-  categories = [],
-  parentId = null,
   onClose,
   onSaved,
 }: {
   category?: BookCategory;
-  categories?: BookCategory[];
-  parentId?: string | null;
   onClose: () => void;
   onSaved: (category: BookCategory) => Promise<void>;
 }) {
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const [icon, setIcon] = useState<CategoryIcon>(category?.icon || "folder");
@@ -36,7 +24,7 @@ export default function CategoryForm({
     const data = Object.fromEntries(new FormData(event.currentTarget));
     const payload = {
       ...data,
-      parent_id: data.parent_id || null,
+      parent_id: null,
       description: category?.description || "",
       description_ru: category?.description_ru || "",
       icon,
@@ -68,13 +56,7 @@ export default function CategoryForm({
   return (
     <>
       <Modal
-        title={t(
-          category
-            ? "Edit category"
-            : parentId
-              ? "Add subcategory"
-              : "Add category",
-        )}
+        title={t(category ? "Edit category" : "Add category")}
         onClose={() => {
           if (!busy) onClose();
         }}
@@ -101,30 +83,6 @@ export default function CategoryForm({
                 maxLength={160}
               />
             </Field>
-            {!category?.builtin ? (
-              <Field label={t("Parent category")}>
-                <Select
-                  name="parent_id"
-                  defaultValue={category?.parent_id || parentId || ""}
-                >
-                  <option value="">{t("Top-level category")}</option>
-                  {orderedCategories(categories)
-                    .filter(
-                      (c) =>
-                        (categoryAvailable(c, categories) ||
-                          c.id === category?.parent_id) &&
-                        !categoryTrail(c, categories).some(
-                          (ancestor) => ancestor.id === category?.id,
-                        ),
-                    )
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {categoryLabel(c, categories, language, t)}
-                      </option>
-                    ))}
-                </Select>
-              </Field>
-            ) : null}
             <CategoryIconPicker value={icon} onChange={setIcon} />
             <p className="form-hint span-all">
               {t(

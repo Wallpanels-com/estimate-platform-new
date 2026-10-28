@@ -114,16 +114,31 @@ try {
     archived: true,
   };
   const schema = {
-    mirror: { rate: 80, minimum: 1000 },
-    wall: { addons_sf: [], addons_fixed: [] },
+    mirror: {
+      rate: 80,
+      minimum: 1000,
+      types: [
+        { key: "rustic", label: "Rustic Mirror", rate: 100 },
+        { key: "bronze", label: "Bronze Mirror", rate: 100 },
+        { key: "clear", label: "Clear Mirror", rate: 80 },
+      ],
+    },
+    wall: { base_rates: [], addons_sf: [], addons_fixed: [] },
     cabinet: { types: [], addons_lf: [], glass_doors: [] },
     materials: {},
     colors: [],
     services: {},
   };
+  let calculatorPayloads = [];
+  let deletions = [];
   let categoryWrites = [],
     rateWrites = [];
-  let config = { wall: { base_rate: 40 } };
+  let config = {
+    wall: {
+      base_rates: { large: 40, medium: 45, small: 50 },
+      addons_sf: { led: { label: "LED", price: 5 } },
+    },
+  };
   let book,
     creates,
     quotes,
@@ -140,6 +155,16 @@ try {
         headers: { "Content-Type": "image/png" },
       });
     const payload = options.body ? JSON.parse(options.body) : null;
+    if (options.method === "DELETE") {
+      const id = path.split("/").at(-1).split("?")[0];
+      deletions.push(id);
+      book = {
+        ...book,
+        categories: book.categories.filter((c) => c.id !== id),
+        items: book.items.filter((i) => i.id !== id && i.category_id !== id),
+      };
+      return new Response(null, { status: 204 });
+    }
     let body;
     if (path === "/pricing/config") {
       if (payload) {
@@ -190,6 +215,7 @@ try {
       };
     } else if (path.startsWith("/pricing/calc/")) {
       calculatorCalls.push(path);
+      calculatorPayloads.push(payload);
       body = { total: 2600, line_items: [] };
     } else throw Error(`Unexpected request: ${path}`);
     return new Response(JSON.stringify(body), {
@@ -197,7 +223,11 @@ try {
       headers: { "Content-Type": "application/json" },
     });
   };
-  async function mount(language = "en", initial = "calculator") {
+  async function mount(
+    language = "en",
+    initial = "calculator",
+    zoneType = "mirror",
+  ) {
     localStorage.setItem("wallpanels.ui-language", language);
     book = { categories, items: [existing, archived] };
     creates = [];
@@ -206,6 +236,7 @@ try {
     closed = 0;
     failAdd = false;
     calculatorCalls = [];
+    calculatorPayloads = [];
     client = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
@@ -221,7 +252,7 @@ try {
             h(AddItems, {
               zone: {
                 id: "zone-1",
-                zone_type: "mirror",
+                zone_type: zoneType,
                 line_items: [],
                 square_footage: "20",
               },
@@ -428,7 +459,12 @@ try {
   for (const language of ["en", "ru"]) {
     localStorage.setItem("wallpanels.ui-language", language);
     book = { categories, items: [] };
-    config = { wall: { base_rate: 40 } };
+    config = {
+      wall: {
+        base_rates: { large: 40, medium: 45, small: 50 },
+        addons_sf: { led: { label: "LED", price: 5 } },
+      },
+    };
     rateWrites = [];
     categoryWrites = [];
     client = new QueryClient({
@@ -465,8 +501,25 @@ try {
     await click(button(saveRate));
     await click(button(confirmSave, editor()));
     assert.equal(rateWrites.length, 1);
-    assert.equal(rateWrites[0].config.wall.base_rate, 41);
+    assert.equal(rateWrites[0].config.wall.base_rates.large, 41);
     assert.equal(rateWrites[0].expected_revision, "test-revision");
+    assert.equal(
+      button(ru ? "Добавить подкатегорию" : "Add subcategory"),
+      undefined,
+    );
+    await click(document.querySelector(".rate-add"));
+    await input(editor().querySelector('[name="label"]'), "Selected wall rate");
+    await input(editor().querySelector('[name="amount"]'), "73");
+    await click(button(ru ? "Добавить в черновик" : "Add to draft", editor()));
+    assert.equal(rateWrites.length, 1);
+    await click(button(saveRate));
+    await click(button(confirmSave, editor()));
+    assert.ok(Object.values(rateWrites[1].config.wall.base_rates).includes(73));
+    assert.ok(
+      Object.values(rateWrites[1].config._rate_labels).some(
+        (v) => v.label === "Selected wall rate",
+      ),
+    );
     await click(button(ru ? "Добавить категорию" : "Add category"));
     await input(editor().querySelector('[name="name"]'), "Custom finishes");
     await input(editor().querySelector('[name="name_ru"]'), "Отделка на заказ");
@@ -482,15 +535,6 @@ try {
     await click(button(confirmSave, editor()));
     assert.equal(categoryWrites.length, 1);
     assert.equal(categoryWrites[0].parent_id, null);
-    await click(button(ru ? "Добавить подкатегорию" : "Add subcategory"));
-    assert.equal(
-      editor().querySelector('[name="parent_id"]').value,
-      "category-1",
-    );
-    await input(editor().querySelector('[name="name"]'), "Oak");
-    await click(button(saveCategory, editor()));
-    await click(button(confirmSave, editor()));
-    assert.equal(categoryWrites[1].parent_id, "category-1");
     await click(
       document.querySelector(
         '.book-category-actions button[title="' +
@@ -498,12 +542,13 @@ try {
           '"]',
       ),
     );
+    assert.equal(editor().querySelector('[name="parent_id"]'), null);
     await input(editor().querySelector('[name="name"]'), "Natural oak");
     await click(button(saveCategory, editor()));
-    assert.equal(categoryWrites.length, 2);
+    assert.equal(categoryWrites.length, 1);
     await click(button(confirmSave, editor()));
-    assert.equal(categoryWrites[2].expected_version, 1);
-    assert.equal(categoryWrites[2].parent_id, "category-1");
+    assert.equal(categoryWrites[1].expected_version, 1);
+    assert.equal(categoryWrites[1].parent_id, null);
     const archiveCategory = () =>
       document.querySelector(
         '.book-category-actions button[title="' +
@@ -512,7 +557,7 @@ try {
       );
     await click(archiveCategory());
     await click(button(cancel, editor()));
-    assert.equal(categoryWrites.length, 3);
+    assert.equal(categoryWrites.length, 2);
     await click(archiveCategory());
     await click(
       button(ru ? "В архив" : "Archive", editor()) ||
@@ -520,43 +565,38 @@ try {
     );
     assert.equal(categoryWrites.at(-1).archived, true);
     assert.equal(categoryWrites.at(-1).expected_version, 2);
+    const toggle = document.querySelector(".book-archive-toggle input");
+    await click(toggle);
+    await click(button(ru ? "Отделка на заказ" : "Natural oak"));
+    const deleteText = ru ? "Удалить безвозвратно" : "Delete permanently";
+    deletions = [];
+    await click(button(deleteText));
+    await click(button(cancel, editor()));
+    assert.equal(deletions.length, 0);
+    await click(button(deleteText));
+    await click(button(deleteText, editor()));
+    assert.equal(deletions.length, 1);
     await cleanup();
   }
-  // Editing an archived child must keep its archived parent selected.
-  const archivedParent = {
-    ...categories[0],
-    id: "archived-parent",
-    name: "Archived parent",
-    builtin: false,
-    archived: true,
-  };
-  const archivedChild = {
-    ...archivedParent,
-    id: "archived-child",
-    name: "Archived child",
-    parent_id: archivedParent.id,
-  };
-  localStorage.setItem("wallpanels.ui-language", "en");
-  root = createRoot(document.getElementById("root"));
-  await act(async () =>
-    root.render(
-      h(
-        LanguageProvider,
-        null,
-        h(CategoryForm, {
-          category: archivedChild,
-          categories: [...categories, archivedParent, archivedChild],
-          onClose: () => {},
-          onSaved: async () => {},
-        }),
-      ),
-    ),
-  );
+  await mount("en", "calculator", "wall");
+  await input(picker(), "Mirror");
+  await key(picker(), "Enter");
+  const mirrorType = editor().querySelector('select[name="mirror_type"]');
   assert.equal(
-    editor().querySelector('[name="parent_id"]').value,
-    archivedParent.id,
+    mirrorType.value,
+    "clear",
+    "Switching from wall must reset the mirror selector to Clear",
   );
-  await act(async () => root.unmount());
+  await act(async () => {
+    mirrorType.value = "rustic";
+    mirrorType.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await input(editor().querySelector('[name="square_footage"]'), "10");
+  await submit();
+  assert.equal(calculatorPayloads[0].mirror_type, "rustic");
+  assert.equal(calculatorPayloads[0].square_footage, 10);
+  await cleanup();
+  localStorage.setItem("wallpanels.ui-language", "en");
   // Regression: hidden upload fields must not create a layout box below a
   // scroll rail. The visible Add/Replace actions must still open the chooser.
   const sheet = postcss.parse(
@@ -643,7 +683,7 @@ try {
     await act(async () => root.unmount());
   }
   console.log(
-    "Catalogue UI tests passed: EN/RU search, keyboard selection/create, Price Book persistence callback, current-zone quote, retry without duplicate item, cancel, unchanged calculator routing, and EN/RU Price Book rate/category/subcategory/edit/archive confirmations, and hidden photo upload/replace regression.",
+    "Catalogue UI tests passed: EN/RU search, keyboard selection/create, Price Book persistence callback, current-zone quote, retry without duplicate item, cancel, unchanged calculator routing, and EN/RU Price Book rate/category/edit/archive/delete confirmations and rate-group additions, and hidden photo upload/replace regression.",
   );
 } finally {
   await rm(dir, { recursive: true, force: true });

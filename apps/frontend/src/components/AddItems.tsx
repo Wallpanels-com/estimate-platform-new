@@ -93,6 +93,7 @@ export default function AddItems({
         type === "wall"
           ? {
               square_footage: Number(f.square_footage),
+              base_rate_key: f.base_rate_key || null,
               addons_sf: checked,
               addons_fixed: Object.entries(fixed)
                 .filter(([, qty]) => qty > 0)
@@ -113,7 +114,10 @@ export default function AddItems({
                   .filter(([, qty]) => qty > 0)
                   .map(([type, qty]) => ({ type, qty })),
               }
-            : { square_footage: Number(f.square_footage) };
+            : {
+                square_footage: Number(f.square_footage),
+                mirror_type: f.mirror_type || null,
+              };
       setResult(await post(`/pricing/calc/${type}`, options));
     } catch (err) {
       setError(errorMessage(err));
@@ -265,7 +269,9 @@ export default function AddItems({
             {Object.entries(s.services).map(([key, service]) => (
               <div key={key}>
                 <span>
-                  {t(service.label)}
+                  {language === "ru"
+                    ? service.label_ru || t(service.label)
+                    : service.label}
                   <small>
                     {service.default_price
                       ? money(service.default_price)
@@ -373,13 +379,29 @@ export default function AddItems({
                   )}
                   {type === "wall" ? (
                     <>
+                      <Field key="wall-base-rate" label={t("Base rate")}>
+                        <Select name="base_rate_key">
+                          <option value="">{t("Automatic area tiers")}</option>
+                          {s.wall.base_rates.map((v) => (
+                            <option key={v.key} value={v.key}>
+                              {language === "ru"
+                                ? v.label_ru || t(v.label)
+                                : v.label}{" "}
+                              · {money(v.rate)}/SF
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
                       <Field label="Panel / material name">
                         <Combobox
                           name="panel_name"
                           options={Object.values(s.materials).map(
                             (material) => ({
                               value: material.label,
-                              label: t(material.label),
+                              label:
+                                language === "ru"
+                                  ? material.label_ru || t(material.label)
+                                  : material.label,
                             }),
                           )}
                           onValueChange={(value) => {
@@ -391,10 +413,9 @@ export default function AddItems({
                               setChecked((current) => [
                                 ...current.filter(
                                   (k) =>
-                                    ![
-                                      "premium_material",
-                                      "very_premium_material",
-                                    ].includes(k),
+                                    !Object.values(s.materials).some(
+                                      (entry) => entry.addon_key === k,
+                                    ),
                                 ),
                                 ...(material.addon_key
                                   ? [material.addon_key]
@@ -431,12 +452,15 @@ export default function AddItems({
                     </>
                   ) : type === "cabinet" ? (
                     <>
-                      <Field label={t("Cabinet type")}>
+                      <Field key="cabinet-type" label={t("Cabinet type")}>
                         <Select name="cabinet_type">
                           <option value="">{t("Standard cabinetry")}</option>
                           {s.cabinet.types.map((v) => (
                             <option key={v.key} value={v.key}>
-                              {t(v.label)} · {money(v.rate)}/LF
+                              {language === "ru"
+                                ? v.label_ru || t(v.label)
+                                : v.label}{" "}
+                              · {money(v.rate)}/LF
                             </option>
                           ))}
                         </Select>
@@ -452,10 +476,28 @@ export default function AddItems({
                       </label>
                     </>
                   ) : (
-                    <p className="form-hint">
-                      {money(s.mirror.rate)}/SF + {money(s.mirror.minimum)}{" "}
-                      {t("installation fee.")}
-                    </p>
+                    <>
+                      {s.mirror.types?.length ? (
+                        <Field key="mirror-type" label={t("Mirror type")}>
+                          <Select name="mirror_type" defaultValue="clear">
+                            {s.mirror.types.map((v) => (
+                              <option key={v.key} value={v.key}>
+                                {language === "ru"
+                                  ? v.label_ru || t(v.label)
+                                  : v.label}{" "}
+                                · {money(v.rate)}/SF
+                              </option>
+                            ))}
+                          </Select>
+                        </Field>
+                      ) : null}
+                      <p className="form-hint">
+                        {t(
+                          "Selected mirror rate × area, plus {0} installation.",
+                          money(s.mirror.minimum),
+                        )}
+                      </p>
+                    </>
                   )}
                 </div>
                 {type !== "mirror" ? (
@@ -477,7 +519,9 @@ export default function AddItems({
                             onChange={() => toggle(v.key)}
                           />
                           <span>
-                            {t(v.label)}
+                            {language === "ru"
+                              ? v.label_ru || t(v.label)
+                              : v.label}
                             <small>
                               +{money(v.price)}/{type === "wall" ? "SF" : "LF"}
                             </small>

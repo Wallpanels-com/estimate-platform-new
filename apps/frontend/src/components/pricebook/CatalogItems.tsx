@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Archive, ArchiveRestore, Pencil, Search } from "lucide-react";
+import { Archive, ArchiveRestore, Pencil, Search, Trash2 } from "lucide-react";
 import { money } from "../../lib/api";
 import { localized, itemKindLabel, type BookItem } from "../../lib/pricebook";
 import { useI18n } from "../../lib/i18n";
@@ -11,6 +11,7 @@ export default function CatalogItems({
   onEdit,
   onArchive,
   onRestore,
+  onDelete,
   disabled = false,
 }: {
   items: BookItem[];
@@ -18,6 +19,7 @@ export default function CatalogItems({
   onEdit: (i: BookItem) => void;
   onArchive: (i: BookItem) => void;
   onRestore: (i: BookItem) => void;
+  onDelete: (i: BookItem) => void;
   disabled?: boolean;
 }) {
   const { t, language } = useI18n();
@@ -87,15 +89,32 @@ export default function CatalogItems({
               </strong>
               <div className="book-item-actions">
                 {item.archived ? (
-                  <Button
-                    variant="ghost"
-                    aria-label={t("Restore {0}", localized(item, language, t))}
-                    title={t("Restore")}
-                    onClick={() => onRestore(item)}
-                    disabled={disabled}
-                  >
-                    <ArchiveRestore size={17} />
-                  </Button>
+                  <>
+                    <Button
+                      variant="ghost"
+                      aria-label={t(
+                        "Restore {0}",
+                        localized(item, language, t),
+                      )}
+                      title={t("Restore")}
+                      onClick={() => onRestore(item)}
+                      disabled={disabled}
+                    >
+                      <ArchiveRestore size={17} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      aria-label={t(
+                        "Delete permanently: {0}",
+                        localized(item, language, t),
+                      )}
+                      title={t("Delete permanently")}
+                      onClick={() => onDelete(item)}
+                      disabled={disabled}
+                    >
+                      <Trash2 size={17} />
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <Button

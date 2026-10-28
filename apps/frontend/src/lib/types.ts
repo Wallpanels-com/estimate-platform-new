@@ -104,6 +104,7 @@ export type JsonValue =
   string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 export type PricingConfig = Record<string, JsonValue>;
 export interface PricingOption {
+  label_ru?: string;
   key: string;
   label: string;
   price?: number;
@@ -121,11 +122,11 @@ export interface PricingSchema {
     addons_lf: PricingOption[];
     glass_doors: PricingOption[];
   };
-  mirror: { rate: number; minimum: number };
+  mirror: { rate: number; minimum: number; types?: PricingOption[] };
   services: Record<
     string,
-    { label: string; default_price: number; unit: string }
+    { label: string; label_ru?: string; default_price: number; unit: string }
   >;
-  materials: Record<string, { label: string; addon_key: string | null }>;
+  materials: Record<string, { label: string; label_ru?: string; addon_key: string | null }>;
   colors: { group: string; options: string[] }[];
 }

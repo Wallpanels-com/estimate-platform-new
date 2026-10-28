@@ -23,7 +23,25 @@ RULES={rule.id:rule for rule in [
 ]}
 
 def calculate(identifier,config,**validated_parameters):
+    from copy import deepcopy
+    from fastapi import HTTPException
+    label=None
+    if identifier=='mirror':
+        key=validated_parameters.pop('mirror_type',None)
+        if key:
+            entry=config['mirror'].get('types',{}).get(key)
+            if not entry:raise HTTPException(422,'Choose an existing mirror type.')
+            config=deepcopy(config);config['mirror']['rate']=entry['rate'];label=entry['label']
+    if identifier=='wall':
+        key=validated_parameters.pop('base_rate_key',None)
+        if key:
+            if key not in config['wall']['base_rates']:raise HTTPException(422,'Choose an existing base rate.')
+            from app.services.rule_engine import wall_size_tier
+            from decimal import Decimal
+            config=deepcopy(config)
+            config['wall']['base_rates'][wall_size_tier(Decimal(str(validated_parameters.get('square_footage') or 0)))]=config['wall']['base_rates'][key]
     result = RULES[identifier].calculate(config=config,**validated_parameters)
+    if label and result['line_items']:result['line_items'][0]['name']=label
     if identifier == 'mirror' and result['line_items']:
         # Keep the original formula/total, but persist installation separately so
         # an ordinary quantity edit cannot discard the fixed installation fee.

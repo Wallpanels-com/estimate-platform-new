@@ -1,5 +1,6 @@
 """Exercise all migrations in a newly created, isolated localhost QA database."""
 import os
+import json
 from pathlib import Path
 import re
 import subprocess
@@ -55,9 +56,21 @@ try:
                        (history_id,employee,'{"name":{"before":"Old employee label","after":"Example Employee"}}'))
         for ident,kind,source,total in [(pre,'pre',None,50),(final,'final',pre,75)]:
             cursor.execute("INSERT INTO estimates(id,user_id,type,source_estimate_id,title,prepared_by,created_by_name,updated_by_name,subtotal,final_total,updated_at,status,manual_override) VALUES (%s,%s,%s,%s,'Preserved title','Old employee label','Old employee label','Old employee label',%s,%s,'2026-01-01T00:00:00Z','draft',false)", (ident,employee,kind,source,total,total))
+    pricing_id=str(uuid.uuid4())
+    original_config={'mirror':{'rate':91,'minimum':1100},'cabinet':{'types':{'existing':{'label':'Existing','base_rate':777}}},'_catalog_v1':{'categories':[{'id':'parent','name':'Parent','archived':True,'version':1},{'id':'child','parent_id':'parent','name':'Child','archived':False,'version':1}],'items':[],'overrides':{}}}
+    with db.cursor() as cursor:
+        cursor.execute("INSERT INTO pricing_config(id,config) VALUES (%s,%s)",(pricing_id,json.dumps(original_config)))
     db.commit()
     subprocess.run(command, env=test_env, cwd=ROOT / "apps/backend", check=True)
     with db.cursor() as cursor:
+        cursor.execute("SELECT config FROM pricing_config WHERE id=%s",(pricing_id,))
+        config=cursor.fetchone()[0]
+        assert config['mirror']['rate']==91 and config['mirror']['minimum']==1100
+        assert config['mirror']['types']['rustic']['rate']==100 and config['mirror']['types']['clear']['rate']==80
+        assert config['cabinet']['types']['existing']['base_rate']==777 and config['cabinet']['types']['shelving_unit']['base_rate']==800
+        child=next(c for c in config['_catalog_v1']['categories'] if c['id']=='child')
+        assert child['parent_id'] is None and child['archived'] is True
+
         cursor.execute("SELECT type,prepared_by,created_by_name,updated_by_name,subtotal,final_total,updated_at,title FROM estimates ORDER BY type")
         for kind,prepared,creator,editor,subtotal,total,updated,title in cursor.fetchall():
             assert prepared == creator == editor == 'Example Employee'
