@@ -6,6 +6,7 @@ from sqlalchemy import text
 import os
 
 from app.core.config import settings
+from app.core.schema_version import current_revision
 from app.core.database import engine, Base, AsyncSessionLocal
 from app.api.v1 import auth, estimates, voice, files, pdf, pricing, zones, pricebook, users, governance, backups
 from app.services import audit  # register transaction-level audit hooks
@@ -23,7 +24,7 @@ async def lifespan(app: FastAPI):
 
     async with engine.connect() as conn:
         result = await conn.execute(text("SELECT version_num FROM alembic_version"))
-        if result.scalar_one_or_none() != "0003_uniform_users":
+        if result.scalar_one_or_none() != current_revision():
             raise RuntimeError("Database migrations are required. Run the approved Alembic upgrade before starting the application.")
 
     import asyncio

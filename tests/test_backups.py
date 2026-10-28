@@ -27,7 +27,7 @@ class BackupSafety(unittest.TestCase):
     def test_verification_never_restores_into_working_database(self):
         options = {"host": "localhost", "port": 5432, "dbname": "corporate", "user": "employee", "password": "placeholder"}
         admin = MagicMock(); restored = MagicMock()
-        restored.cursor.return_value.__enter__.return_value.fetchone.return_value = ("0003_uniform_users",)
+        restored.cursor.return_value.__enter__.return_value.fetchone.return_value = (backups.current_revision(),)
         with patch.object(backups.psycopg2, "connect", side_effect=[admin, restored]), \
              patch.object(backups, "row_counts", return_value={"users": 7}), \
              patch.object(backups, "pg_command") as command:

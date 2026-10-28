@@ -4,6 +4,7 @@ No restore into the live database is exposed. Verification creates a uniquely
 named, empty database, restores there, compares all row counts, then drops ONLY
 that verification database. Customer databases are never overwritten.
 """
+from app.core.schema_version import current_revision
 import asyncio
 from datetime import datetime, timezone
 import hashlib
@@ -90,7 +91,7 @@ def verify_dump(dump, expected, options):
                 if row_counts(cursor) != expected:
                     raise RuntimeError("Restored row counts do not match the backup snapshot.")
                 cursor.execute("SELECT version_num FROM alembic_version")
-                if cursor.fetchone()[0] != "0003_uniform_users":
+                if cursor.fetchone()[0] != current_revision():
                     raise RuntimeError("Restored schema version does not match.")
     finally:
         if created:

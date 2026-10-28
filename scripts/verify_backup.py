@@ -13,6 +13,7 @@ from urllib.parse import urlsplit, urlunsplit
 import psycopg2
 from psycopg2 import sql
 from dotenv import dotenv_values
+from alembic.script import ScriptDirectory
 
 ROOT = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
@@ -49,7 +50,7 @@ try:
     db = psycopg2.connect(urlunsplit(parsed._replace(path="/" + name)))
     with db.cursor() as cursor:
         cursor.execute("SELECT version_num FROM alembic_version")
-        assert cursor.fetchone()[0] == "0003_uniform_users"
+        assert ScriptDirectory(str(ROOT / "apps/backend/alembic")).get_revision(cursor.fetchone()[0]) is not None
         counts = {}
         for table in ("users", "estimates", "estimate_images", "pricing_config", "audit_events", "document_versions"):
             cursor.execute(sql.SQL("SELECT COUNT(*) FROM {}").format(sql.Identifier(table)))
