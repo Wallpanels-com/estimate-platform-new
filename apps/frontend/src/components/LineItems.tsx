@@ -13,6 +13,7 @@ interface Props {
   onUpdate: (id: string, fields: Record<string, unknown>) => Promise<boolean>;
   onDelete: (item: LineItem) => void;
   onMove: (id: string, direction: number) => void;
+  onPendingChange?: (key: string, pending: boolean) => void;
 }
 
 export function Description({ text }: { text: string }) {
@@ -235,17 +236,23 @@ export default function LineItems({
   onUpdate,
   onDelete,
   onMove,
+  onPendingChange,
 }: Props) {
   const { t, n } = useI18n();
 
   const [editing, setEditing] = useState<LineItem | null>(null);
-  const sections = [...new Set(items.map((i) => i.section || "General"))];
+  const groups = new Map<string, LineItem[]>();
+  for (const item of items) {
+    const section = item.section || "General";
+    const group = groups.get(section);
+    if (group) group.push(item);
+    else groups.set(section, [item]);
+  }
   return (
     <div
       className={`line-sections ${items.length > 50 ? "large-estimate" : ""}`}
     >
-      {sections.map((section) => {
-        const group = items.filter((i) => (i.section || "General") === section);
+      {[...groups].map(([section, group]) => {
         return (
           <section className="line-section" key={section}>
             <header>
@@ -318,7 +325,10 @@ export default function LineItems({
                           step="0.01"
                           min="0"
                           name={`${field}-${item.id}`}
-                          key={`${item.id}-${field}-${item[field]}`}
+                          key={`${item.id}-${field}`}
+                          onPendingChange={(pending) =>
+                            onPendingChange?.(`${item.id}-${field}`, pending)
+                          }
                           initialValue={item[field] ?? null}
                           placeholder={
                             field === "unit_price" ? t("Not set") : undefined

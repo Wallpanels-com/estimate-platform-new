@@ -139,8 +139,10 @@ def validate_legacy(config):
 async def save_legacy(db, incoming, user, expected=None, reset=False):
     await lock_config(db)
     current=await get_pricing_config(db)
-    if expected is not None and revision(current)!=expected:raise HTTPException(409,'Pricing changed elsewhere. Reload before saving your rates.')
     from app.services.managed_rates import with_managed_rates, validate_additions
+    # GET /pricing/config exposes the effective managed defaults. Compare the
+    # same representation, including on the first save of an older config.
+    if expected is not None and revision(with_managed_rates(current))!=expected:raise HTTPException(409,'Pricing changed elsewhere. Reload before saving your rates.')
     config=with_managed_rates(DEFAULT_PRICING_CONFIG) if reset else legacy_config(incoming)
     validate_additions(config)
     validate_legacy(config)

@@ -87,27 +87,38 @@ async def _purge_expired_trash(db: AsyncSession) -> None:
     return
 
 
-@router.get("", response_model=List[EstimateListItem])
-async def list_estimates(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    await _purge_expired_trash(db)
+async def estimate_register(db: AsyncSession, *, trash: bool = False):
+    """Load selected branches in two queries, independent of project count."""
     result = await db.execute(
         select(Estimate)
-        .where(Estimate.deleted_at.is_(None), Estimate.source_estimate_id.is_(None))
-        .order_by(Estimate.updated_at.desc())
+        .where(
+            Estimate.deleted_at.isnot(None) if trash else Estimate.deleted_at.is_(None),
+            Estimate.source_estimate_id.is_(None),
+        )
+        .order_by(Estimate.deleted_at.desc() if trash else Estimate.updated_at.desc())
     )
+    roots = result.scalars().all()
+    active_final_ids = [est.id for est in roots if (est.branch_state or {}).get('active_mode') == 'final']
+    finals = {}
+    if active_final_ids:
+        branches = await db.execute(select(Estimate).where(Estimate.source_estimate_id.in_(active_final_ids)))
+        finals = {est.source_estimate_id: est for est in branches.scalars().all()}
     items = []
-    for est in result.scalars().all():
-        if (est.branch_state or {}).get('active_mode') == 'final':
-            final = (await db.execute(select(Estimate).where(Estimate.source_estimate_id == est.id))).scalar_one_or_none()
-            if final: est = final
+    for root in roots:
+        est = finals.get(root.id, root)
         item = EstimateListItem.model_validate(est)
         item.created_by = est.created_by_name
         item.updated_by = est.updated_by_name
         items.append(item)
     return items
+
+
+@router.get("", response_model=List[EstimateListItem])
+async def list_estimates(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await estimate_register(db)
 
 
 @router.get("/trash", response_model=List[EstimateListItem])
@@ -115,22 +126,7 @@ async def list_trash(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    await _purge_expired_trash(db)
-    result = await db.execute(
-        select(Estimate)
-        .where(Estimate.deleted_at.isnot(None), Estimate.source_estimate_id.is_(None))
-        .order_by(Estimate.deleted_at.desc())
-    )
-    items = []
-    for est in result.scalars().all():
-        if (est.branch_state or {}).get('active_mode') == 'final':
-            final = (await db.execute(select(Estimate).where(Estimate.source_estimate_id == est.id))).scalar_one_or_none()
-            if final: est = final
-        item = EstimateListItem.model_validate(est)
-        item.created_by = est.created_by_name
-        item.updated_by = est.updated_by_name
-        items.append(item)
-    return items
+    return await estimate_register(db, trash=True)
 
 
 @router.post("", response_model=EstimateOut, status_code=201)

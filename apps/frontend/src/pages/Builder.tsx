@@ -24,6 +24,8 @@ import {
   Layers,
   Eye,
   History,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import {
   request,
@@ -86,6 +88,15 @@ export default function Builder() {
   const [ai, setAi] = useState(false);
   const [busy, setBusy] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const drafts = useRef(new Set<string>());
+  const [hasDrafts, setHasDrafts] = useState(false);
+  const onPendingChange = useCallback((key: string, pending: boolean) => {
+    pending ? drafts.current.add(key) : drafts.current.delete(key);
+    setHasDrafts(drafts.current.size > 0);
+    if (!drafts.current.size) setSaveFailed(false);
+  }, []);
+  const writeQueue = useRef(Promise.resolve());
+  const writeCount = useRef(0);
   const [exporting, setExporting] = useState<"pdf" | "xlsx" | null>(null);
   const [deletingZone, setDeletingZone] = useState<Zone | null>(null);
   const [deletingItem, setDeletingItem] = useState<LineItem | null>(null);
@@ -95,6 +106,7 @@ export default function Builder() {
     refetchInterval: () =>
       busy ||
       saveFailed ||
+      hasDrafts ||
       document.querySelector(
         "dialog[open], input:focus, textarea:focus, select:focus",
       )
@@ -104,14 +116,14 @@ export default function Builder() {
   const estimate = query.data;
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
-      if (busy || saveFailed) {
+      if (busy || saveFailed || hasDrafts) {
         event.preventDefault();
         event.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [busy, saveFailed]);
+  }, [busy, saveFailed, hasDrafts]);
   const pdfMode: EstimatePdfMode = estimate?.type === "final" ? "final" : "pre";
   const pdfId = estimate?.id;
   const pdfRevision = estimate?.updated_at
@@ -137,7 +149,7 @@ export default function Builder() {
     enabled: !!pdfId && pdfMode === "final",
   });
   const loadPdf = useCallback(async () => {
-    if (saveFailed || busy)
+    if (saveFailed || busy || drafts.current.size > 0)
       throw new Error(t("Save your changes before exporting."));
     if (!pdfId || !pdfRevision)
       return Promise.reject(new Error("Estimate is not loaded."));
@@ -158,7 +170,8 @@ export default function Builder() {
   }, [pdfId, pdfMode, pdfRevision, client, t, saveFailed, busy]);
   const warmedPdf = useRef<string | null>(null);
   const preparePdf = () => {
-    if (busy || saveFailed || !pdfId || !pdfRevision) return;
+    if (busy || saveFailed || drafts.current.size > 0 || !pdfId || !pdfRevision)
+      return;
     const key = JSON.stringify([pdfId, pdfMode, pdfRevision]);
     if (warmedPdf.current === key) return;
     warmedPdf.current = key;
@@ -174,6 +187,10 @@ export default function Builder() {
     await client.invalidateQueries({ queryKey: ["estimates"] });
   }
   function selectZone(id: string) {
+    if (drafts.current.size) {
+      notify("Save your changes before continuing.", true);
+      return;
+    }
     setParams(
       (p) => {
         p.set("zone", id);
@@ -186,7 +203,14 @@ export default function Builder() {
     task: () => Promise<unknown>,
     message = "Changes saved",
   ) {
+    writeCount.current += 1;
     setBusy(true);
+    const previous = writeQueue.current;
+    let release!: () => void;
+    writeQueue.current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
     try {
       await task();
       await refresh();
@@ -194,15 +218,21 @@ export default function Builder() {
       notify(message);
       return true;
     } catch (err) {
-      setSaveFailed(true);
+      setSaveFailed(drafts.current.size > 0);
       notify(errorMessage(err), true);
       return false;
     } finally {
-      setBusy(false);
+      writeCount.current -= 1;
+      setBusy(writeCount.current > 0);
+      release();
     }
   }
   async function switchMode(mode: "pre" | "final") {
     if (estimate?.type === mode) return;
+    if (drafts.current.size || writeCount.current) {
+      notify("Save your changes before continuing.", true);
+      return;
+    }
     setBusy(true);
     try {
       const next = await post<Estimate>(`/estimates/${id}/mode`, { mode });
@@ -228,7 +258,7 @@ export default function Builder() {
   }
   async function exportFile(kind: "pdf" | "xlsx") {
     if (!estimate) return;
-    if (busy || saveFailed)
+    if (busy || saveFailed || hasDrafts)
       return notify("Save your changes before exporting.", true);
     setExporting(kind);
     try {
@@ -288,7 +318,19 @@ export default function Builder() {
     z.line_items.some((i) => i.is_tbd),
   ).length;
   return (
-    <div className="builder-root">
+    <div
+      className="builder-root"
+      onClickCapture={(event) => {
+        if (
+          drafts.current.size &&
+          (event.target as HTMLElement).closest("a[href]")
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          notify("Save your changes before continuing.", true);
+        }
+      }}
+    >
       <a href="#estimate-content" className="skip-link">
         {t("Skip to estimate")}
       </a>
@@ -334,21 +376,36 @@ export default function Builder() {
             <History size={18} />
           </Button>
           <LanguageSwitch />
-          <span className="save-state" role="status">
-            <Check size={14} />
-            {busy ? t("Saving…") : saveFailed ? t("Not saved") : t("Saved")}
+          <span
+            className={`save-state ${saveFailed ? "save-failed" : hasDrafts ? "save-pending" : ""}`}
+            role="status"
+          >
+            {busy ? (
+              <Loader2 size={14} className="spin" aria-hidden="true" />
+            ) : saveFailed ? (
+              <AlertCircle size={14} aria-hidden="true" />
+            ) : (
+              <Check size={14} aria-hidden="true" />
+            )}
+            {busy
+              ? t("Saving…")
+              : saveFailed
+                ? t("Not saved")
+                : hasDrafts
+                  ? t("Unsaved changes")
+                  : t("Saved")}
           </span>
           <div className="segments type-switch" aria-label={t("Estimate type")}>
             <button
               aria-pressed={pdfMode === "pre"}
-              disabled={busy || exporting === "pdf"}
+              disabled={busy || hasDrafts || exporting === "pdf"}
               onClick={() => switchMode("pre")}
             >
               {t("Pre-estimate")}
             </button>
             <button
               aria-pressed={pdfMode === "final"}
-              disabled={busy || exporting === "pdf"}
+              disabled={busy || hasDrafts || exporting === "pdf"}
               onClick={() => switchMode("final")}
             >
               {t("Final")}
@@ -358,6 +415,11 @@ export default function Builder() {
       </header>
       {records ? (
         <EstimateRecords id={estimate.id} onClose={() => setRecords(false)} />
+      ) : null}
+      {query.isError ? (
+        <ErrorNotice retry={() => query.refetch()}>
+          {t("Unable to refresh. Showing the last loaded version.")}
+        </ErrorNotice>
       ) : null}
       <nav className="workspace-tabs" aria-label={t("Builder panels")}>
         {[
@@ -550,6 +612,7 @@ export default function Builder() {
                       patch(`/estimates/${id}/line-items/${itemId}`, data),
                     )
                   }
+                  onPendingChange={onPendingChange}
                   onDelete={setDeletingItem}
                   onMove={moveItem}
                 />
@@ -717,7 +780,11 @@ export default function Builder() {
             >
               <Button
                 variant="primary"
-                onClick={() => setProposal(true)}
+                onClick={() => {
+                  if (drafts.current.size || saveFailed)
+                    return notify("Save your changes before exporting.", true);
+                  setProposal(true);
+                }}
                 onPointerEnter={preparePdf}
                 onFocus={preparePdf}
                 disabled={busy}

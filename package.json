@@ -21,7 +21,10 @@
     "test:quick": "node --experimental-strip-types scripts/test-quick.mjs",
     "format:check": "prettier --check apps/frontend/src apps/frontend/vite.config.ts",
     "test:i18n": "node scripts/test-i18n.mjs",
-    "test:catalog-ui": "node scripts/test-catalog-ui.mjs"
+    "test:catalog-ui": "node scripts/test-catalog-ui.mjs",
+    "test:autosave-ui": "node scripts/test-autosave-ui.mjs",
+    "audit:workflows": ".venv/bin/python scripts/audit_workflows.py",
+    "audit:performance": ".venv/bin/python scripts/audit_performance.py"
   },
   "engines": {
     "node": ">=22.12.0"

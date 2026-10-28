@@ -1,6 +1,6 @@
 import Select from "../components/Select";
 import { useI18n } from "../lib/i18n";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -44,6 +44,7 @@ export default function Estimates({ trash = false }: { trash?: boolean }) {
   const [params, setParams] = useSearchParams();
   const search = params.get("q") || "";
   const type = params.get("type") || "all";
+  const searchTerm = useDeferredValue(search.trim().toLowerCase());
   const [create, setCreate] = useState<NewEstimateType | null>(null);
   const [deleting, setDeleting] = useState<EstimateSummary | null>(null);
   const data = useQuery({
@@ -65,7 +66,7 @@ export default function Estimates({ trash = false }: { trash?: boolean }) {
       (e) =>
         (type === "all" || e.type === type) &&
         [e.title, e.client_name, e.created_by].some((v) =>
-          v?.toLowerCase().includes(search.toLowerCase()),
+          v?.toLowerCase().includes(searchTerm),
         ) &&
         (!author || e.created_by === author || e.updated_by === author) &&
         (!from || e.updated_at.slice(0, 10) >= from) &&
@@ -84,7 +85,19 @@ export default function Estimates({ trash = false }: { trash?: boolean }) {
               ? a.updated_at.localeCompare(b.updated_at)
               : b.updated_at.localeCompare(a.updated_at),
     );
-  }, [data.data, type, search, params]);
+  }, [data.data, type, searchTerm, params]);
+  const pageSize = 50;
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const page = Math.max(
+    1,
+    Math.min(pageCount, Math.floor(Number(params.get("page")) || 1)),
+  );
+  const pageRows = rows.slice((page - 1) * pageSize, page * pageSize);
+  const filtered =
+    type !== "all" ||
+    ["q", "author", "from", "to", "min", "max"].some(
+      (key) => !!params.get(key),
+    );
   const authors = [
     ...new Set(
       (data.data || [])
@@ -96,6 +109,7 @@ export default function Estimates({ trash = false }: { trash?: boolean }) {
     setParams(
       (p) => {
         value ? p.set(key, value) : p.delete(key);
+        if (key !== "page") p.delete("page");
         return p;
       },
       { replace: true },
@@ -262,28 +276,37 @@ export default function Estimates({ trash = false }: { trash?: boolean }) {
             </div>
           </details>
         </div>
+        {data.error && data.data ? (
+          <ErrorNotice retry={() => data.refetch()}>
+            {t("Unable to refresh. Showing the last loaded version.")}
+          </ErrorNotice>
+        ) : null}
         {data.isLoading ? (
           <Loading />
-        ) : data.error ? (
+        ) : data.error && !data.data ? (
           <ErrorNotice retry={() => data.refetch()}>
             {errorMessage(data.error)}
           </ErrorNotice>
         ) : !rows.length ? (
           <EmptyState
             title={
-              search
+              filtered
                 ? t("No matching estimates")
                 : trash
                   ? t("Trash is empty")
                   : t("Start with your next project")
             }
             action={
-              !trash && !search ? (
+              filtered ? (
+                <Button onClick={() => setParams(new URLSearchParams())}>
+                  {t("Clear filters")}
+                </Button>
+              ) : !trash ? (
                 <NewEstimateButton onSelect={setCreate} />
               ) : undefined
             }
           >
-            {search
+            {filtered
               ? t("Try another client name or clear the filters.")
               : trash
                 ? t("Deleted estimates will appear here.")
@@ -300,7 +323,7 @@ export default function Estimates({ trash = false }: { trash?: boolean }) {
               <span className="numeric">{t("Base total")}</span>
               <span>{t("Actions")}</span>
             </div>
-            {rows.map((e) => (
+            {pageRows.map((e) => (
               <article className="estimate-row" key={e.id}>
                 <div className="estimate-name">
                   <Link to={`/estimates/${e.id}`}>
@@ -384,6 +407,26 @@ export default function Estimates({ trash = false }: { trash?: boolean }) {
         )}
         <footer className="register-footer">
           <span>{n(rows.length, "estimates")}</span>
+          {pageCount > 1 ? (
+            <nav
+              className="register-pagination"
+              aria-label={t("Estimate pages")}
+            >
+              <Button
+                disabled={page === 1}
+                onClick={() => filter("page", String(page - 1))}
+              >
+                {t("Previous page")}
+              </Button>
+              <span>{t("Page {0} of {1}", page, pageCount)}</span>
+              <Button
+                disabled={page === pageCount}
+                onClick={() => filter("page", String(page + 1))}
+              >
+                {t("Next page")}
+              </Button>
+            </nav>
+          ) : null}
           <span>
             {t("Amounts in USD · Base totals before markup & discount")}
           </span>
@@ -422,7 +465,7 @@ export default function Estimates({ trash = false }: { trash?: boolean }) {
             ? t(
                 "will be permanently deleted with its zones and line items. This cannot be restored.",
               )
-            : t("can be restored from Trash for 7 days.")}
+            : t("can be restored from Trash.")}
         </Confirm>
       ) : null}
     </>

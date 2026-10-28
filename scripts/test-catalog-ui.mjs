@@ -806,25 +806,32 @@ try {
   document.head.append(uploadStyle);
   for (const count of [0, 4]) {
     const uploads = [];
+    const photoClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     root = createRoot(document.getElementById("root"));
     await act(async () =>
       root.render(
         h(
-          LanguageProvider,
-          null,
-          h(Photos, {
-            zone: {
-              id: "photo-scroll-zone",
-              images: Array.from({ length: count }, (_, i) => ({
-                slot: i + 1,
-                id: `photo-${i + 1}`,
-              })),
-            },
-            busy: false,
-            finalMode: true,
-            onUpload: (slot, file) => uploads.push({ slot, file }),
-            onDelete: () => {},
-          }),
+          QueryClientProvider,
+          { client: photoClient },
+          h(
+            LanguageProvider,
+            null,
+            h(Photos, {
+              zone: {
+                id: "photo-scroll-zone",
+                images: Array.from({ length: count }, (_, i) => ({
+                  slot: i + 1,
+                  id: `photo-${i + 1}`,
+                })),
+              },
+              busy: false,
+              finalMode: true,
+              onUpload: (slot, file) => uploads.push({ slot, file }),
+              onDelete: () => {},
+            }),
+          ),
         ),
       ),
     );
@@ -874,6 +881,7 @@ try {
     assert.equal(uploads[0].slot, count === 0 ? 1 : 3);
     assert.equal(uploads[0].file, file);
     await act(async () => root.unmount());
+    photoClient.clear();
   }
   console.log(
     "Catalogue UI tests passed: EN/RU search, keyboard selection/create, Price Book persistence callback, current-zone quote, retry without duplicate item, cancel, unchanged calculator routing, and EN/RU Price Book rate/category/edit/archive/delete confirmations and rate-group additions, and hidden photo upload/replace regression.",

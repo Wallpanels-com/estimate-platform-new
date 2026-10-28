@@ -1135,7 +1135,14 @@ html[lang="ru"] .line-head {
   gap: 4px;
   font-size: 11px;
   color: var(--success);
-  min-width: 55px;
+  min-width: 144px;
+  justify-content: flex-end;
+}
+.save-state.save-failed {
+  color: #8f302a;
+}
+.save-state.save-pending {
+  color: var(--muted);
 }
 .type-switch button {
   font-size: 11px;
@@ -3035,33 +3042,6 @@ html[lang="ru"] .line-head {
   margin-left: 4px;
   padding-inline: 12px;
 }
-.book-view-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 0 24px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.book-view-tabs > button {
-  min-height: var(--control);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: transparent;
-  font-size: 12px;
-}
-.book-view-tabs > button[aria-pressed="true"] {
-  background: var(--soft);
-  border-color: var(--border);
-  font-weight: 500;
-}
-.book-view-tabs > button > span {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
 .book-rate-form {
   min-width: 0;
 }
@@ -3519,9 +3499,6 @@ html[lang="ru"] .line-head {
   .book-catalogue {
     padding: 16px;
   }
-  .book-view-tabs {
-    padding-inline: 16px;
-  }
   .book-category-actions {
     flex-wrap: wrap;
   }
@@ -3740,4 +3717,40 @@ html[lang="ru"] .line-head {
   padding: 0;
   justify-self: end;
   color: var(--muted);
+}
+
+/* Shared feedback geometry: status changes never resize photos or modal content. */
+.photo-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 64px;
+  color: var(--muted);
+  font-size: 12px;
+}
+input[aria-invalid="true"] {
+  border-color: #8f302a;
+}
+.modal[open] {
+  animation: modal-enter 140ms ease-out;
+}
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.register-pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.register-pagination .button {
+  padding: 6px 10px;
 }

@@ -102,7 +102,7 @@ for (const dir of ["pages", "components"])
   }
 const lines = readFileSync(`${root}/components/LineItems.tsx`, "utf8");
 assert.ok(
-  lines.includes('(i.section || "General") === section'),
+  lines.includes('const section = item.section || "General"'),
   "Default section grouping must use its stored English key",
 );
 const builder = readFileSync(`${root}/pages/Builder.tsx`, "utf8");

@@ -141,7 +141,11 @@ async def passport(
     output_dir = os.path.join(settings.STORAGE_PATH, "passports", str(estimate_id))
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, f"passport-{uuid.uuid4()}.xlsx")
-    generate_passport(estimate, output_path)
+    try:
+        await run_in_threadpool(generate_passport, estimate, output_path)
+    except Exception:
+        Path(output_path).unlink(missing_ok=True)
+        raise
 
     return FileResponse(
         output_path,

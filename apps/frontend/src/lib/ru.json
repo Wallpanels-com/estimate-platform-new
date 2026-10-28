@@ -827,5 +827,17 @@
   "The presentation PDF could not be assembled. No incomplete PDF was returned.": "Не удалось собрать PDF. Неполная презентация не будет скачана.",
   "Add cabinet type": "Добавить вид мебели",
   "Save cabinet type": "Сохранить вид мебели",
-  "Save cabinet type?": "Сохранить новый вид мебели?"
+  "Save cabinet type?": "Сохранить новый вид мебели?",
+  "Save your changes before continuing.": "Дождитесь сохранения изменений перед переходом.",
+  "Unable to refresh. Showing the last loaded version.": "Не удалось обновить данные. Показана последняя загруженная версия.",
+  "Connection lost. Check your network and try again.": "Соединение потеряно. Проверьте сеть и повторите попытку.",
+  "can be restored from Trash.": "можно восстановить из корзины.",
+  "This page could not be opened.": "Не удалось открыть страницу.",
+  "Your saved data has not been removed. Reload the page to try again.": "Сохранённые данные не удалены. Обновите страницу и повторите попытку.",
+  "Reload page": "Обновить страницу",
+  "Estimate pages": "Страницы смет",
+  "Previous page": "Назад",
+  "Next page": "Далее",
+  "Page {0} of {1}": "Страница {0} из {1}",
+  "The request timed out. Review the saved data before trying again.": "Сервер не ответил вовремя. Проверьте сохранённые данные перед повторной попыткой."
 }

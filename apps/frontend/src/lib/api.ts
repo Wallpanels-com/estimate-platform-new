@@ -44,6 +44,9 @@ export async function request<T>(
   const response = await fetch(`${API_ORIGIN}/api/v1${path}`, {
     ...options,
     headers,
+    signal: options.signal
+      ? AbortSignal.any([options.signal, AbortSignal.timeout(30_000)])
+      : AbortSignal.timeout(30_000),
   });
   if (!response.ok) {
     let message = "The request could not be completed. Please try again.";
@@ -85,11 +88,14 @@ export async function download(path: string, filename: string) {
       Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY) || ""}`,
     },
   });
-  if (!response.ok)
+  if (!response.ok) {
+    if (response.status === 401)
+      window.dispatchEvent(new Event("wallpanels:unauthorized"));
     throw new ApiError(
       response.status,
       "The export could not be downloaded. Please try again.",
     );
+  }
   const url = URL.createObjectURL(await response.blob());
   const a = document.createElement("a");
   a.href = url;
@@ -102,20 +108,25 @@ export async function download(path: string, filename: string) {
 export function photoUrl(estimateId: string, zoneId: string, path: string) {
   return `${API_ORIGIN}/storage/images/${estimateId}/${zoneId}/${encodeURIComponent(path.split("/").pop() || "")}`;
 }
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 2,
+});
 export const money = (value: unknown) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(Number(value) || 0);
+  currencyFormatter.format(Number(value) || 0);
+const dateFormatter = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
 export const dateLabel = (value: string) =>
-  new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(
-    new Date(value),
-  );
+  dateFormatter.format(new Date(value));
 export const errorMessage = (error: unknown) =>
-  error instanceof Error
-    ? error.message
-    : "Something went wrong. Please try again.";
+  error instanceof Error && error.name === "TimeoutError"
+    ? "The request timed out. Review the saved data before trying again."
+    : error instanceof TypeError &&
+        /fetch|network|load failed/i.test(error.message)
+      ? "Connection lost. Check your network and try again."
+      : error instanceof Error
+        ? error.message
+        : "Something went wrong. Please try again.";
 export const safeFilename = (value: string) =>
   value
     .replace(/[\\/:*?"<>|]/g, "")
