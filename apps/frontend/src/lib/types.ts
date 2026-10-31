@@ -50,6 +50,7 @@ export interface Zone {
 }
 export interface Estimate {
   pdf_layout?: {
+    proposal_brand?: "wallpanels" | "verona";
     final_zone_photos?: Record<string, number>;
     [key: string]: unknown;
   } | null;

@@ -56,6 +56,7 @@ import Photos from "../components/Photos";
 import EstimateRecords from "../components/EstimateRecords";
 import AiInput from "../components/AiInput";
 import EstimatePdfPreview from "../components/EstimatePdfPreview";
+import ProposalBrandSwitch from "../components/ProposalBrandSwitch";
 import PdfChecks, { type ExportChecks } from "../components/PdfChecks";
 import {
   createEstimatePdfLoader,
@@ -126,17 +127,21 @@ export default function Builder() {
   }, [busy, saveFailed, hasDrafts]);
   const pdfMode: EstimatePdfMode = estimate?.type === "final" ? "final" : "pre";
   const pdfId = estimate?.id;
+  const proposalBrand =
+    estimate?.pdf_layout?.proposal_brand === "verona" ? "verona" : "wallpanels";
   const pdfRevision = estimate?.updated_at
     ? JSON.stringify([
         estimate.updated_at,
         Number(estimate.markup_pct || 0),
         Number(estimate.discount_pct || 0),
-        pdfMode === "final" ? "final-corporate-v12" : "pre-corporate-v7",
+        pdfMode === "final" ? "final-corporate-v13" : "pre-corporate-v8",
+        proposalBrand,
       ])
     : undefined;
   const pdfFilename = estimatePdfFilename(
     pdfMode,
     estimate?.client_name || "Client",
+    proposalBrand,
   );
   const pdfLoader = useRef<ReturnType<typeof createEstimatePdfLoader> | null>(
     null,
@@ -166,8 +171,9 @@ export default function Builder() {
       id: pdfId,
       mode: pdfMode,
       revision: pdfRevision,
+      brand: proposalBrand,
     });
-  }, [pdfId, pdfMode, pdfRevision, client, t, saveFailed, busy]);
+  }, [pdfId, pdfMode, pdfRevision, proposalBrand, client, t, saveFailed, busy]);
   const warmedPdf = useRef<string | null>(null);
   const preparePdf = () => {
     if (busy || saveFailed || drafts.current.size > 0 || !pdfId || !pdfRevision)
@@ -769,6 +775,16 @@ export default function Builder() {
               </Button>
               <strong>{money(total)}</strong>
             </div>
+            <ProposalBrandSwitch
+              value={proposalBrand}
+              disabled={busy || hasDrafts || saveFailed || !!exporting}
+              onChange={(brand) => {
+                if (brand === proposalBrand) return;
+                void mutate(() =>
+                  patch(`/estimates/${id}/proposal-brand`, { brand }),
+                );
+              }}
+            />
             {pendingZoneCount ? (
               <p className="pending-scope-note">
                 {t("Zones with unconfirmed pricing: {0}.", pendingZoneCount)}

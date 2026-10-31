@@ -1,18 +1,24 @@
 import { API_ORIGIN, ApiError, TOKEN_KEY, safeFilename } from "./api";
 
+export type ProposalBrand = "wallpanels" | "verona";
 export type EstimatePdfMode = "pre" | "final";
 export interface EstimatePdfSource {
   id: string;
   mode: EstimatePdfMode;
   revision: string;
+  brand?: ProposalBrand;
 }
 
 export function estimatePdfLabel(mode: EstimatePdfMode) {
   return mode === "pre" ? "Pre-Estimate" : "Final Estimate";
 }
 
-export function estimatePdfFilename(mode: EstimatePdfMode, clientName: string) {
-  return `${estimatePdfLabel(mode)} - Wallpanels - ${safeFilename(clientName)}.pdf`;
+export function estimatePdfFilename(
+  mode: EstimatePdfMode,
+  clientName: string,
+  brand: ProposalBrand = "wallpanels",
+) {
+  return `${estimatePdfLabel(mode)} - ${brand === "verona" ? "Verona Home" : "Wallpanels"} - ${safeFilename(clientName)}.pdf`;
 }
 
 export async function fetchEstimatePdf(
@@ -48,7 +54,12 @@ export async function fetchEstimatePdf(
 export function createEstimatePdfLoader(fetchPdf = fetchEstimatePdf) {
   const snapshots = new Map<string, Promise<Blob>>();
   return (source: EstimatePdfSource): Promise<Blob> => {
-    const key = JSON.stringify([source.id, source.mode, source.revision]);
+    const key = JSON.stringify([
+      source.id,
+      source.mode,
+      source.revision,
+      source.brand || "wallpanels",
+    ]);
     const cached = snapshots.get(key);
     if (cached) {
       snapshots.delete(key);

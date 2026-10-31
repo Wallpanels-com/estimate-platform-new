@@ -4,6 +4,7 @@
 from .pre_estimate_v1 import _fonts, _gallery, _item_detail, _zone_pages
 from pathlib import Path
 import tempfile
+from .proposal_brands import brand_key
 from .final_estimate_service import load_company_slides, compose_final_pdf, FinalEstimatePdfError
 
 
@@ -25,8 +26,10 @@ def design_version():
 
 
 def generate_pre_estimate(est, output_path):
-    company = load_company_slides()  # Fail closed before rendering any partial proposal.
-    if design_version() == "v1":
+    brand = brand_key(est)
+    # Validate the selected appendix before rendering any partial proposal.
+    company = load_company_slides() if brand == "wallpanels" else load_company_slides(brand=brand)
+    if design_version() == "v1" and brand == "wallpanels":
         from .pre_estimate_v1 import generate_pre_estimate as render
     else:
         from .pre_estimate_v2 import generate_pre_estimate as render

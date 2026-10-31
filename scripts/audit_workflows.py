@@ -86,6 +86,15 @@ async def main():
             assert sorted(r.status_code for r in simultaneous)==[200,409]
             checks.append('Simultaneous edits: one save, one 409; no lost update')
 
+            # Persisted proposal branding uses the same row lock and revision guard.
+            latest=await refresh()
+            branded=(await call('PATCH',path+'/proposal-brand',json={'brand':'verona'})).json()
+            assert branded['pdf_layout']['proposal_brand']=='verona'
+            await call('PATCH',path+'/proposal-brand',409,json={'brand':'wallpanels'})
+            latest=await refresh();assert latest['pdf_layout']['proposal_brand']=='verona'
+            await call('PATCH',path+'/proposal-brand',422,json={'brand':'unknown'})
+            pre_id=eid
+
             for i in range(1,12):
                 await refresh()
                 await call('POST',path+'/zones',201,json={'label':f'Area {i+1}','zone_type':'wall'})
@@ -107,8 +116,12 @@ async def main():
                 if mode=='final':
                     await refresh();est=(await call('POST',path+'/mode',json={'mode':'final'})).json();eid=est['id'];path=f'/estimates/{eid}';await refresh()
                 before=(await refresh())
+                assert before['pdf_layout']['proposal_brand']=='verona'
                 start=time.perf_counter();r=await call('GET',f'/pdf/{eid}/{mode}-estimate');timings[mode+'_pdf_seconds']=round(time.perf_counter()-start,3)
-                pdf=PdfReader(BytesIO(r.content));assert len(pdf.pages)>13
+                pdf=PdfReader(BytesIO(r.content));assert len(pdf.pages)>29
+                assert pdf.metadata['/WallPanelsCompanySlidesCount']=='29'
+                assert r.headers['x-proposal-brand']=='verona'
+                assert 'Verona%20Home' in r.headers['content-disposition']
                 assert r.headers.get('content-type','').startswith('application/pdf')
                 # Attachment uses the same renderer and page order; no business data mutation.
                 attachment=await call('GET',f'/pdf/{eid}/{mode}-estimate?download=true');other=PdfReader(BytesIO(attachment.content))
@@ -117,6 +130,8 @@ async def main():
                 start=time.perf_counter();xlsx=await call('GET',f'/pdf/{eid}/passport');timings[mode+'_xlsx_seconds']=round(time.perf_counter()-start,3)
                 workbook=load_workbook(BytesIO(xlsx.content));assert workbook.active['C3'].value=='Local fixture'
                 after=await refresh();assert after['subtotal']==before['subtotal']==total
+            await refresh();await call('PATCH',path+'/proposal-brand',json={'brand':'wallpanels'})
+            assert (await call('GET',f'/estimates/{pre_id}')).json()['pdf_layout']['proposal_brand']=='verona'
             history=(await call('GET',path+'/history?limit=500')).json();assert history and len({row['actor_name'] for row in history})==2
             # Shared visibility and recovery through a fresh authenticated session.
             c.headers['Authorization']='Bearer '+tokens[0]

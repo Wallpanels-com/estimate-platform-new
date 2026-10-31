@@ -54,7 +54,7 @@ const dir = await mkdtemp(resolve(".local/catalog-ui-"));
 try {
   const compiled = await build({
     stdin: {
-      contents: `export {default as ItemForm} from './apps/frontend/src/components/pricebook/ItemForm'; export {default as ItemNameFields} from './apps/frontend/src/components/pricebook/ItemNameFields'; export {default as Photos} from './apps/frontend/src/components/Photos'; export {default as CategoryForm} from './apps/frontend/src/components/pricebook/CategoryForm'; export {default as PriceBook} from './apps/frontend/src/pages/PriceBook'; export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
+      contents: `export {default as ProposalBrandSwitch} from './apps/frontend/src/components/ProposalBrandSwitch'; export {default as ItemForm} from './apps/frontend/src/components/pricebook/ItemForm'; export {default as ItemNameFields} from './apps/frontend/src/components/pricebook/ItemNameFields'; export {default as Photos} from './apps/frontend/src/components/Photos'; export {default as CategoryForm} from './apps/frontend/src/components/pricebook/CategoryForm'; export {default as PriceBook} from './apps/frontend/src/pages/PriceBook'; export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -68,6 +68,7 @@ try {
   });
   await writeFile(resolve(dir, "app.mjs"), compiled.outputFiles[0].contents);
   const {
+    ProposalBrandSwitch,
     AddItems,
     ItemNameFields,
     ItemForm,
@@ -81,6 +82,22 @@ try {
     act,
     createRoot,
   } = await import(pathToFileURL(resolve(dir, "app.mjs")));
+  for (const language of ['en', 'ru']) {
+    localStorage.setItem('wallpanels.ui-language', language);
+    const brandRoot = createRoot(document.getElementById('root'));
+    const choices = [];
+    const renderBrand = (value, disabled = false) => brandRoot.render(h(LanguageProvider, null, h(ProposalBrandSwitch, {value, disabled, onChange: next => choices.push(next)})));
+    await act(async () => renderBrand('wallpanels'));
+    assert.equal(document.querySelector('button[aria-label="WallPanels"]').getAttribute('aria-pressed'), 'true');
+    await act(async () => document.querySelector('button[aria-label="Verona Home"]').click());
+    assert.deepEqual(choices, ['verona']);
+    await act(async () => renderBrand('verona'));
+    assert.equal(document.querySelector('button[aria-label="Verona Home"]').getAttribute('aria-pressed'), 'true');
+    await act(async () => renderBrand('verona', true));
+    await act(async () => document.querySelector('button[aria-label="WallPanels"]').click());
+    assert.deepEqual(choices, ['verona'], 'Brand switching is blocked while saving/exporting');
+    await act(async () => brandRoot.unmount());
+  }
   const categories = ["wall", "cabinet", "mirror", "services"].map((id) => ({
     id,
     icon: "folder",

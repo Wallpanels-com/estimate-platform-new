@@ -4,6 +4,7 @@ from pathlib import Path
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from PIL import Image
+from .proposal_brands import brand_key, profile
 
 ASSETS = Path(__file__).resolve().parents[2] / 'assets/proposals'
 BACKGROUND = ASSETS / 'proposal-background.png'
@@ -47,11 +48,14 @@ def background(c, width, height):
 
 def pre_title(c, width, height):
     try:
-        contained(c, PRE_TITLE, 0, 0, width, height)
+        title = PRE_TITLE if getattr(c, "_proposal_brand", "wallpanels") == "wallpanels" else profile(c._proposal_brand).assets / "pre-shared-title.png"
+        contained(c, title, 0, 0, width, height)
     except (OSError, ValueError) as error:
         raise ValueError("The shared Pre-estimate cover is missing or damaged.") from error
 
 def final_title(c, estimate, width, height, template=FINAL_TITLE):
+    if brand_key(estimate) != "wallpanels":
+        template = profile(brand_key(estimate)).assets / "final-title-template.png"
     contained(c, template, 0, 0, width, height)
     photos = list(getattr(estimate, 'images', []) or [])
     for zone in getattr(estimate, 'zones', []) or []:
@@ -77,4 +81,5 @@ def final_title(c, estimate, width, height, template=FINAL_TITLE):
 
 def brand(c, width, height):
     logo_width = width * 0.11
-    contained(c, ASSETS / 'proposal-logo.png', width * 0.86, height * 0.025, logo_width, logo_width / 3)
+    selected = profile(getattr(c, '_proposal_brand', 'wallpanels'))
+    contained(c, selected.assets / 'proposal-logo.png', width * 0.86, height * 0.025, logo_width, logo_width / selected.logo_ratio)

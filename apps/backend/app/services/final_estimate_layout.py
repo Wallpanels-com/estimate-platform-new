@@ -789,8 +789,10 @@ def generate_final_client(est, output_path):
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     c = canvas.Canvas(str(output_path), pagesize=(W, H), pageCompression=1, invariant=1)
+    from .proposal_brands import brand_key
+    c._proposal_brand = brand_key(est)
     c.setTitle(est.title or "Final Estimate")
-    c.setAuthor("WALLPANELS.COM by VERONA HOME")
+    c.setAuthor("VERONA HOME" if c._proposal_brand == "verona" else "WALLPANELS.COM by VERONA HOME")
     for index, p in enumerate(pages):
         if isinstance(p, Page) and p.kind == "shared-title":
             shared_title(c, est)

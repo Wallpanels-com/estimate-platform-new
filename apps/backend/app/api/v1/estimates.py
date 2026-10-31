@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete as sa_delete, func
 from sqlalchemy.orm import selectinload
-from typing import List
+from typing import List, Literal
 import uuid
 from datetime import datetime, timezone, timedelta
 
@@ -18,6 +18,7 @@ from app.core.config import settings
 from app.services.estimate_branches import switch_mode, synchronize
 from pydantic import BaseModel, Field
 from app.services.final_zone_photos import select_photo
+from app.services.proposal_brands import select_brand
 from app.core.estimate_routes import EstimateRoute
 
 router = APIRouter(prefix="/estimates", tags=["estimates"], route_class=EstimateRoute)
@@ -239,6 +240,28 @@ async def update_estimate(
         setattr(est, field, value)
     touch(est, current_user)
     await db.flush()
+    await db.commit()
+    return await load_estimate(estimate_id, current_user, db)
+
+
+class ProposalBrandUpdate(BaseModel):
+    brand: Literal["wallpanels", "verona"]
+
+
+@router.patch("/{estimate_id}/proposal-brand", response_model=EstimateOut)
+async def update_proposal_brand(
+    estimate_id: uuid.UUID,
+    data: ProposalBrandUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Existing row lock/revision checks protect other employees' edits. Merge only
+    # this setting, preserving selected zone photos and all other layout options.
+    est = await load_estimate(estimate_id, current_user, db)
+    if getattr(est, "deleted_at", None):
+        raise HTTPException(404, "Estimate not found")
+    select_brand(est, data.brand)
+    touch(est, current_user)
     await db.commit()
     return await load_estimate(estimate_id, current_user, db)
 

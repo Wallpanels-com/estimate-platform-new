@@ -14,6 +14,7 @@ from pypdf.generic import ArrayObject, DictionaryObject, RectangleObject, Stream
 
 from app.services.final_estimate_layout import generate_final_client
 from app.services.pdf_optimization import optimize
+from app.services.proposal_brands import brand_key, profile
 
 ASSET_DIRECTORY = Path(__file__).resolve().parents[2] / 'assets' / 'proposals'
 COMPANY_PDF = ASSET_DIRECTORY / 'company-slides.pdf'
@@ -31,6 +32,7 @@ class CompanySlides:
     digest: str
     signatures: list[str]
     content_hashes: set[str]
+    brand: str = "wallpanels"
 
 
 def _content_hash(page):
@@ -77,9 +79,10 @@ def page_signature(page):
     return sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
 
-def load_company_slides(asset_path=None, manifest_path=None):
-    asset_path = Path(asset_path) if asset_path is not None else COMPANY_PDF
-    manifest_path = Path(manifest_path) if manifest_path is not None else COMPANY_MANIFEST
+def load_company_slides(asset_path=None, manifest_path=None, *, brand="wallpanels"):
+    selected = profile(brand)
+    asset_path = Path(asset_path) if asset_path is not None else (COMPANY_PDF if brand == "wallpanels" else selected.assets / "company-slides.pdf")
+    manifest_path = Path(manifest_path) if manifest_path is not None else (COMPANY_MANIFEST if brand == "wallpanels" else selected.assets / "company-slides.json")
     try:
         contents = asset_path.read_bytes()
         manifest = json.loads(manifest_path.read_text())
@@ -98,9 +101,9 @@ def load_company_slides(asset_path=None, manifest_path=None):
         reader = PdfReader(BytesIO(contents), strict=True)
         if reader.is_encrypted:
             raise ValueError('Encrypted corporate asset')
-        if len(reader.pages) != COMPANY_PAGE_COUNT or manifest.get('pages') != COMPANY_PAGE_COUNT:
+        if len(reader.pages) != selected.company_pages or manifest.get('pages') != selected.company_pages:
             raise FinalEstimatePdfError(
-                'Corporate slides must contain exactly 25 pages. Final Estimate was not generated.'
+                f'Corporate slides must contain exactly {selected.company_pages} pages. The presentation was not generated.'
             )
         reference = reader.pages[0]
         for page in reader.pages:
@@ -112,7 +115,7 @@ def load_company_slides(asset_path=None, manifest_path=None):
                     or page.get_contents() is None):
                 raise ValueError('Corporate pages must share a landscape 16:9 canvas')
         return CompanySlides(reader, digest, [page_signature(p) for p in reader.pages],
-                             {_content_hash(p) for p in reader.pages})
+                             {_content_hash(p) for p in reader.pages}, brand)
     except FinalEstimatePdfError:
         raise
     except Exception as error:
@@ -152,6 +155,7 @@ def _add_client_page(writer, page, reference):
 
 def compose_final_pdf(client_path, output_path, company=None):
     company = company if company is not None else load_company_slides()
+    page_count = len(company.reader.pages)
     output_path = Path(output_path)
     pending = output_path.with_name(f'.{output_path.name}.{uuid.uuid4()}.tmp')
     try:
@@ -176,15 +180,16 @@ def compose_final_pdf(client_path, output_path, company=None):
         writer.add_metadata({
             '/Producer': 'WallPanels Estimate Platform',
             '/WallPanelsCompanySlidesSHA256': company.digest,
-            '/WallPanelsCompanySlidesCount': str(COMPANY_PAGE_COUNT),
+            '/WallPanelsCompanySlidesCount': str(page_count),
             '/WallPanelsClientPages': str(len(client_pages)),
+            '/WallPanelsProposalBrand': company.brand,
         })
         output_path.parent.mkdir(parents=True, exist_ok=True)
         writer.write(pending)
         verified = PdfReader(pending, strict=True)
-        if (len(verified.pages) != len(client_pages) + COMPANY_PAGE_COUNT
+        if (len(verified.pages) != len(client_pages) + page_count
                 or not all(_same_canvas(page, reference) for page in verified.pages)
-                or [page_signature(page) for page in verified.pages[-COMPANY_PAGE_COUNT:]] != company.signatures):
+                or [page_signature(page) for page in verified.pages[-page_count:]] != company.signatures):
             raise ValueError('Final presentation verification failed')
         # A failed assembly never replaces an existing complete PDF or returns a partial file.
         os.replace(pending, output_path)
@@ -200,7 +205,8 @@ def compose_final_pdf(client_path, output_path, company=None):
 
 
 def generate_final_estimate(estimate, output_dir):
-    company = load_company_slides()
+    brand = brand_key(estimate)
+    company = load_company_slides() if brand == "wallpanels" else load_company_slides(brand=brand)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='client-slides-', dir=output_dir) as directory:

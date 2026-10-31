@@ -167,6 +167,7 @@ SSH setup and the exact release sequence are documented in
 Additional details are in [architecture](docs/architecture.md), [QA](docs/qa.md),
 [managed Price Book](docs/price-book-managed.md), [Pre-Estimate V2](docs/pre-estimate-v2.md),
 and [Final Estimate corporate slides](docs/final-company-slides.md).
+The shared W/VH presentation switch, approved Verona assets and verification are documented in [proposal brands](docs/proposal-brands.md).
 
 ## Operations
 

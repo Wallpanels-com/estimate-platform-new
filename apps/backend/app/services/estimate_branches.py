@@ -16,6 +16,7 @@ from sqlalchemy import event, inspect, select
 from sqlalchemy.orm import Session, selectinload
 from app.models.estimate import Estimate, EstimateZone, LineItem, EstimateImage
 from app.core.config import settings
+from app.services.proposal_brands import initial_layout
 
 FIELDS = {
     "estimate": (
@@ -119,6 +120,7 @@ async def clone(db, src, mode):
         type=mode,
         status=src.status,
         subtotal=src.subtotal,
+        pdf_layout=initial_layout(src),
         created_by_name=src.created_by_name,
         updated_by_name=src.updated_by_name,
         **values(src, "estimate"),

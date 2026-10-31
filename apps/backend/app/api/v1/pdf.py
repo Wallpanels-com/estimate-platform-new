@@ -20,6 +20,7 @@ from app.services.pre_estimate_service import generate_pre_estimate, design_vers
 from app.api.deps import get_current_user
 from app.services.estimate_branches import synchronize, switch_mode
 from app.services.final_pricing import quote
+from app.services.proposal_brands import brand_key, profile
 from app.services.final_zone_layout import photos as validate_zone_photos
 from app.services.final_zone_photos import selected_slot, PHOTO_REQUIRED
 from app.api.v1.estimates import load_estimate
@@ -185,9 +186,9 @@ async def pre_estimate(
     client = _sanitize(estimate.client_name or estimate.title or "Project", "Project")
     return FileResponse(
         path, media_type="application/pdf",
-        filename=f"Pre-Estimate - Wallpanels - {client}.pdf",
+        filename=f"Pre-Estimate - {profile(brand_key(estimate)).label} - {client}.pdf",
         content_disposition_type="attachment" if download else "inline",
-        headers={"Cache-Control": "no-store", "X-Pre-Estimate-Design": design_version()},
+        headers={"Cache-Control": "no-store", "X-Pre-Estimate-Design": design_version(), "X-Proposal-Brand": brand_key(estimate)},
         background=BackgroundTask(temporary.cleanup),
     )
 
@@ -258,8 +259,8 @@ async def final_estimate(
     client = _sanitize(estimate.client_name or estimate.title or "Project", "Project")
     return FileResponse(
         path, media_type="application/pdf",
-        filename=f"Final Estimate - Wallpanels - {client}.pdf",
+        filename=f"Final Estimate - {profile(brand_key(estimate)).label} - {client}.pdf",
         content_disposition_type="attachment" if download else "inline",
-        headers={"Cache-Control": "no-store", "X-WallPanels-Company-Pages": "25"},
+        headers={"Cache-Control": "no-store", "X-WallPanels-Company-Pages": str(profile(brand_key(estimate)).company_pages), "X-Proposal-Brand": brand_key(estimate)},
         background=BackgroundTask(temporary.cleanup),
     )

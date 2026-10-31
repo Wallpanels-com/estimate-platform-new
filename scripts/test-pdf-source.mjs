@@ -43,6 +43,15 @@ failOld(new Error('obsolete failure'));
 await assert.rejects(old, /obsolete failure/);
 assert.equal(await racing(finalSource), fresh, 'An old failure must not clear the newer Final snapshot');
 
+const brandedLoad = pdf.createEstimatePdfLoader(async source => new Blob([source.brand || 'wallpanels']));
+const wall = await brandedLoad(pre);
+const verona = await brandedLoad({...pre, brand:'verona'});
+assert.notEqual(wall, verona, 'Brand changes must never reuse the other company PDF');
+assert.equal(await verona.text(), 'verona');
+assert.equal(await brandedLoad(pre), wall);
+assert.equal(pdf.estimatePdfFilename('pre', 'Client', 'verona'), 'Pre-Estimate - Verona Home - Client.pdf');
+assert.equal(pdf.estimatePdfFilename('final', 'Client', 'verona'), 'Final Estimate - Verona Home - Client.pdf');
+
 const paths = [];
 globalThis.localStorage = { getItem: key => key === 'wallpanels.ui-language' ? 'ru' : 'local-test-token' };
 globalThis.fetch = async (path, options) => {

@@ -793,6 +793,8 @@ def generate_pre_estimate(est, output_path):
     else:
         destination = output_path
     c = canvas.Canvas(destination, pagesize=(W, H), pageCompression=1, invariant=1)
+    from .proposal_brands import brand_key
+    c._proposal_brand = brand_key(est)
     c.setTitle(f'{est.client_name or est.title or "Project"} | Pre-Estimate')
     c.setAuthor(est.prepared_by or "WallPanels")
     c.setSubject("Preliminary interior scope and investment / Design V2")

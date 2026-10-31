@@ -3754,3 +3754,31 @@ input[aria-invalid="true"] {
 .register-pagination .button {
   padding: 6px 10px;
 }
+
+/* Presentation options share the existing compact language toggle geometry. */
+.proposal-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.proposal-brand-row > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.proposal-brand-switch button {
+  min-width: 38px;
+  min-height: 34px;
+  font-size: 12px;
+}
+.proposal-brand-switch button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+.proposal-brand-switch button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
