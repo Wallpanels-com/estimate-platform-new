@@ -15,7 +15,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor, Color
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
-from .pre_estimate_v1 import _fonts, _wrap, number, money, _plain_number
+from .pre_estimate_v1 import _wrap, number, money, _plain_number
+from .proposal_style import fonts as _fonts, background as slide_background, final_title, brand as slide_brand
 from .pre_estimate_v2 import Asset, gallery_cells
 from . import final_zone_layout as zone_layout
 from .final_pricing import quote as price_quote, key as price_key
@@ -23,8 +24,8 @@ from .final_pricing import quote as price_quote, key as price_key
 W, H, M = 1440, 810, 100
 INK = HexColor("#272521")
 MUTED = HexColor("#777067")
-GOLD = HexColor("#AA8658")
-LINE = HexColor("#DDD3C6")
+GOLD = INK
+LINE = HexColor("#D7D7D4")
 ASSETS = Path(__file__).resolve().parents[2] / "assets" / "proposals"
 LOGO = (
     Path(__file__).resolve().parents[1]
@@ -32,7 +33,7 @@ LOGO = (
     / "brand"
     / "wallpanels-verona-transparent.png"
 )
-SHARED_TITLE = ASSETS / "final-shared-title.png"
+SHARED_TITLE = ASSETS / "final-title-template.png"
 BOTTOM = 172
 
 
@@ -65,35 +66,22 @@ def contained(c, path, x, y, w, h):
 
 
 def background(c, index):
-    path = ASSETS / f"final-background-{0 if index==0 else 1+(index-1)%3}.png"
-    if not path.is_file():
-        raise ValueError("Final Estimate background is unavailable.")
-    contained(c, path, 0, 0, W, H)
+    slide_background(c, W, H)
 
 
-def shared_title(c):
-    """The same untouched first slide for every Final, with no overlays."""
+def shared_title(c, estimate=None):
     try:
-        contained(c, SHARED_TITLE, 0, 0, W, H)
+        final_title(c, estimate, W, H, SHARED_TITLE)
     except (OSError, ValueError) as error:
-        raise ValueError(
-            "The shared Final Estimate cover is missing or damaged. Final Estimate was not generated."
-        ) from error
+        raise ValueError("The shared Final Estimate cover is missing or damaged. Final Estimate was not generated.") from error
 
 
 def brand(c):
-    c.drawImage(
-        str(LOGO),
-        W - M - 225,
-        H - 92,
-        225,
-        225 * ImageReader(str(LOGO)).getSize()[1] / ImageReader(str(LOGO)).getSize()[0],
-        mask="auto",
-    )
+    slide_brand(c, W, H)
 
 
 def footer(c, index, count):
-    text(c, f"{index+1:02d} / {count:02d}", W - M, 54, 11, color=MUTED, right=True)
+    text(c, f"{index+1:02d} / {count:02d}", M, 35, 11, color=MUTED)
 
 
 def amount(value):
@@ -723,7 +711,7 @@ def summary_slide(c, page, est, factor, final_page, pricing=None):
             y,
             x + width,
             y,
-            [HexColor("#CFA168"), HexColor("#F2DBB6"), HexColor("#DCB98D")],
+            [HexColor("#ECEDEB"), HexColor("#ECEDEB"), HexColor("#ECEDEB")],
             [0, 0.5, 1],
         )
         c.restoreState()
@@ -805,7 +793,7 @@ def generate_final_client(est, output_path):
     c.setAuthor("WALLPANELS.COM by VERONA HOME")
     for index, p in enumerate(pages):
         if isinstance(p, Page) and p.kind == "shared-title":
-            shared_title(c)
+            shared_title(c, est)
             c.showPage()
             continue
         if isinstance(p, zone_layout.ZonePage):
@@ -813,7 +801,7 @@ def generate_final_client(est, output_path):
             c.showPage()
             continue
         if p.kind == "summary":
-            contained(c, zone_layout.TEMPLATE, 0, 0, W, H)
+            slide_background(c, W, H)
         else:
             background(c, index - 1)
         brand(c)

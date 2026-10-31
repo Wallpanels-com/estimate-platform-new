@@ -806,6 +806,7 @@ try {
   document.head.append(uploadStyle);
   for (const count of [0, 4]) {
     const uploads = [];
+    const covers = [];
     const photoClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -828,6 +829,8 @@ try {
               },
               busy: false,
               finalMode: true,
+              coverImageId: "photo-2",
+              onSelectCover: (id) => covers.push(id),
               onUpload: (slot, file) => uploads.push({ slot, file }),
               onDelete: () => {},
             }),
@@ -851,6 +854,15 @@ try {
     });
     if (count === 0) await click(button("Add photo"));
     else {
+      const titleButtons = [
+        ...document.querySelectorAll("button[aria-label]"),
+      ].filter((b) =>
+        b.getAttribute("aria-label").includes("on the title slide"),
+      );
+      assert.equal(titleButtons.length, 4);
+      assert.equal(titleButtons[1].getAttribute("aria-pressed"), "true");
+      await click(titleButtons[2]);
+      assert.deepEqual(covers, ["photo-3"]);
       assert.equal(
         button("Add photo"),
         undefined,

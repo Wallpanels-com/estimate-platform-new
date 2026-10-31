@@ -4,7 +4,7 @@
 from .pre_estimate_v1 import _fonts, _gallery, _item_detail, _zone_pages
 from pathlib import Path
 import tempfile
-from .final_estimate_service import load_company_slides, compose_final_pdf
+from .final_estimate_service import load_company_slides, compose_final_pdf, FinalEstimatePdfError
 
 
 class _PreEstimateView:
@@ -33,5 +33,8 @@ def generate_pre_estimate(est, output_path):
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='pre-client-', dir=output_path.parent) as folder:
-        client = render(_PreEstimateView(est), Path(folder) / 'client.pdf')
+        try:
+            client = render(_PreEstimateView(est), Path(folder) / 'client.pdf')
+        except (OSError, ValueError) as error:
+            raise FinalEstimatePdfError(str(error)) from error
         return compose_final_pdf(client, output_path, company)

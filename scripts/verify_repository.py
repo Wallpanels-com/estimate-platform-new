@@ -82,8 +82,8 @@ def main() -> None:
             expected = manifest.get("sha256")
             if expected and digest != expected:
                 errors.append("corporate PDF hash does not match its manifest")
-            if manifest.get("pages") != 13:
-                errors.append("corporate PDF manifest must require exactly 13 pages")
+            if manifest.get("pages") != 25:
+                errors.append("corporate PDF manifest must require exactly 25 pages")
 
     text_suffixes = {".py", ".js", ".mjs", ".ts", ".tsx", ".json", ".md", ".toml", ".yml", ".yaml"}
     forbidden_text = (

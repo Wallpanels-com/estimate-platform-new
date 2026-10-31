@@ -31,13 +31,14 @@ from .pre_estimate_v1 import (
     number,
 )
 from .pdf_optimization import contained as _contain
+from .proposal_style import fonts as _fonts, background as slide_background, pre_title, brand as slide_brand
 
 W, H, M = 1152, 648, 64
 INK = HexColor("#292724")
 MUTED = HexColor("#77716B")
-WARM = HexColor("#F7F5F2")
-BEIGE = HexColor("#E8DED3")
-TAUPE = HexColor("#B8A18A")
+WARM = HexColor("#F3F3F1")
+BEIGE = HexColor("#ECEDEB")
+TAUPE = HexColor("#454545")
 LINE = HexColor("#E5E0DA")
 WHITE = HexColor("#FFFFFF")
 CONTENT_BOTTOM = 160
@@ -79,11 +80,7 @@ def surface(c, x, y, width, height, color=WARM):
 
 
 def brand(c):
-    image = ImageReader(str(BRAND_LOGO))
-    iw, ih = image.getSize()
-    width = 210
-    height = width * ih / iw
-    c.drawImage(image, W - M - width, H - 24 - height, width, height, mask="auto")
+    slide_brand(c, W, H)
 
 
 def zone_label(zone):
@@ -98,8 +95,7 @@ def list_price(zone, factor):
 
 
 def footer(c, est, n, count):
-    rule(c, M, 49, W - 2 * M)
-    text(c, f"{n:02d} / {count:02d}", W - M, 30, 10.5, color=MUTED, right=True)
+    text(c, f"{n:02d} / {count:02d}", M, 30, 10.5, color=MUTED)
 
 
 @dataclass(frozen=True)
@@ -837,8 +833,10 @@ def generate_pre_estimate(est, output_path):
     c.setTitle(f'{est.client_name or est.title or "Project"} | Pre-Estimate')
     c.setAuthor(est.prepared_by or "WallPanels")
     c.setSubject("Preliminary interior scope and investment / Design V2")
-    for n, page in enumerate(pages, 1):
-        surface(c, 0, 0, W, H, WHITE)
+    pre_title(c, W, H)
+    c.showPage()
+    for n, page in enumerate(pages, 2):
+        slide_background(c, W, H)
         brand(c)
         if page.kind == "cover":
             cover(c, est, page, media)
@@ -857,7 +855,7 @@ def generate_pre_estimate(est, output_path):
             zone_slide(c, page, factor, zones.index(page.zone) + 1, len(zones), media)
         else:
             summary(c, page, factor, total, pending)
-        footer(c, est, n, len(pages))
+        footer(c, est, n, len(pages) + 1)
         c.showPage()
     c.save()
     return str(output_path) if isinstance(output_path, (str, Path)) else output_path

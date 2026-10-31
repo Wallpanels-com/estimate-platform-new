@@ -13,6 +13,8 @@ export default function Photos({
   finalMode = false,
   presentationSlot,
   onSelectPresentationPhoto,
+  coverImageId,
+  onSelectCover,
 }: {
   zone: Zone;
   onUpload: (slot: number, file: File) => void;
@@ -21,6 +23,8 @@ export default function Photos({
   finalMode?: boolean;
   presentationSlot?: number | null;
   onSelectPresentationPhoto?: (slot: number) => void;
+  coverImageId?: string | null;
+  onSelectCover?: (id: string) => void;
 }) {
   const { t } = useI18n();
 
@@ -86,6 +90,26 @@ export default function Photos({
                   {t("Photo")} {photo.slot}
                 </span>
                 <div className="photo-actions">
+                  {finalMode ? (
+                    <button
+                      type="button"
+                      className="photo-presentation-choice"
+                      aria-pressed={coverImageId === photo.id}
+                      aria-label={t(
+                        "Use photo {0} on the title slide",
+                        photo.slot,
+                      )}
+                      title={t(
+                        coverImageId === photo.id
+                          ? "Selected for the title slide"
+                          : "Use on the title slide",
+                      )}
+                      disabled={busy}
+                      onClick={() => onSelectCover?.(photo.id)}
+                    >
+                      <strong aria-hidden="true">T</strong>
+                    </button>
+                  ) : null}
                   {finalMode ? (
                     <button
                       type="button"
@@ -161,7 +185,7 @@ export default function Photos({
         <br />
         {t(
           finalMode
-            ? "Only the starred photo is used in this zone’s Final Estimate. The first photo is selected by default."
+            ? "T selects the title photo. The star selects this zone’s slide photo."
             : "Included in this zone’s PDF.",
         )}
       </p>

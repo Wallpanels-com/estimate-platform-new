@@ -429,7 +429,7 @@ class FinalLayout(TestCase):
             )
             self.assertTrue(all(page.portrait for page in pages))
             self.assertTrue(all(page.total_box[0] == 82 for page in pages))
-            self.assertTrue(all(page.media_box[3] == 774 for page in pages))
+            self.assertTrue(all(page.media_box[3] == 702 for page in pages))
             self.assertTrue(
                 all(" ".join(page.titles) == "DINING WALL" for page in pages)
             )
@@ -450,8 +450,8 @@ class FinalLayout(TestCase):
                 reader = PdfReader(path)
                 first = reader.pages[0]
                 self.assertEqual(first.extract_text().strip(), "")
-                self.assertEqual(len(first.images), 1)
-                embedded = first.images[0].image.convert("RGB")
+                self.assertEqual(len(first.images), 2)
+                embedded = next(i.image.convert("RGB") for i in first.images if i.image.size == expected.size)
                 self.assertEqual(embedded.size, expected.size)
                 self.assertEqual(embedded.tobytes(), expected.tobytes())
                 self.assertIn(

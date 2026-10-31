@@ -63,9 +63,10 @@ def _png_samples(raw, width, height, channels):
 def warm_static_images():
     """Prepare only versioned artwork once at startup, never customer PDFs."""
     backend = Path(__file__).resolve().parents[2]
-    paths = [backend / 'assets/proposals/final-shared-title.png',
-             backend / 'assets/proposals/zone-template-clean.png',
-             backend / 'app/assets/brand/wallpanels-verona-transparent.png']
+    paths = [backend / 'assets/proposals/pre-shared-title.png',
+             backend / 'assets/proposals/final-title-template.png',
+             backend / 'assets/proposals/proposal-background.png',
+             backend / 'assets/proposals/proposal-logo.png']
     for path in paths:
         try:
             with Image.open(path) as source:

@@ -158,7 +158,7 @@ def main():
         final_bytes=call(c,'GET',f'/pdf/{fid}/final-estimate').content
         assert final_bytes==call(clients[(index+1)%4],'GET',f'/pdf/{fid}/final-estimate?download=true').content
         reader=PdfReader(io.BytesIO(final_bytes))
-        assert [page_signature(page) for page in reader.pages[-13:]]==company.signatures
+        assert [page_signature(page) for page in reader.pages[-len(company.signatures):]]==company.signatures
         summaries=[page for page in reader.pages[:-13] if 'investment summary' in re.sub(r'\s+',' ',page.extract_text()).lower()]
         sizes=[]
         for page in summaries:

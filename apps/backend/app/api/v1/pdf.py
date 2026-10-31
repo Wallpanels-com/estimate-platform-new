@@ -234,7 +234,7 @@ async def final_estimate(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Read-only Final preview/download: client pages, then exactly 13 company pages."""
+    """Read-only Final preview/download: client pages, then exactly 25 company pages."""
     result = await db.execute(
         select(Estimate).options(
             selectinload(Estimate.images),
@@ -260,6 +260,6 @@ async def final_estimate(
         path, media_type="application/pdf",
         filename=f"Final Estimate - Wallpanels - {client}.pdf",
         content_disposition_type="attachment" if download else "inline",
-        headers={"Cache-Control": "no-store", "X-WallPanels-Company-Pages": "13"},
+        headers={"Cache-Control": "no-store", "X-WallPanels-Company-Pages": "25"},
         background=BackgroundTask(temporary.cleanup),
     )

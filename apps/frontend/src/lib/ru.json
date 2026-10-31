@@ -839,5 +839,11 @@
   "Previous page": "Назад",
   "Next page": "Далее",
   "Page {0} of {1}": "Страница {0} из {1}",
-  "The request timed out. Review the saved data before trying again.": "Сервер не ответил вовремя. Проверьте сохранённые данные перед повторной попыткой."
+  "The request timed out. Review the saved data before trying again.": "Сервер не ответил вовремя. Проверьте сохранённые данные перед повторной попыткой.",
+  "Use photo {0} on the title slide": "Использовать фото {0} на титулке",
+  "Selected for the title slide": "Выбрано для титулки",
+  "Use on the title slide": "Использовать на титулке",
+  "Title slide photo saved": "Фото титулки сохранено",
+  "Corporate slides must contain exactly 25 pages. Final Estimate was not generated.": "Корпоративный PDF должен содержать ровно 25 страниц. Презентация не сформирована.",
+  "T selects the title photo. The star selects this zone’s slide photo.": "T — фото титулки. Звёздочка — фото слайда этой зоны."
 }

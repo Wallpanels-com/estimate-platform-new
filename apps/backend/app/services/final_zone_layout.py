@@ -12,16 +12,17 @@ from PIL import Image, ImageOps
 from reportlab.pdfbase import pdfmetrics
 from reportlab.lib.colors import HexColor
 from reportlab.lib.utils import ImageReader
-from .pre_estimate_v1 import _fonts, _wrap
+from .pre_estimate_v1 import _wrap
+from .proposal_style import fonts as _fonts, background as slide_background, brand as slide_brand
 from .final_pricing import key
 from .final_zone_photos import PHOTO_REQUIRED
 
 W, H = 1440, 810
 X = 82
 INK = HexColor("#11110F")
-GOLD = HexColor("#B58B54")
+GOLD = INK
 MUTED = HexColor("#746D65")
-RULE = HexColor("#D8CFC3")
+RULE = HexColor("#D7D7D4")
 TEMPLATE = (
     Path(__file__).resolve().parents[2] / "assets/proposals/zone-template-clean.png"
 )
@@ -119,8 +120,8 @@ class ZonePage:
     gallery_only: bool = False
     portrait: bool = False
     text_width: float = 386
-    media_box: tuple = (527, 160, 913, 580)
-    total_box: tuple = (816, 48, 624, 104)
+    media_box: tuple = (527, 210, 913, 530)
+    total_box: tuple = (816, 90, 624, 104)
     sparse: bool = False
 
 
@@ -179,12 +180,12 @@ def geometry(zone, number, assets, continued=False):
             side=side,
             component_y=components,
             body_top=top,
-            body_bottom=170 if portrait else 100 if side else 205,
+            body_bottom=220 if portrait else 100 if side else 205,
             columns=1 if side else 2,
             portrait=portrait,
             text_width=738 if portrait else 386,
-            media_box=(912, 18, 490, 774) if portrait else (527, 160, 913, 580),
-            total_box=(82, 44, 738, 104) if portrait else (816, 48, 624, 104),
+            media_box=(912, 90, 490, 702) if portrait else (527, 210, 913, 530),
+            total_box=(82, 90, 738, 104) if portrait else (816, 90, 624, 104),
         ),
         introductions,
     )
@@ -436,7 +437,7 @@ def draw_total(c, page, quote):
         y,
         x + w,
         y,
-        [HexColor("#CFA168"), HexColor("#F2DBB6"), HexColor("#DCB98D")],
+        [HexColor("#ECEDEB"), HexColor("#ECEDEB"), HexColor("#ECEDEB")],
         [0, 0.5, 1],
     )
     c.restoreState()
@@ -457,21 +458,8 @@ def draw_total(c, page, quote):
 
 
 def draw(c, page, quote):
-    try:
-        with Image.open(TEMPLATE) as im:
-            iw, ih = im.size
-            scale = min(W / iw, H / ih)
-            c.drawImage(
-                ImageReader(im),
-                (W - iw * scale) / 2,
-                (H - ih * scale) / 2,
-                iw * scale,
-                ih * scale,
-            )
-    except (OSError, ValueError) as error:
-        raise ValueError(
-            "Final Estimate zone template is missing or damaged."
-        ) from error
+    slide_background(c, W, H)
+    slide_brand(c, W, H)
     rule(c, X, 724, 56, GOLD, 3)
     text(c, f"{page.number:02d}" if page.number else "—", 156, 717, 19)
     if page.parts > 1:

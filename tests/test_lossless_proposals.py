@@ -23,7 +23,7 @@ class LosslessProposals(TestCase):
     def test_missing_warmup_assets_do_not_prevent_application_startup(self):
         with patch.object(packing.Image, 'open', side_effect=FileNotFoundError), self.assertLogs(packing.__name__, level='WARNING') as logs:
             packing.warm_static_images()
-        self.assertEqual(len(logs.output), 3)
+        self.assertEqual(len(logs.output), 4)
 
     def test_image_cache_is_bounded_and_never_reuses_changed_pixels(self):
         with patch.object(packing, '_packed_images', OrderedDict()), patch.object(packing, '_packed_bytes', 0), patch.object(packing, '_PACKED_BUDGET', 64):
@@ -77,10 +77,10 @@ class LosslessProposals(TestCase):
             self.assertEqual(stream.get_data(), path.read_bytes())
             self.assertEqual((stream['/Width'], stream['/Height']), (401, 607))
 
-    def test_pre_versions_append_exactly_thirteen_pages_and_ignore_markup(self):
+    def test_pre_versions_append_exactly_twenty_five_pages_and_ignore_markup(self):
         with tempfile.TemporaryDirectory() as folder:
             folder = Path(folder)
-            corporate = make_pdf(folder / 'company.pdf', 13, 'CORPORATE')
+            corporate = make_pdf(folder / 'company.pdf', 25, 'CORPORATE')
             reader = PdfReader(corporate)
             company = assembly.CompanySlides(reader, 'fixture',
                 [assembly.page_signature(p) for p in reader.pages],
@@ -99,12 +99,12 @@ class LosslessProposals(TestCase):
                     self.assertEqual(estimate, marked)
                     left, right = PdfReader(a), PdfReader(b)
                     self.assertEqual(len(left.pages), len(right.pages))
-                    self.assertGreater(len(left.pages), 13)
+                    self.assertGreater(len(left.pages), 25)
                     self.assertEqual([p.extract_text() for p in left.pages],
                                      [p.extract_text() for p in right.pages])
                     if version == 'v2':
                         self.assertEqual(a.read_bytes(), b.read_bytes())
-                    self.assertEqual([assembly.page_signature(p) for p in right.pages[-13:]], company.signatures)
+                    self.assertEqual([assembly.page_signature(p) for p in right.pages[-25:]], company.signatures)
                     repeated = folder / f'{version}-repeated.pdf'
                     assembly.compose_final_pdf(b, repeated, company)
                     self.assertEqual(len(PdfReader(repeated).pages), len(right.pages))

@@ -34,21 +34,21 @@ class FinalCompanySlides(TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.folder = Path(self.temp.name)
-        self.asset = make_pdf(self.folder / 'company.pdf', 13, 'CORPORATE')
+        self.asset = make_pdf(self.folder / 'company.pdf', 25, 'CORPORATE')
         self.manifest = self.folder / 'company.json'
         self.write_manifest()
         self.company = final.load_company_slides(self.asset, self.manifest)
         self.client = make_pdf(self.folder / 'client.pdf', 2, 'CLIENT', (792, 612))
 
     def write_manifest(self):
-        self.manifest.write_text(json.dumps({'pages': 13, 'sha256': sha256(self.asset.read_bytes()).hexdigest()}))
+        self.manifest.write_text(json.dumps({'pages': 25, 'sha256': sha256(self.asset.read_bytes()).hexdigest()}))
 
     def test_order_count_format_vectors_and_source_preservation(self):
         before = sha256(self.asset.read_bytes()).hexdigest()
         output = self.folder / 'final.pdf'
         final.compose_final_pdf(self.client, output, self.company)
         reader = PdfReader(output, strict=True)
-        self.assertEqual(len(reader.pages), 15)
+        self.assertEqual(len(reader.pages), 27)
         self.assertIn('CLIENT 1', reader.pages[0].extract_text())
         self.assertIn('CLIENT 2', reader.pages[1].extract_text())
         for index, page in enumerate(reader.pages[2:]):
@@ -66,18 +66,18 @@ class FinalCompanySlides(TestCase):
         output = self.folder / 'final.pdf'
         final.compose_final_pdf(self.client, output, self.company)
         final.compose_final_pdf(output, output, self.company)
-        self.assertEqual(len(PdfReader(output).pages), 15)
-        for count in (5, 13, 26):
+        self.assertEqual(len(PdfReader(output).pages), 27)
+        for count in (5, 25, 26):
             writer = PdfWriter()
             writer.append(output)
             for index in range(count):
-                writer.add_page(self.company.reader.pages[index % 13])
+                writer.add_page(self.company.reader.pages[index % 25])
             doubled = self.folder / f'repeated-{count}.pdf'
             writer.write(doubled)
             final.compose_final_pdf(doubled, doubled, self.company)
             reader = PdfReader(doubled)
-            self.assertEqual(len(reader.pages), 15)
-            self.assertEqual([final.page_signature(p) for p in reader.pages[-13:]], self.company.signatures)
+            self.assertEqual(len(reader.pages), 27)
+            self.assertEqual([final.page_signature(p) for p in reader.pages[-25:]], self.company.signatures)
 
     def test_rotated_cropped_client_page_keeps_all_visible_content(self):
         make_pdf(self.client, 1, 'CLIENT', (612, 792))
@@ -103,9 +103,9 @@ class FinalCompanySlides(TestCase):
             final.load_company_slides(self.asset, self.manifest)
         make_pdf(self.asset, 12, 'CORPORATE')
         self.write_manifest()
-        with self.assertRaisesRegex(final.FinalEstimatePdfError, 'exactly 13'):
+        with self.assertRaisesRegex(final.FinalEstimatePdfError, 'exactly 25'):
             final.load_company_slides(self.asset, self.manifest)
-        make_pdf(self.asset, 13, 'CORPORATE', (612, 792))
+        make_pdf(self.asset, 25, 'CORPORATE', (612, 792))
         self.write_manifest()
         with self.assertRaisesRegex(final.FinalEstimatePdfError, 'damaged'):
             final.load_company_slides(self.asset, self.manifest)
@@ -130,10 +130,10 @@ class FinalCompanySlides(TestCase):
         final.compose_final_pdf(self.client, right, self.company)
         self.assertEqual(left.read_bytes(), right.read_bytes())
 
-    def test_pinned_company_asset_is_the_approved_compressed_thirteen_page_file(self):
+    def test_pinned_company_asset_is_the_approved_compressed_twenty_five_page_file(self):
         company = final.load_company_slides()
-        self.assertEqual(len(company.reader.pages), 13)
+        self.assertEqual(len(company.reader.pages), 25)
         manifest = json.loads(final.COMPANY_MANIFEST.read_text())
-        self.assertEqual(company.digest, '1548803e25f92b922f0c67fb6e44fa336cf2808e182c4391010cf13eea3b0e3b')
+        self.assertEqual(company.digest, '120f8252929eccea827919187dba93fe8a15863470eb567ebdf5cf15c2f18695')
         self.assertEqual(company.digest, manifest['sha256'])
         self.assertEqual(company.signatures, manifest['page_signatures'])

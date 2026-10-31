@@ -158,7 +158,7 @@ def check_pdf(ident, kind):
     pdf = PdfReader(io.BytesIO(preview.content)); assert len(pdf.pages) > 0
     if kind == "final":
         company = load_company_slides()
-        assert [page_signature(p) for p in pdf.pages[-13:]] == company.signatures
+        assert [page_signature(p) for p in pdf.pages[-len(company.signatures):]] == company.signatures
         assert pdf.metadata["/WallPanelsCompanySlidesCount"] == "13"
         assert "CUSTOM INTERIOR" in pdf.pages[0].extract_text() or len(pdf.pages[0].images) > 0
         state["final_page_count"] = len(pdf.pages)

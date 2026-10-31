@@ -131,7 +131,7 @@ export default function Builder() {
         estimate.updated_at,
         Number(estimate.markup_pct || 0),
         Number(estimate.discount_pct || 0),
-        pdfMode === "final" ? "final-speed-v10" : "pre-speed-v5",
+        pdfMode === "final" ? "final-corporate-v11" : "pre-corporate-v6",
       ])
     : undefined;
   const pdfFilename = estimatePdfFilename(
@@ -450,6 +450,17 @@ export default function Builder() {
               zone={zone}
               busy={busy}
               finalMode={pdfMode === "final"}
+              coverImageId={estimate.cover_image_id}
+              onSelectCover={(image_id) =>
+                mutate(
+                  () =>
+                    request(`/estimates/${id}/cover-photo`, {
+                      method: "PUT",
+                      body: JSON.stringify({ image_id }),
+                    }),
+                  "Title slide photo saved",
+                )
+              }
               presentationSlot={
                 estimate?.pdf_layout?.final_zone_photos?.[zone.id]
               }

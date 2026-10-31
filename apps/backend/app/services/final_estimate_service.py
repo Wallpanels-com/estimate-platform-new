@@ -1,4 +1,4 @@
-"""Shared lossless proposal assembly; client slides followed by 13 corporate pages."""
+"""Shared lossless proposal assembly; client slides followed by 25 corporate pages."""
 from dataclasses import dataclass
 from hashlib import sha256
 from io import BytesIO
@@ -18,7 +18,7 @@ from app.services.pdf_optimization import optimize
 ASSET_DIRECTORY = Path(__file__).resolve().parents[2] / 'assets' / 'proposals'
 COMPANY_PDF = ASSET_DIRECTORY / 'company-slides.pdf'
 COMPANY_MANIFEST = ASSET_DIRECTORY / 'company-slides.json'
-COMPANY_PAGE_COUNT = 13
+COMPANY_PAGE_COUNT = 25
 
 
 class FinalEstimatePdfError(RuntimeError):
@@ -100,7 +100,7 @@ def load_company_slides(asset_path=None, manifest_path=None):
             raise ValueError('Encrypted corporate asset')
         if len(reader.pages) != COMPANY_PAGE_COUNT or manifest.get('pages') != COMPANY_PAGE_COUNT:
             raise FinalEstimatePdfError(
-                'Corporate slides must contain exactly 13 pages. Final Estimate was not generated.'
+                'Corporate slides must contain exactly 25 pages. Final Estimate was not generated.'
             )
         reference = reader.pages[0]
         for page in reader.pages:
