@@ -263,7 +263,9 @@ class PreEstimateVersions(TestCase):
         self.assertTrue(
             any(p.kind == "reference" and len(p.assets) == 1 for p in pages)
         )
-        self.assertEqual(media.reference_location, "project introduction")
+        self.assertEqual(media.reference_location, "project reference")
+        self.assertEqual(pages[0].kind, "overview")
+        self.assertFalse(any(p.kind in ("cover", "metadata", "project-title") for p in pages))
 
     def test_v2_keeps_all_data_and_supported_text_size(self):
         est = example()

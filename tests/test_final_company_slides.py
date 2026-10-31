@@ -62,6 +62,14 @@ class FinalCompanySlides(TestCase):
         self.assertEqual(float(matrix[2]), 0)
         self.assertEqual(sha256(self.asset.read_bytes()).hexdigest(), before)
 
+    def test_optimizer_sees_only_client_pages(self):
+        original = final.optimize
+        with patch.object(final, 'optimize') as optimize:
+            counts = []
+            optimize.side_effect = lambda writer: (counts.append(len(writer.pages)), original(writer))[-1]
+            final.compose_final_pdf(self.client, self.folder / 'output.pdf', self.company)
+        self.assertEqual(counts, [2])
+
     def test_repeated_assembly_and_existing_full_or_partial_appendices(self):
         output = self.folder / 'final.pdf'
         final.compose_final_pdf(self.client, output, self.company)

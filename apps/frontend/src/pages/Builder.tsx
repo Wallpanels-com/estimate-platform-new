@@ -131,7 +131,7 @@ export default function Builder() {
         estimate.updated_at,
         Number(estimate.markup_pct || 0),
         Number(estimate.discount_pct || 0),
-        pdfMode === "final" ? "final-corporate-v11" : "pre-corporate-v6",
+        pdfMode === "final" ? "final-corporate-v12" : "pre-corporate-v7",
       ])
     : undefined;
   const pdfFilename = estimatePdfFilename(

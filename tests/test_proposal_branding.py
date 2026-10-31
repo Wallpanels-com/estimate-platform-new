@@ -22,7 +22,14 @@ class Branding(unittest.TestCase):
             for item in est.line_items:item.calc_type='sf';item.unit='SF';item.zone_id=est.zones[0].id
             before=deepcopy(est)
             path=Path(directory)/'pre.pdf';pre.generate_pre_estimate(est,path)
-            first=PdfReader(path).pages[0]
+            pages=PdfReader(path).pages
+            first=pages[0]
+            self.assertIn("Project Overview", pages[1].extract_text())
+            import re
+            for page in pages:
+                text=page.extract_text()
+                self.assertNotIn("Prepared by", text)
+                self.assertIsNone(re.search(r"^\d{2} / \d{2}$", text, re.MULTILINE))
             with Image.open(style.PRE_TITLE) as source:
                 embedded=first.images[0].image.convert('RGB')
                 self.assertEqual(embedded.tobytes(),source.convert('RGB').tobytes())

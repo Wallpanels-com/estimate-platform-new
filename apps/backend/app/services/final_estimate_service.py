@@ -168,6 +168,8 @@ def compose_final_pdf(client_path, output_path, company=None):
         reference = company.reader.pages[0]
         for page in client_pages:
             _add_client_page(writer, page, reference)
+        # Process generated client resources only. Never decode/repack the approved appendix.
+        optimize(writer)
         # Corporate pages are cloned directly, preserving all source image/font streams.
         for page in company.reader.pages:
             writer.add_page(page)
@@ -178,7 +180,6 @@ def compose_final_pdf(client_path, output_path, company=None):
             '/WallPanelsClientPages': str(len(client_pages)),
         })
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        optimize(writer)
         writer.write(pending)
         verified = PdfReader(pending, strict=True)
         if (len(verified.pages) != len(client_pages) + COMPANY_PAGE_COUNT

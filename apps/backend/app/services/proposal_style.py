@@ -3,21 +3,41 @@ from functools import lru_cache
 from pathlib import Path
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from .pdf_optimization import contained
+from PIL import Image
 
 ASSETS = Path(__file__).resolve().parents[2] / 'assets/proposals'
 BACKGROUND = ASSETS / 'proposal-background.png'
 PRE_TITLE = ASSETS / 'pre-shared-title.png'
 FINAL_TITLE = ASSETS / 'final-title-template.png'
 
-@lru_cache(maxsize=1)
 def fonts():
     from .pre_estimate_v1 import FONT_LOCK, FONTS
     with FONT_LOCK:
         for weight, file in [('Regular','Arial.ttf'),('Medium','Arial-Bold.ttf'),('Bold','Arial-Bold.ttf')]:
             name, path = 'WP-'+weight, str(FONTS / file)
             if name not in pdfmetrics.getRegisteredFontNames() or getattr(pdfmetrics.getFont(name).face, 'filename', None) != path:
+                # ReportLab ignores re-registration of an existing dynamic alias.
+                # Legacy V1 may have initialized WP-* before the active renderer.
+                pdfmetrics._fonts.pop(name, None)
                 pdfmetrics.registerFont(TTFont(name, path))
+
+@lru_cache(maxsize=16)
+def _artwork_size(path, modified, size):
+    with Image.open(path) as image:
+        return image.size
+
+
+def contained(c, path, x, y, w, h):
+    # Filename-based XObjects let ReportLab reuse immutable artwork on every
+    # page of this document without repeatedly decoding and hashing its pixels.
+    # Cache dimensions only; decoded customer images never accumulate in RAM.
+    path = Path(path)
+    stat = path.stat()
+    iw, ih = _artwork_size(str(path), stat.st_mtime_ns, stat.st_size)
+    scale = min(w / iw, h / ih)
+    dw, dh = iw * scale, ih * scale
+    c.drawImage(str(path), x + (w - dw) / 2, y + (h - dh) / 2, dw, dh, mask='auto')
+
 
 def background(c, width, height):
     try:

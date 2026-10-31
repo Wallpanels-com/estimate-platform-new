@@ -94,10 +94,6 @@ def list_price(zone, factor):
     return "-" if _pending_only(zone) else money(_zone_total(zone, factor))
 
 
-def footer(c, est, n, count):
-    text(c, f"{n:02d} / {count:02d}", M, 30, 10.5, color=MUTED)
-
-
 @dataclass(frozen=True)
 class Asset:
     path: str
@@ -523,44 +519,11 @@ def column_entries(c, page, factor):
 
 
 def plan(est, factor, zones, media):
-    client = est.client_name or est.title or "Project"
-    wrapped = _wrap(client, 480 if media.cover else W - 2 * M, 48, "WP-Medium")
-    if len(wrapped) <= 3:
-        pages = [Page("cover", titles=wrapped, assets=media.cover)]
-    else:
-        wrapped = _wrap(client, W - 2 * M, 38, "WP-Medium")
-        pages = [
-            Page("cover", titles=wrapped[i : i + 4], continued=i > 0, cover_size=38)
-            for i in range(0, len(wrapped), 4)
-        ]
-        if media.cover:
-            media.reference_location = "project introduction"
-            pages.append(Page("reference", assets=media.cover))
-    if (
-        est.prepared_by
-        and len(
-            _wrap(
-                f"Prepared by {est.prepared_by}",
-                480 if media.cover else W - 2 * M,
-                12.5,
-            )
-        )
-        > 2
-    ):
-        preparer = _wrap(f"Prepared by {est.prepared_by}", W - 2 * M, 16)
-        pages += [
-            Page("metadata", titles=preparer[i : i + 12])
-            for i in range(0, len(preparer), 12)
-        ]
-    subtitle = est.project_name or "Custom Interior Solution"
-    subtitle_lines = _wrap(subtitle, W - 2 * M, 23, "WP-Medium")
-    # Preserve arbitrarily long real project names without colliding with metadata.
-    if len(subtitle_lines) > 2:
-        pages += [
-            Page("project-title", titles=subtitle_lines[i : i + 8], continued=i > 0)
-            for i in range(0, len(subtitle_lines), 8)
-        ]
-    pages += list_pages("overview", zones)
+    # The shared title is rendered separately. Start directly with the overview.
+    pages = list_pages("overview", zones)
+    if media.shared:
+        media.reference_location = "project reference"
+        pages.append(Page("reference", assets=media.cover))
     for zone in zones:
         pages += zone_pages(zone, factor, media)
     pages += list_pages("summary", zones)
@@ -835,7 +798,7 @@ def generate_pre_estimate(est, output_path):
     c.setSubject("Preliminary interior scope and investment / Design V2")
     pre_title(c, W, H)
     c.showPage()
-    for n, page in enumerate(pages, 2):
+    for page in pages:
         slide_background(c, W, H)
         brand(c)
         if page.kind == "cover":
@@ -855,7 +818,6 @@ def generate_pre_estimate(est, output_path):
             zone_slide(c, page, factor, zones.index(page.zone) + 1, len(zones), media)
         else:
             summary(c, page, factor, total, pending)
-        footer(c, est, n, len(pages) + 1)
         c.showPage()
     c.save()
     return str(output_path) if isinstance(output_path, (str, Path)) else output_path
