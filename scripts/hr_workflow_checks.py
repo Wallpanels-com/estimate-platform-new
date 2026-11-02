@@ -40,6 +40,23 @@ async def check_hr(call, client, tokens):
     v=(await call('PATCH',f'/hr/vacancies/{vid}',json={'name':'Updated vacancy','description':'Requirements','archived':True,'expected_updated_at':v['updated_at']})).json()
     await call('POST',f'/hr/vacancies/{vid}/imports',409,files={'file':('Candidates.xlsx',data.getvalue(),'application/octet-stream')})
     await call('PATCH',f'/hr/vacancies/{vid}',json={'name':v['name'],'description':v['description'],'archived':False,'expected_updated_at':v['updated_at']})
+    # Page sizes, non-overlapping slices and stale/out-of-range page clamping.
+    w2=Workbook();ws=w2.active;ws.append(['name','email','phone'])
+    for i in range(63):ws.append([f'Paging {i}',f'page{i}@example.com',''])
+    buf=BytesIO();w2.save(buf)
+    b=(await call('POST',f'/hr/vacancies/{vid}/imports',201,files={'file':('Paging.xlsx',buf.getvalue(),'application/octet-stream')})).json()
+    await call('POST',f"/hr/imports/{b['id']}/confirm",json={'sheet':b['sheets'][0]['name'],'mapping':b['sheets'][0]['mapping']})
+    slices=[]
+    for number,expected in [(1,20),(2,20),(4,5)]:
+        result=(await call('GET',f'/hr/vacancies/{vid}/candidates?page_size=20&page={number}')).json()
+        assert len(result['items'])==expected and result['page']==number
+        slices.append({r['id'] for r in result['items']})
+    assert not slices[0].intersection(slices[1])
+    for size,expected in [(50,50),(100,65)]:
+        result=(await call('GET',f'/hr/vacancies/{vid}/candidates?page_size={size}')).json()
+        assert len(result['items'])==expected and result['page_size']==size
+    assert (await call('GET',f'/hr/vacancies/{vid}/candidates?page_size=20&page=999')).json()['page']==4
+    await call('GET',f'/hr/vacancies/{vid}/candidates?page_size=21',422)
     client.headers['Authorization']='Bearer '+tokens[1]
     await call('GET',f'/hr/vacancies/{vid}/candidates',403)
     await call('PATCH',f"/hr/candidates/{low['id']}",403,json={**update,'version':2})

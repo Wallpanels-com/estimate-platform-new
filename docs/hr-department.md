@@ -7,8 +7,9 @@ Desktop route: `/hr`. Initial production access is limited to the configured imm
 1. Add a vacancy or select Marketer / Project Manager.
 2. Import an `.xlsx` workbook (up to 10 MB, 5,000 non-empty rows and 100 columns). Empty worksheets/rows are ignored. Choose the worksheet and check the proposed name/email/phone mapping.
 3. Check the preview and confirm. Facebook dummy leads, incomplete records and duplicate contact identities are reported separately. Confirmation is idempotent and imports into the selected vacancy only. Existing notes/statuses are never overwritten.
-4. Open a candidate by name. Set priority, status, HR notes, and confirmed place of residence/work. Archive candidates via status; select Archived in the status filter to restore them. Vacancies have a separate archive checkbox and Show archive control.
-5. Saved changes include editor attribution and transaction-level audit history. Concurrent edits return 409 instead of overwriting another employee's changes.
+4. Choose 20, 50 or 100 candidates per page. The table scrolls with the document, with numbered navigation and first/last boundaries. Page size is an optional browser preference; candidate records remain in PostgreSQL.
+5. Open a candidate by name. Set priority, status, HR notes, and confirmed place of residence/work. Archive candidates via status; select Archived in the status filter to restore them. Vacancies have a separate archive checkbox and Show archive control.
+6. Saved changes include editor attribution and transaction-level audit history. Concurrent edits return 409 instead of overwriting another employee's changes.
 
 Names, phone numbers and original answers are retained as supplied. No messages are sent to candidates. Candidate workbook files, credentials, import results and personal data must never be committed to Git.
 

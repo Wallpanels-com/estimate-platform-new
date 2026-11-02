@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
@@ -6,8 +6,6 @@ import {
   Pencil,
   Star,
   Search,
-  ChevronLeft,
-  ChevronRight,
   MapPin,
   BriefcaseBusiness,
 } from "lucide-react";
@@ -23,6 +21,7 @@ import {
   useNotice,
 } from "../components/ui";
 import Select from "../components/Select";
+import HRPagination from "../components/HRPagination";
 
 type Vacancy = {
   id: string;
@@ -59,6 +58,7 @@ type Candidate = {
 };
 type Results = {
   items: Candidate[];
+  page: number;
   total: number;
   counts: Record<string, number>;
 };
@@ -116,6 +116,19 @@ export default function HR() {
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState(false);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(() => {
+    try {
+      const stored = Number(localStorage.getItem("wallpanels.hr.page-size"));
+      return [20, 50, 100].includes(stored) ? stored : 50;
+    } catch {
+      return 50;
+    }
+  });
+  const board = useRef<HTMLElement>(null);
+  function goToPage(value: number) {
+    setPage(value);
+    board.current?.scrollIntoView({ block: "start" });
+  }
   const [edit, setEdit] = useState<Vacancy | "new" | null>(null);
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [importing, setImporting] = useState(false);
@@ -134,15 +147,26 @@ export default function HR() {
     return () => clearTimeout(timer);
   }, [q]);
   const query = useQuery({
-    queryKey: ["hr-candidates", ident, search, status, priority, page],
+    queryKey: [
+      "hr-candidates",
+      ident,
+      search,
+      status,
+      priority,
+      page,
+      pageSize,
+    ],
     enabled: !!ident,
     queryFn: () =>
       request<Results>(
-        `/hr/vacancies/${ident}/candidates?${new URLSearchParams({ q: search, status: status || "", priority: String(priority), page: String(page) }).toString().replace("status=&", "")}`,
+        `/hr/vacancies/${ident}/candidates?${new URLSearchParams({ q: search, status: status || "", priority: String(priority), page: String(page), page_size: String(pageSize) }).toString().replace("status=&", "")}`,
       ),
     refetchInterval: 20000,
     refetchOnWindowFocus: true,
   });
+  useEffect(() => {
+    if (query.data && query.data.page !== page) setPage(query.data.page);
+  }, [query.data, page]);
   function refresh() {
     void client.invalidateQueries({ queryKey: ["hr-candidates"] });
     void client.invalidateQueries({ queryKey: ["hr-vacancies"] });
@@ -254,7 +278,7 @@ export default function HR() {
               {t("Create a vacancy, then import its candidate workbook.")}
             </EmptyState>
           ) : (
-            <section className="hr-board">
+            <section className="hr-board" ref={board}>
               <div className="hr-board-heading">
                 <div className="min-zero">
                   <h2>{current.name}</h2>
@@ -308,9 +332,32 @@ export default function HR() {
                   <Star size={16} fill={priority ? "currentColor" : "none"} />
                   {t("Priority")}
                 </Button>
-                <span className="hr-count">
-                  {query.data?.total ?? "—"} {t("candidates")}
-                </span>
+                <div className="hr-page-size">
+                  <Field label="Candidates per page">
+                    <Select
+                      value={pageSize}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        setPageSize(value);
+                        setPage(1);
+                        try {
+                          localStorage.setItem(
+                            "wallpanels.hr.page-size",
+                            String(value),
+                          );
+                        } catch {
+                          /* Preference is optional. */
+                        }
+                      }}
+                    >
+                      {[20, 50, 100].map((n) => (
+                        <option key={n} value={n}>
+                          {t("{0} / page", n)}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
               </div>
               <p className="hr-sort-note">
                 {t(
@@ -418,26 +465,12 @@ export default function HR() {
                       </tbody>
                     </table>
                   </div>
-                  <footer className="hr-pagination">
-                    <span>
-                      {t("Page")} {page} /{" "}
-                      {Math.max(1, Math.ceil(query.data.total / 50))}
-                    </span>
-                    <Button
-                      disabled={page <= 1}
-                      aria-label={t("Previous page")}
-                      onClick={() => setPage(page - 1)}
-                    >
-                      <ChevronLeft size={17} />
-                    </Button>
-                    <Button
-                      disabled={page * 50 >= query.data.total}
-                      aria-label={t("Next page")}
-                      onClick={() => setPage(page + 1)}
-                    >
-                      <ChevronRight size={17} />
-                    </Button>
-                  </footer>
+                  <HRPagination
+                    page={query.data.page}
+                    pageSize={pageSize}
+                    total={query.data.total}
+                    onChange={goToPage}
+                  />
                 </>
               ) : (
                 <EmptyState title="No candidates found">

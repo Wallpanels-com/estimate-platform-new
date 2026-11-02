@@ -925,5 +925,10 @@
   "Professional match": "Соответствие требованиям",
   "Not scored": "Нет оценки",
   "Equal weight for available criteria: experience, English, US market and technical drawings. Self-reported answers; human review required.": "Равный вес доступных критериев: опыт, английский, рынок США и чтение чертежей. Ответы из анкеты требуют проверки HR.",
-  "Show archive": "Показать архив"
+  "Show archive": "Показать архив",
+  "Candidates per page": "Кандидатов на странице",
+  "Candidate pages": "Страницы кандидатов",
+  "Page {0}": "Страница {0}",
+  "{0}–{1} of {2} candidates": "{0}–{1} из {2} кандидатов",
+  "{0} / page": "{0} / стр."
 }

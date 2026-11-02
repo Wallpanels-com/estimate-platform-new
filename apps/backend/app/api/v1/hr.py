@@ -70,7 +70,8 @@ async def edit_vacancy(ident:uuid.UUID,body:VacancyInput,db:AsyncSession=Depends
     await db.flush();await db.refresh(v);return vacancy_out(v)
 
 @router.get('/vacancies/{ident}/candidates')
-async def candidates(ident:uuid.UUID,q:str=Query('',max_length=200),status:Status|None=None,priority:bool=False,page:int=Query(1,ge=1),db:AsyncSession=Depends(get_db),user=Depends(get_current_user)):
+async def candidates(ident:uuid.UUID,q:str=Query('',max_length=200),status:Status|None=None,priority:bool=False,page:int=Query(1,ge=1),page_size:int=Query(50,ge=20,le=100),db:AsyncSession=Depends(get_db),user=Depends(get_current_user)):
+    if page_size not in (20,50,100):raise HTTPException(422,'Choose 20, 50 or 100 candidates per page.')
     await vacancy(db,ident)
     where=[Candidate.vacancy_id==ident]
     if status:where.append(Candidate.status==status)
@@ -80,9 +81,10 @@ async def candidates(ident:uuid.UUID,q:str=Query('',max_length=200),status:Statu
         term='%'+q.strip().replace('\\','\\\\').replace('%','\\%').replace('_','\\_')+'%'
         where.append(or_(*(c.ilike(term) for c in (Candidate.name,Candidate.email,Candidate.phone))))
     total=(await db.execute(select(func.count()).select_from(Candidate).where(*where))).scalar_one()
-    rows=(await db.execute(select(Candidate).where(*where).order_by(Candidate.priority.desc(),Candidate.score.desc().nulls_last(),Candidate.created_at.desc(),Candidate.id).offset((page-1)*50).limit(50))).scalars().all()
+    page=min(page,max(1,(total+page_size-1)//page_size))
+    rows=(await db.execute(select(Candidate).where(*where).order_by(Candidate.priority.desc(),Candidate.score.desc().nulls_last(),Candidate.created_at.desc(),Candidate.id).offset((page-1)*page_size).limit(page_size))).scalars().all()
     counts=(await db.execute(select(Candidate.status,func.count()).where(Candidate.vacancy_id==ident).group_by(Candidate.status))).all()
-    return {'items':[candidate_out(c) for c in rows],'total':total,'counts':dict(counts),'page':page}
+    return {'items':[candidate_out(c) for c in rows],'total':total,'counts':dict(counts),'page':page,'page_size':page_size}
 
 @router.patch('/candidates/{ident}')
 async def edit_candidate(ident:uuid.UUID,body:CandidateInput,db:AsyncSession=Depends(get_db),user=Depends(get_current_user)):

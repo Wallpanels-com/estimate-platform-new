@@ -3910,7 +3910,7 @@ input[aria-invalid="true"] {
 }
 .hr-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 220px auto auto;
+  grid-template-columns: minmax(220px, 1fr) 220px auto 140px;
   align-items: center;
   gap: 12px;
   padding: 0 24px;
@@ -3945,9 +3945,7 @@ input[aria-invalid="true"] {
   margin: 16px 24px;
 }
 .hr-table-wrap {
-  overflow: auto;
-  max-height: max(240px, calc(100dvh - 430px));
-  scrollbar-gutter: stable;
+  overflow: visible;
 }
 .hr-table thead th {
   position: sticky;
@@ -4059,17 +4057,42 @@ input[aria-invalid="true"] {
 .hr-pagination {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 20px;
   padding: 16px 24px;
   font-size: 13px;
   color: #74786e;
 }
-.hr-pagination span {
-  margin-right: 12px;
+.hr-pagination nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .hr-pagination .button {
   min-height: 36px;
+  min-width: 36px;
+  padding: 7px 10px;
+}
+.hr-page-gap {
+  padding: 0 6px;
+}
+.hr-page-range {
+  white-space: nowrap;
+}
+.hr-page-size .field {
+  gap: 4px;
+}
+.hr-page-size .field > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.hr-board {
+  scroll-margin-top: 20px;
 }
 .hr-candidate-contact {
   display: flex;
