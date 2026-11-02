@@ -24,7 +24,7 @@ def user(pages=None): return O(id=uuid.uuid4(), is_active=True, page_access=page
 
 class PageAccess(IsolatedAsyncioTestCase):
     async def test_default_access_and_owner_identity_do_not_depend_on_login_or_role(self):
-        employee=user(); self.assertEqual(access.allowed_pages(employee), list(access.PAGES))
+        employee=user(); self.assertEqual(access.allowed_pages(employee), list(access.LEGACY_PAGES))
         employee.page_access=[]; self.assertFalse(access.allowed_pages(employee))
         with patch.object(access.settings,'ACCESS_MANAGER_USER_ID', employee.id):
             employee.email='renamed'; employee.name='Renamed'; employee.role='user'
@@ -49,6 +49,9 @@ class PageAccess(IsolatedAsyncioTestCase):
           ([], '/auth/me','GET',True), ([], '/auth/password','POST',True),
           (list(access.PAGES),'/audit','GET',False), (list(access.PAGES),'/operations/backups','POST',False),
           ([], '/future-hr-api','GET',False),
+            (None, '/hr/vacancies','GET',False),
+            (['hr'], '/hr/vacancies','GET',True),
+            (['hr'], '/hr/candidates','PATCH',True),
         ]
         for pages,path,method,allowed in cases:
             with self.subTest(path=path,method=method,pages=pages):
@@ -82,7 +85,7 @@ class PageAccess(IsolatedAsyncioTestCase):
             with self.assertRaises(HTTPException) as error: await users.update_user_access(owner.id,UserAccessUpdate(pages=list(access.PAGES),expected_updated_at=datetime(2000,1,1,tzinfo=timezone.utc)),db,owner)
             self.assertEqual(error.exception.status_code,409)
         db.commit.assert_not_awaited()
-        for pages in (['hr'],['users','users']):
+        for pages in (['unknown'],['users','users']):
             with self.assertRaises(ValidationError): UserAccessUpdate(pages=pages,expected_updated_at=owner.updated_at)
 
 

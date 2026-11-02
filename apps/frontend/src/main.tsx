@@ -24,6 +24,7 @@ const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Builder = lazy(() => import("./pages/Builder"));
 const PriceBook = lazy(() => import("./pages/PriceBook"));
 const QuickEstimate = lazy(() => import("./pages/QuickEstimate"));
+const HR = lazy(() => import("./pages/HR"));
 const Users = lazy(() => import("./pages/Users"));
 const client = new QueryClient({
   defaultOptions: {
@@ -69,6 +70,14 @@ function App() {
               }
             />
             <Route path="access" element={<NoPageAccess />} />
+            <Route
+              path="hr"
+              element={
+                <PageGate page="hr">
+                  <HR />
+                </PageGate>
+              }
+            />
             <Route
               path="onboarding"
               element={

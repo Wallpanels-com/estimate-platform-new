@@ -5,7 +5,8 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from app.core.config import settings
 
-PAGES = ('estimates', 'quick_estimate', 'price_book', 'users', 'trash')
+LEGACY_PAGES = ('estimates', 'quick_estimate', 'price_book', 'users', 'trash')
+PAGES = (*LEGACY_PAGES, 'hr')
 
 
 def is_access_manager(user):
@@ -17,7 +18,7 @@ def allowed_pages(user):
     if is_access_manager(user):
         return list(PAGES)
     configured = getattr(user, 'page_access', None)
-    return list(PAGES) if configured is None else [p for p in PAGES if p in configured]
+    return list(LEGACY_PAGES) if configured is None else [p for p in PAGES if p in configured]
 
 
 def require_manager(user):
@@ -43,6 +44,9 @@ async def authorize_request(user, db, request):
     method = request.method
     if path.startswith('/auth/'):
         return  # Login/profile/password-self remain available even with no grants.
+    if path == '/hr' or path.startswith('/hr/'):
+        require_any(user, 'hr')
+        return
     if path.startswith('/users'):
         require_any(user, 'users')
         if method not in ('GET', 'HEAD'):

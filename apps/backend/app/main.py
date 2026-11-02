@@ -8,7 +8,7 @@ import os
 from app.core.config import settings
 from app.core.schema_version import current_revision
 from app.core.database import engine, Base, AsyncSessionLocal
-from app.api.v1 import auth, estimates, voice, files, pdf, pricing, zones, pricebook, users, governance, backups
+from app.api.v1 import auth, estimates, voice, files, pdf, pricing, zones, pricebook, users, governance, backups, hr
 from app.services import audit  # register transaction-level audit hooks
 
 
@@ -67,6 +67,7 @@ app.include_router(pricebook.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(governance.router, prefix="/api/v1")
 app.include_router(backups.router, prefix="/api/v1")
+app.include_router(hr.router, prefix="/api/v1")
 
 
 @app.get("/health")

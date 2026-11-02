@@ -3,6 +3,7 @@ export const PAGES = [
   { key: "quick_estimate", label: "Quick estimate", path: "/quick-estimate" },
   { key: "price_book", label: "Price book", path: "/price-book" },
   { key: "users", label: "Team accounts", path: "/users" },
+  { key: "hr", label: "HR department", path: "/hr" },
   { key: "trash", label: "Trash", path: "/trash" },
 ] as const;
 export type PageKey = (typeof PAGES)[number]["key"];
@@ -14,8 +15,8 @@ export function canAccess(user: Grants | undefined, page: PageKey) {
   return (
     !!user &&
     (user.can_manage_access === true ||
-      user.page_access == null ||
-      user.page_access.includes(page))
+      (user.page_access == null && page !== "hr") ||
+      user.page_access?.includes(page) === true)
   );
 }
 export function firstPage(user: Grants | undefined) {

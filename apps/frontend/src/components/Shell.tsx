@@ -7,6 +7,7 @@ import {
   Trash2,
   LogOut,
   Users,
+  BriefcaseBusiness,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { canAccess, firstPage } from "../lib/access";
@@ -62,6 +63,12 @@ export default function Shell() {
             <NavLink to="/price-book">
               <BookOpen size={18} />
               {t("Price book")}
+            </NavLink>
+          ) : null}
+          {canAccess(user, "hr") ? (
+            <NavLink to="/hr">
+              <BriefcaseBusiness size={18} />
+              {t("HR department")}
             </NavLink>
           ) : null}
           {canAccess(user, "users") ? (

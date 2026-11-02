@@ -71,6 +71,8 @@ try {
   } = await import(pathToFileURL(resolve(dir, "app.mjs")));
   assert.equal(canAccess(undefined, "users"), false);
   assert.equal(canAccess({}, "users"), true);
+  assert.equal(canAccess({}, "hr"), false);
+  assert.equal(canAccess({page_access:["hr"]}, "hr"), true);
   assert.equal(canAccess({ page_access: [] }, "users"), false);
   assert.equal(firstPage({ page_access: [] }), "/access");
   assert.equal(firstPage({ page_access: ["users"] }), "/users");
@@ -184,7 +186,7 @@ try {
     for (let i = 0; i < 10 && !document.querySelector(".access-options"); i++)
       await act(async () => new Promise((r) => setTimeout(r, 10)));
     const boxes = [...document.querySelectorAll(".access-options input")];
-    assert.equal(boxes.length, 5);
+    assert.equal(boxes.length, 6);
     assert.ok(boxes.every((b) => b.checked));
     await act(async () => boxes[2].click());
     assert.equal(boxes[2].checked, false);
@@ -199,7 +201,7 @@ try {
     assert.ok(document.querySelector("dialog"));
     assert.equal(
       document.querySelectorAll(".access-options input:checked").length,
-      4,
+      5,
     );
     fail = false;
     await act(async () =>
@@ -231,7 +233,7 @@ try {
     client.clear();
   }
   console.log(
-    "Page access UI passed: EN/RU owner-only actions, five grants, save payload, conflict preservation, menu filtering and direct-link guards.",
+    "Page access UI passed: EN/RU owner-only actions, six grants, save payload, conflict preservation, menu filtering and direct-link guards.",
   );
 } finally {
   await rm(dir, { recursive: true, force: true });

@@ -71,6 +71,8 @@ async def main():
                 tokens.append((await call('POST','/auth/login',json={'email':login,'password':password})).json()['access_token'])
             c.headers['Authorization']='Bearer '+tokens[0]
             await call('GET','/auth/me')
+            from hr_workflow_checks import check_hr
+            await check_hr(call,c,tokens)
             est=(await call('POST','/estimates',201,json={'type':'pre','title':'Isolated workflow audit','client_name':'Local fixture'})).json()
             eid=est['id']; zid=est['zones'][0]['id']; path=f'/estimates/{eid}'
             revision=est['revision']
@@ -192,7 +194,7 @@ async def main():
             await call('GET',path,403,headers=staff_headers)
             await call('POST','/estimates',403,json={'type':'pre'},headers=staff_headers)
             await call('PATCH',f'/estimates/{quick['id']}',403,json={'type':'pre'},headers=staff_headers)
-            me=(await call('GET','/auth/me')).json();assert me['can_manage_access'] and len(me['page_access'])==5
+            me=(await call('GET','/auth/me')).json();assert me['can_manage_access'] and len(me['page_access'])==6
             own=(await call('GET',f'/users/{me['id']}/access')).json()
             await call('PUT',f'/users/{me['id']}/access',409,json={'pages':[],'expected_updated_at':own['updated_at']})
             events=(await call('GET','/audit')).json();assert any('page_access' in event['changes'] for event in events)

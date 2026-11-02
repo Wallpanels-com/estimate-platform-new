@@ -81,11 +81,11 @@ class ProfileUpdate(BaseModel):
     onboarding_completed: bool | None = None
 
 
-PageKey = Literal["estimates", "quick_estimate", "price_book", "users", "trash"]
+PageKey = Literal["estimates", "quick_estimate", "price_book", "users", "trash", "hr"]
 
 
 class UserAccessUpdate(BaseModel):
-    pages: list[PageKey] = Field(max_length=5)
+    pages: list[PageKey] = Field(max_length=6)
     expected_updated_at: datetime
 
     @field_validator('pages')
