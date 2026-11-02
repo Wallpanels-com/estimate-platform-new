@@ -3972,19 +3972,19 @@ input[aria-invalid="true"] {
   background: #f4f3ed;
 }
 .hr-table th:nth-child(1) {
-  width: 27%;
+  width: 34%;
 }
 .hr-table th:nth-child(2) {
-  width: 25%;
+  width: 31%;
 }
 .hr-table th:nth-child(3) {
-  width: 17%;
+  width: 20%;
 }
 .hr-table th:nth-child(4) {
-  width: 18%;
+  width: 15%;
 }
-.hr-table th:nth-child(5) {
-  width: 13%;
+.hr-contact.hr-contact-review {
+  color: #a6352c;
 }
 .hr-name {
   display: flex;
@@ -4040,10 +4040,6 @@ input[aria-invalid="true"] {
 }
 .hr-muted {
   color: #898c83;
-  font-size: 13px;
-}
-.hr-location-check {
-  color: #806943;
   font-size: 13px;
 }
 .hr-updated {

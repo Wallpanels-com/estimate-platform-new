@@ -379,7 +379,6 @@ export default function HR() {
                           <th>{t("Candidate")}</th>
                           <th>{t("Experience & skills")}</th>
                           <th>{t("Candidate status")}</th>
-                          <th>{t("Location check")}</th>
                           <th>{t("Updated")}</th>
                         </tr>
                       </thead>
@@ -399,9 +398,35 @@ export default function HR() {
                                 )}
                                 {c.name}
                               </button>
-                              <div className="hr-contact">
-                                {c.email || c.phone}
-                              </div>
+                              {c.email && (
+                                <div
+                                  className={`hr-contact${c.contact_flags.includes("email_ru") ? " hr-contact-review" : ""}`}
+                                  title={
+                                    c.contact_flags.includes("email_ru")
+                                      ? t("Email .ru — contact to verify")
+                                      : undefined
+                                  }
+                                >
+                                  {c.email}
+                                </div>
+                              )}
+                              {c.phone && (
+                                <div
+                                  className={`hr-contact${c.contact_flags.includes("phone_plus7") ? " hr-contact-review" : ""}`}
+                                  title={
+                                    c.contact_flags.includes("phone_plus7")
+                                      ? t("Phone +7 — contact to verify")
+                                      : undefined
+                                  }
+                                >
+                                  {c.phone}
+                                </div>
+                              )}
+                              {c.contact_flags.length > 0 && (
+                                <small className="hr-contact hr-contact-review">
+                                  {t("Contact to verify")}
+                                </small>
+                              )}
                             </td>
                             <td>
                               <div className="hr-skills">
@@ -431,30 +456,6 @@ export default function HR() {
                               >
                                 {t(statuses[c.status] || c.status)}
                               </span>
-                            </td>
-                            <td>
-                              {c.location_verified ? (
-                                <span>{c.location}</span>
-                              ) : (
-                                <span
-                                  className={
-                                    c.contact_flags.length
-                                      ? "hr-location-check"
-                                      : "hr-muted"
-                                  }
-                                >
-                                  {t("Location to confirm")}
-                                </span>
-                              )}
-                              {c.contact_flags.length > 0 && (
-                                <small className="hr-contact">
-                                  {c.contact_flags
-                                    .map((f) =>
-                                      f === "phone_plus7" ? "+7" : ".ru",
-                                    )
-                                    .join(" · ")}
-                                </small>
-                              )}
                             </td>
                             <td className="hr-updated">
                               {date(c.updated_at)}
