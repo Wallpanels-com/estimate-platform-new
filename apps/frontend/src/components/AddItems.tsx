@@ -21,11 +21,13 @@ export default function AddItems({
   onAdd,
   onClose,
   initial = "calculator",
+  canEditPriceBook = true,
 }: {
   zone: Zone;
   onAdd: (items: CalculatedItem[]) => Promise<void>;
   onClose: () => void;
   initial?: "calculator" | "manual" | "services" | "catalog";
+  canEditPriceBook?: boolean;
 }) {
   const { t, language } = useI18n();
   const client = useQueryClient();
@@ -256,7 +258,7 @@ export default function AddItems({
           <CatalogPicker
             key={selectedCatalog?.id || "catalog"}
             initialItem={selectedCatalog}
-            onCreate={openCreate}
+            onCreate={canEditPriceBook ? openCreate : undefined}
             onAdd={add}
             onClose={onClose}
           />
@@ -330,7 +332,7 @@ export default function AddItems({
                           keywords: `${item.name} ${item.name_ru} ${item.description} ${item.description_ru}`,
                         })),
                       ]}
-                      onCreate={openCreate}
+                      onCreate={canEditPriceBook ? openCreate : undefined}
                       onSelect={(value) => {
                         if (value.startsWith("item:")) {
                           const item = catalogItems.find(
@@ -475,13 +477,15 @@ export default function AddItems({
                               </option>
                             ))}
                           </Select>
-                          <Button
-                            aria-label={t("Add cabinet type")}
-                            title={t("Add cabinet type")}
-                            onClick={() => setCreatingCabinet(true)}
-                          >
-                            <Plus size={18} aria-hidden="true" />
-                          </Button>
+                          {canEditPriceBook ? (
+                            <Button
+                              aria-label={t("Add cabinet type")}
+                              title={t("Add cabinet type")}
+                              onClick={() => setCreatingCabinet(true)}
+                            >
+                              <Plus size={18} aria-hidden="true" />
+                            </Button>
+                          ) : null}
                         </div>
                       </Field>
                       <label className="check-label">

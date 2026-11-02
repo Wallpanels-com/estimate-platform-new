@@ -366,6 +366,8 @@ async def create_line_item(
     current_user: User = Depends(get_current_user),
 ):
     est = await load_estimate(estimate_id, current_user, db)
+    if data.zone_id and not any(zone.id == data.zone_id for zone in est.zones):
+        raise HTTPException(404, "Zone not found in this estimate.")
     total = data.total_price
     if (data.calc_type in ("sf", "lf") and data.quantity is not None
             and data.unit_price is not None and "total_price" not in data.model_fields_set):
@@ -393,7 +395,7 @@ async def update_line_item(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    await load_estimate(estimate_id, current_user, db)
+    est = await load_estimate(estimate_id, current_user, db)
     result = await db.execute(
         select(LineItem).join(Estimate).where(
             LineItem.id == item_id, LineItem.estimate_id == estimate_id
@@ -403,6 +405,8 @@ async def update_line_item(
     if not item:
         raise HTTPException(status_code=404, detail="Line item not found")
     fields = data.model_dump(exclude_unset=True)
+    if fields.get("zone_id") and not any(zone.id == fields["zone_id"] for zone in est.zones):
+        raise HTTPException(404, "Zone not found in this estimate.")
     for field, value in fields.items():
         setattr(item, field, value)
     # Derive total = quantity x unit_price for ANY calc type (sf/lf/fixed/manual),

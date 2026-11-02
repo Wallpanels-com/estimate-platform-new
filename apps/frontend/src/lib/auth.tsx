@@ -23,6 +23,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryFn: () => request<User>("/auth/me"),
     enabled: !!token,
     retry: false,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
   });
   function signOut() {
     localStorage.removeItem(TOKEN_KEY);
@@ -31,8 +33,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   useEffect(() => {
     const expire = () => signOut();
+    const accessChanged = () => {
+      void client.invalidateQueries({ queryKey: ["me"] });
+    };
+    window.addEventListener("wallpanels:access-changed", accessChanged);
     window.addEventListener("wallpanels:unauthorized", expire);
-    return () => window.removeEventListener("wallpanels:unauthorized", expire);
+    return () => {
+      window.removeEventListener("wallpanels:unauthorized", expire);
+      window.removeEventListener("wallpanels:access-changed", accessChanged);
+    };
   }, [client]);
   return (
     <Context.Provider

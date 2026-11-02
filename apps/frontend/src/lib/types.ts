@@ -7,6 +7,8 @@ export interface User {
   is_active: boolean;
   onboarding_completed: boolean;
   agentation_enabled?: boolean;
+  page_access?: import("./access").PageKey[] | null;
+  can_manage_access?: boolean;
 }
 export interface LineItem {
   id: string;

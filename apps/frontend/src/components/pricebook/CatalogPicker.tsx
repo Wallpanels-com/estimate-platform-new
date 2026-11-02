@@ -24,7 +24,7 @@ export default function CatalogPicker({
 }: {
   onAdd: (items: CalculatedItem[]) => Promise<void>;
   onClose: () => void;
-  onCreate: (name: string, category?: string) => void;
+  onCreate?: (name: string, category?: string) => void;
   initialItem?: BookItem | null;
 }) {
   const { t, language } = useI18n();
@@ -199,14 +199,16 @@ export default function CatalogPicker({
         </p>
       </div>
       <footer className="modal-footer">
-        <Button
-          className="book-picker-create"
-          disabled={!query.data || busy}
-          onClick={() => onCreate(search, category || selected?.category_id)}
-        >
-          <Plus size={16} aria-hidden="true" />
-          {t("Add new Price Book item")}
-        </Button>
+        {onCreate ? (
+          <Button
+            className="book-picker-create"
+            disabled={!query.data || busy}
+            onClick={() => onCreate(search, category || selected?.category_id)}
+          >
+            <Plus size={16} aria-hidden="true" />
+            {t("Add new Price Book item")}
+          </Button>
+        ) : null}
         <Button onClick={onClose}>{t("Cancel")}</Button>
         <Button
           variant="primary"

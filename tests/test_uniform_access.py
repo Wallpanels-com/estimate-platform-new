@@ -18,6 +18,7 @@ from app.api import deps
 from app.schemas.auth import UserCreate, UserUpdate
 from app.api.v1 import estimates, users
 from app.schemas.estimate import EstimateUpdate
+from app.services.page_access import settings
 
 
 class UniformAccess(unittest.IsolatedAsyncioTestCase):
@@ -49,7 +50,8 @@ class UniformAccess(unittest.IsolatedAsyncioTestCase):
         user = SimpleNamespace(id=ident,email='old.login',name='Old Name',role='user',is_active=True,token_version=4)
         db = SimpleNamespace(execute=AsyncMock(return_value=SimpleNamespace(scalar_one_or_none=lambda: None)),
                              get=AsyncMock(return_value=user),commit=AsyncMock())
-        result = await users.update_user(ident,UserUpdate(email=' Anthony.Kosariev ',name='Anthony Kosariev'),db,user)
+        with patch.object(settings, "ACCESS_MANAGER_USER_ID", ident):
+            result = await users.update_user(ident,UserUpdate(email=' Anthony.Kosariev ',name='Anthony Kosariev'),db,user)
         self.assertIs(result,user)
         self.assertEqual(result.id,ident)
         self.assertEqual(result.email,'anthony.kosariev')
@@ -57,7 +59,8 @@ class UniformAccess(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.role,'user')
         db.commit.assert_awaited_once()
         # A display-name edit does not invalidate the same user's session.
-        await users.update_user(ident,UserUpdate(name='Anthony Kosariev'),db,user)
+        with patch.object(settings, "ACCESS_MANAGER_USER_ID", ident):
+            await users.update_user(ident,UserUpdate(name='Anthony Kosariev'),db,user)
         self.assertEqual(user.token_version,5)
 
     async def test_duplicate_and_invalid_login_changes_are_rejected(self):
@@ -65,7 +68,7 @@ class UniformAccess(unittest.IsolatedAsyncioTestCase):
         user = SimpleNamespace(id=ident,email='existing',name='Existing',role='user',is_active=True,token_version=2)
         db = SimpleNamespace(execute=AsyncMock(return_value=SimpleNamespace(scalar_one_or_none=lambda: object())),
                              get=AsyncMock(return_value=user),commit=AsyncMock())
-        with self.assertRaises(HTTPException) as error:
+        with patch.object(settings, "ACCESS_MANAGER_USER_ID", ident), self.assertRaises(HTTPException) as error:
             await users.update_user(ident,UserUpdate(email='duplicate'),db,user)
         self.assertEqual(error.exception.status_code,409)
         self.assertEqual(user.email,'existing')

@@ -1,3 +1,5 @@
+import { useAuth } from "../lib/auth";
+import { canAccess } from "../lib/access";
 import Select from "../components/Select";
 import { useI18n } from "../lib/i18n";
 import { useDeferredValue, useMemo, useState } from "react";
@@ -38,6 +40,7 @@ import NewEstimateButton, {
 export default function Estimates({ trash = false }: { trash?: boolean }) {
   const { t, n } = useI18n();
 
+  const { user } = useAuth();
   const navigate = useNavigate();
   const client = useQueryClient();
   const notify = useNotice();
@@ -156,10 +159,12 @@ export default function Estimates({ trash = false }: { trash?: boolean }) {
         actions={
           !trash ? (
             <>
-              <Link className="button secondary" to="/quick-estimate">
-                <WandSparkles size={16} />
-                {t("Quick estimate")}
-              </Link>
+              {canAccess(user, "quick_estimate") ? (
+                <Link className="button secondary" to="/quick-estimate">
+                  <WandSparkles size={16} />
+                  {t("Quick estimate")}
+                </Link>
+              ) : null}
               <NewEstimateButton onSelect={setCreate} />
             </>
           ) : undefined

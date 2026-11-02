@@ -17,7 +17,7 @@ export default function SearchSelect({
   options: Choice[];
   value: string;
   onSelect: (value: string) => void;
-  onCreate: (name: string) => void;
+  onCreate?: (name: string) => void;
   disabled?: boolean;
 }) {
   const { t } = useI18n();
@@ -29,13 +29,14 @@ export default function SearchSelect({
       .toLocaleLowerCase()
       .includes((query || "").trim().toLocaleLowerCase()),
   );
-  items.push({
-    value: CREATE,
-    label: t("Add new Price Book item"),
-    create: true,
-  });
+  if (onCreate)
+    items.push({
+      value: CREATE,
+      label: t("Add new Price Book item"),
+      create: true,
+    });
   const c = useChoices(items, value, (chosen) => {
-    if (chosen === CREATE) onCreate((query || "").trim());
+    if (chosen === CREATE) onCreate?.((query || "").trim());
     else onSelect(chosen);
     setQuery(null);
   });
@@ -107,21 +108,23 @@ export default function SearchSelect({
           labelId={field?.labelId}
         />
       </div>
-      <button
-        type="button"
-        className="button secondary search-select-create"
-        disabled={disabled}
-        aria-label={t("Add new Price Book item")}
-        title={t("Add new Price Book item")}
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={() => {
-          c.close();
-          onCreate((query || "").trim());
-          setQuery(null);
-        }}
-      >
-        <Plus size={18} aria-hidden="true" />
-      </button>
+      {onCreate ? (
+        <button
+          type="button"
+          className="button secondary search-select-create"
+          disabled={disabled}
+          aria-label={t("Add new Price Book item")}
+          title={t("Add new Price Book item")}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            c.close();
+            onCreate((query || "").trim());
+            setQuery(null);
+          }}
+        >
+          <Plus size={18} aria-hidden="true" />
+        </button>
+      ) : null}
     </div>
   );
 }

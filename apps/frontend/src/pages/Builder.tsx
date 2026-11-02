@@ -1,3 +1,6 @@
+import { PageGate } from "../components/PageGate";
+import { useAuth } from "../lib/auth";
+import { canAccess, firstPage } from "../lib/access";
 import { LanguageSwitch, useI18n } from "../lib/i18n";
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
@@ -68,6 +71,7 @@ const pricingPending = (zone: Zone) =>
   zone.line_items.some((i) => i.is_tbd) && Number(zone.subtotal) === 0;
 export default function Builder() {
   const { t, n } = useI18n();
+  const { user: me } = useAuth();
 
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -115,6 +119,10 @@ export default function Builder() {
         : 8000,
   });
   const estimate = query.data;
+  const allowedEstimate =
+    !estimate ||
+    canAccess(me, "estimates") ||
+    (estimate.type === "quick" && canAccess(me, "quick_estimate"));
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
       if (busy || saveFailed || hasDrafts) {
@@ -303,11 +311,19 @@ export default function Builder() {
       post(`/estimates/${id}/line-items/reorder`, { ordered_ids: order }),
     );
   }
+  if (!allowedEstimate)
+    return (
+      <PageGate
+        page={estimate?.type === "quick" ? "quick_estimate" : "estimates"}
+      >
+        {null}
+      </PageGate>
+    );
   if (query.isLoading) return <Loading label={t("Opening estimate…")} />;
   if (!estimate)
     return (
       <div className="error-page">
-        <Link to="/" className="button secondary">
+        <Link to={firstPage(me)} className="button secondary">
           <ArrowLeft size={16} />
           {t("Estimates")}
         </Link>
@@ -341,11 +357,15 @@ export default function Builder() {
         {t("Skip to estimate")}
       </a>
       <header className="builder-header">
-        <Link to="/" className="brand-link" aria-label={t("WallPanels home")}>
+        <Link
+          to={firstPage(me)}
+          className="brand-link"
+          aria-label={t("WallPanels home")}
+        >
           <Brand />
         </Link>
         <div className="builder-heading">
-          <Link to="/" className="back-link">
+          <Link to={firstPage(me)} className="back-link">
             <ArrowLeft size={17} />
             <span>{t("Estimates")}</span>
           </Link>
@@ -401,22 +421,27 @@ export default function Builder() {
                   ? t("Unsaved changes")
                   : t("Saved")}
           </span>
-          <div className="segments type-switch" aria-label={t("Estimate type")}>
-            <button
-              aria-pressed={pdfMode === "pre"}
-              disabled={busy || hasDrafts || exporting === "pdf"}
-              onClick={() => switchMode("pre")}
+          {canAccess(me, "estimates") ? (
+            <div
+              className="segments type-switch"
+              aria-label={t("Estimate type")}
             >
-              {t("Pre-estimate")}
-            </button>
-            <button
-              aria-pressed={pdfMode === "final"}
-              disabled={busy || hasDrafts || exporting === "pdf"}
-              onClick={() => switchMode("final")}
-            >
-              {t("Final")}
-            </button>
-          </div>
+              <button
+                aria-pressed={pdfMode === "pre"}
+                disabled={busy || hasDrafts || exporting === "pdf"}
+                onClick={() => switchMode("pre")}
+              >
+                {t("Pre-estimate")}
+              </button>
+              <button
+                aria-pressed={pdfMode === "final"}
+                disabled={busy || hasDrafts || exporting === "pdf"}
+                onClick={() => switchMode("final")}
+              >
+                {t("Final")}
+              </button>
+            </div>
+          ) : null}
         </div>
       </header>
       {records ? (
@@ -898,6 +923,7 @@ export default function Builder() {
       ) : null}
       {adding && zone ? (
         <AddItems
+          canEditPriceBook={canAccess(me, "price_book")}
           zone={zone}
           initial={adding}
           onClose={() => setAdding(null)}

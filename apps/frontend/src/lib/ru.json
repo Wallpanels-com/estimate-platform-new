@@ -846,5 +846,21 @@
   "Use on the title slide": "Использовать на титулке",
   "Title slide photo saved": "Фото титулки сохранено",
   "Corporate slides must contain exactly 25 pages. Final Estimate was not generated.": "Корпоративный PDF должен содержать ровно 25 страниц. Презентация не сформирована.",
-  "T selects the title photo. The star selects this zone’s slide photo.": "T — фото титулки. Звёздочка — фото слайда этой зоны."
+  "T selects the title photo. The star selects this zone’s slide photo.": "T — фото титулки. Звёздочка — фото слайда этой зоны.",
+  "Access": "Доступы",
+  "Page access": "Доступ к страницам",
+  "Available pages": "Доступные страницы",
+  "Save access": "Сохранить доступы",
+  "Page access saved": "Доступы сохранены",
+  "View only": "Только просмотр",
+  "Page access is assigned individually by the platform owner.": "Доступ к страницам назначает владелец платформы.",
+  "Choose which pages this employee can open. Changes apply to their current session.": "Выберите доступные сотруднику страницы. Изменения применяются и к текущему сеансу.",
+  "Your account always has access to all pages.": "Ваш аккаунт всегда имеет доступ ко всем страницам.",
+  "No pages selected. This employee will see an access request screen after signing in.": "Страницы не выбраны. После входа сотрудник увидит сообщение о необходимости получить доступ.",
+  "No pages assigned yet": "Доступы пока не назначены",
+  "Contact Dmitry to request access. Your account is active.": "Обратитесь к Дмитрию для получения доступа. Ваш аккаунт активен.",
+  "You do not have access to this page. Contact Dmitry.": "У вас нет доступа к этой странице. Обратитесь к Дмитрию.",
+  "Only the platform owner can manage employee accounts and access.": "Только владелец платформы может управлять аккаунтами и доступами.",
+  "This employee account changed. Reopen access settings and try again.": "Аккаунт сотрудника изменился. Откройте настройки доступа заново и повторите попытку.",
+  "The platform owner always retains access to all pages.": "Владелец платформы всегда сохраняет доступ ко всем страницам."
 }

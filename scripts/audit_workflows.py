@@ -39,6 +39,7 @@ async def main():
     checks=[]; timings={}
     temporary=tempfile.TemporaryDirectory(prefix='wallpanels-audit-')
     previous_storage=settings.STORAGE_PATH; settings.STORAGE_PATH=temporary.name
+    previous_owner=settings.ACCESS_MANAGER_USER_ID
     async def database(request: Request):
         async with sessions() as db:
             request.state.estimate_session=db
@@ -54,6 +55,9 @@ async def main():
             for login in ('audit.one','audit.two'):
                 db.add(User(email=login,name=login.title(),password_hash=get_password_hash(password),role='user',onboarding_completed=True))
             await db.commit()
+        async with sessions() as db:
+            settings.ACCESS_MANAGER_USER_ID=(await db.execute(text("SELECT id FROM users WHERE email='audit.one'"))).scalar_one()
+            access_target=(await db.execute(text("SELECT id FROM users WHERE email='audit.two'"))).scalar_one()
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://audit.local/api/v1',timeout=120) as c:
             async def call(method,path,expected=200,**kwargs):
                 r=await c.request(method,path,**kwargs)
@@ -156,11 +160,48 @@ async def main():
             archived=(await call('PUT',f"/pricing/catalog/items/{item['id']}",json={'category_id':category['id'],'name':edited['name'],'unit':'SF','unit_price':'15.00','archived':True,'expected_version':edited['version']})).json()
             await call('DELETE',f"/pricing/catalog/items/{item['id']}?expected_version={archived['version']}",204)
 
+            # Owner-managed page grants persist in fresh sessions and act on a
+            # previously issued token immediately; no employee data is rewritten.
+            owner_headers={'Authorization':'Bearer '+tokens[0]}
+            staff_headers={'Authorization':'Bearer '+tokens[1]}
+            c.headers.update(owner_headers)
+            new_user=(await call('POST','/users',201,json={'email':'audit.new','name':'New employee','password':password})).json()
+            assert new_user['page_access']==[]
+            new_token=(await call('POST','/auth/login',json={'email':'audit.new','password':password})).json()['access_token']
+            assert (await call('GET','/auth/me',headers={'Authorization':'Bearer '+new_token})).json()['page_access']==[]
+            await call('GET','/estimates',403,headers={'Authorization':'Bearer '+new_token})
+            grant_path=f'/users/{access_target}/access'
+            original=(await call('GET',grant_path)).json()
+            await call('PUT',grant_path,json={'pages':['estimates'],'expected_updated_at':original['updated_at']})
+            await call('PUT',grant_path,409,json={'pages':[],'expected_updated_at':original['updated_at']})
+            current=(await call('GET',grant_path)).json();assert current['pages']==['estimates']
+            assert (await call('GET','/auth/me',headers=staff_headers)).json()['page_access']==['estimates']
+            await call('GET','/estimates',headers=staff_headers)
+            await call('GET','/pricing/schema',headers=staff_headers)
+            await call('POST','/pricing/calc/wall',json={'square_footage':100},headers=staff_headers)
+            for method,target,body in [('GET','/users',None),('GET','/estimates/trash',None),('PUT','/pricing/config',{}),('POST','/users',{}),('POST',f'/users/{settings.ACCESS_MANAGER_USER_ID}/password',{'password':'not-a-real-password'}),('PUT',grant_path,{'pages':list(('estimates','quick_estimate','price_book','users','trash')),'expected_updated_at':current['updated_at']})]:
+                await call(method,target,403,headers=staff_headers,**({'json':body} if body is not None else {}))
+            await call('PUT',grant_path,json={'pages':[],'expected_updated_at':current['updated_at']})
+            assert (await call('GET','/auth/me',headers=staff_headers)).json()['page_access']==[]
+            for target in ('/estimates','/pricing/schema',f'/pdf/{eid}/final-estimate',f'/media/{image_id}'):
+                await call('GET',target,403,headers=staff_headers)
+            current=(await call('GET',grant_path)).json()
+            await call('PUT',grant_path,json={'pages':['quick_estimate'],'expected_updated_at':current['updated_at']})
+            quick=(await call('POST','/estimates',201,json={'type':'quick','title':'Isolated restricted Quick'},headers=staff_headers)).json()
+            await call('GET',f'/estimates/{quick['id']}',headers=staff_headers)
+            await call('GET',path,403,headers=staff_headers)
+            await call('POST','/estimates',403,json={'type':'pre'},headers=staff_headers)
+            await call('PATCH',f'/estimates/{quick['id']}',403,json={'type':'pre'},headers=staff_headers)
+            me=(await call('GET','/auth/me')).json();assert me['can_manage_access'] and len(me['page_access'])==5
+            own=(await call('GET',f'/users/{me['id']}/access')).json()
+            await call('PUT',f'/users/{me['id']}/access',409,json={'pages':[],'expected_updated_at':own['updated_at']})
+            events=(await call('GET','/audit')).json();assert any('page_access' in event['changes'] for event in events)
+
         report={'checks_passed':len(checks),'isolation':'temporary PostgreSQL schema; temporary storage; two synthetic accounts','timings':timings,'checks':checks}
         output=ROOT/'.local/audit/workflows.json';output.parent.mkdir(parents=True,exist_ok=True);output.write_text(json.dumps(report,indent=2))
         print(json.dumps({'checks_passed':len(checks),'timings':timings},indent=2))
     finally:
-        app.dependency_overrides.pop(get_db,None);settings.STORAGE_PATH=previous_storage
+        app.dependency_overrides.pop(get_db,None);settings.STORAGE_PATH=previous_storage;settings.ACCESS_MANAGER_USER_ID=previous_owner
         await engine.dispose()
         async with admin.begin() as conn:await conn.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
         await admin.dispose();temporary.cleanup()

@@ -157,8 +157,9 @@ by a Git push. Transfer approved data and matching storage as a separate migrati
 never upload `.env`, `.local`, raw client backups or employee passwords to GitHub.
 See [deployment verification](docs/deployment-verification.md) for the release checks.
 
-All active employees now have one **User** role with equal shared access, personal
-credentials, attributed history and immutable saved XLSX versions. PDF presentations
+All employees retain one **User** role and personal credentials. The owner assigns
+per-page access; permitted Estimates remain shared across employees. Attribution,
+history and immutable saved XLSX versions are retained. PDF presentations
 are generated only for Preview/Download, then their temporary files are deleted;
 PDFs are never included in data backups. Corporate
 SSH setup and the exact release sequence are documented in
@@ -174,3 +175,5 @@ The shared W/VH presentation switch, approved Verona assets and verification are
 The new corporate deployment and backup operations are documented in
 [Railway operations](docs/railway-operations.md). Secrets and employee passwords
 remain outside the repository.
+
+Employee page grants and owner configuration are documented in [page access](docs/page-access.md).

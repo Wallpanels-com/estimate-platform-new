@@ -79,14 +79,14 @@ The operator must explicitly approve the first push.
 
 ## One employee role
 
-Every active account has the role **User** and identical application permissions:
-shared Estimates, Zones, photos, calculator use, Price Book editing, export,
-history, saved documents and team account management. There are no Admin/Sales
-gates in frontend or backend. `ck_users_uniform_role` enforces the single value in
+Every active account retains the role **User**. The owner assigns individual
+page grants; allowed Estimates remain shared, with zones, photos, calculations,
+exports and history. Employee account creation, edits, password resets and page
+grants are owner-only. See [page access](page-access.md). There are no Admin/Sales roles. `ck_users_uniform_role` enforces the single value in
 PostgreSQL. Account disabling and password changes revoke existing sessions.
 
-Anonymous registration is disabled by default. Existing employees create personal
-accounts through Team accounts. All employee passwords are bcrypt hashes; temporary
+Anonymous registration is disabled by default. The owner creates personal
+accounts through Team accounts, then assigns their page grants. All employee passwords are bcrypt hashes; temporary
 credentials are never committed. The three requested local accounts were created
 without changing existing users' passwords. Their initial credentials are in the
 ignored, permission-restricted `.local/employee-access.json`.

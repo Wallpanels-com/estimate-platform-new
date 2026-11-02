@@ -27,6 +27,7 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
         name=data.name,
         password_hash=get_password_hash(data.password),
         role="user",
+        page_access=[],  # Public sign-up never grants work pages without approval.
     )
     db.add(user)
     await db.flush()
@@ -46,6 +47,9 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 def user_profile(user: User) -> UserOut:
     profile = UserOut.model_validate(user)
+    from app.services.page_access import allowed_pages, is_access_manager
+    profile.page_access = allowed_pages(user)
+    profile.can_manage_access = is_access_manager(user)
     profile.agentation_enabled = bool(user.is_active and settings.AGENTATION_USER_ID and user.id == settings.AGENTATION_USER_ID)
     return profile
 

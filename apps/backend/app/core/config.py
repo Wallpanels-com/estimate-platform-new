@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     FRONTEND_DIST: str = ""
     AGENTATION_USER_ID: UUID | None = None
+    ACCESS_MANAGER_USER_ID: UUID | None = None
     STORAGE_PATH: str = "/data"
     MAX_UPLOAD_SIZE_MB: int = 20
     PRE_ESTIMATE_DESIGN: Literal["v1", "v2"] = "v2"

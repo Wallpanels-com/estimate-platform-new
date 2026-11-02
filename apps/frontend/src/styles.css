@@ -3636,7 +3636,13 @@ html[lang="ru"] .line-head {
   font-weight: 500;
 }
 .team-table td:last-child {
-  width: 300px;
+  width: 420px;
+}
+.team-table th:nth-child(3),
+.team-table td:nth-child(3),
+.team-table th:nth-child(4),
+.team-table td:nth-child(4) {
+  white-space: nowrap;
 }
 .team-table .row-actions {
   flex-wrap: wrap;
@@ -3781,4 +3787,48 @@ input[aria-invalid="true"] {
 .proposal-brand-switch button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* One shared grid for all employee page grants, including future pages. */
+.access-body {
+  display: grid;
+  gap: 16px;
+}
+.access-options {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.access-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 6px);
+  background: var(--soft);
+  min-width: 0;
+  cursor: pointer;
+}
+.access-option input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  accent-color: var(--ink);
+}
+.access-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.access-options:disabled .access-option {
+  cursor: default;
+  opacity: 0.7;
+}
+.team-table .row-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
 }

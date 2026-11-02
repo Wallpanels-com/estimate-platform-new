@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -13,6 +13,7 @@ bearer = HTTPBearer()
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer),
     db: AsyncSession = Depends(get_db),
+    request: Request = None,
 ) -> User:
     token = credentials.credentials
     payload = decode_token(token)
@@ -30,4 +31,7 @@ async def get_current_user(
     if not user or not user.is_active or payload.get("ver", 0) != user.token_version:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     db.info["actor"] = {"id": user.id, "name": user.name or user.email}
+    if request is not None:
+        from app.services.page_access import authorize_request
+        await authorize_request(user, db, request)
     return user

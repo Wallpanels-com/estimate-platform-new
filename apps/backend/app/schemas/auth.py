@@ -37,6 +37,8 @@ class UserOut(BaseModel):
     is_active: bool
     onboarding_completed: bool
     agentation_enabled: bool = False
+    page_access: list[str] | None = None
+    can_manage_access: bool = False
     created_at: datetime
 
     class Config:
@@ -77,3 +79,24 @@ class UserUpdate(BaseModel):
 class ProfileUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
     onboarding_completed: bool | None = None
+
+
+PageKey = Literal["estimates", "quick_estimate", "price_book", "users", "trash"]
+
+
+class UserAccessUpdate(BaseModel):
+    pages: list[PageKey] = Field(max_length=5)
+    expected_updated_at: datetime
+
+    @field_validator('pages')
+    @classmethod
+    def unique_pages(cls, pages):
+        if len(set(pages)) != len(pages):
+            raise ValueError('Choose each page only once.')
+        return pages
+
+
+class UserAccessOut(BaseModel):
+    pages: list[PageKey]
+    updated_at: datetime
+    protected_owner: bool

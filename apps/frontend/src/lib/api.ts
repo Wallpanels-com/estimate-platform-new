@@ -63,6 +63,8 @@ export async function request<T>(
     }
     if (response.status === 401 && !path.startsWith("/auth/login"))
       window.dispatchEvent(new Event("wallpanels:unauthorized"));
+    if (response.status === 403)
+      window.dispatchEvent(new Event("wallpanels:access-changed"));
     throw new ApiError(response.status, message);
   }
   const savedId = response.headers.get("X-Estimate-ID");

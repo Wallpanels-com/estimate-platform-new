@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, KeyRound, Pencil } from "lucide-react";
+import { Plus, KeyRound, Pencil, ShieldCheck } from "lucide-react";
 import { request, post, patch, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
 import type { User } from "../lib/types";
 import { Button, Field, Modal, Loading, ErrorNotice } from "../components/ui";
+import UserAccess from "../components/UserAccess";
 import Select from "../components/Select";
 
 export default function Users() {
@@ -17,6 +18,7 @@ export default function Users() {
     queryFn: () => request<User[]>("/users"),
   });
   const [editing, setEditing] = useState<User | "new" | null>(null);
+  const [accessUser, setAccessUser] = useState<User | null>(null);
   const [passwordUser, setPasswordUser] = useState<User | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -75,15 +77,15 @@ export default function Users() {
         <div>
           <h1>{t("Team accounts")}</h1>
           <p>
-            {t(
-              "Everyone has the same access to all estimates and the Price Book.",
-            )}
+            {t("Page access is assigned individually by the platform owner.")}
           </p>
         </div>
-        <Button variant="primary" onClick={() => setEditing("new")}>
-          <Plus size={17} />
-          {t("Add employee")}
-        </Button>
+        {me?.can_manage_access ? (
+          <Button variant="primary" onClick={() => setEditing("new")}>
+            <Plus size={17} />
+            {t("Add employee")}
+          </Button>
+        ) : null}
       </header>
       {query.isLoading ? (
         <Loading />
@@ -109,16 +111,24 @@ export default function Users() {
                   <td>{t("User")}</td>
                   <td>{t(user.is_active ? "Active" : "Disabled")}</td>
                   <td>
-                    <div className="row-actions">
-                      <Button onClick={() => setEditing(user)}>
-                        <Pencil size={15} />
-                        {t("Edit")}
-                      </Button>
-                      <Button onClick={() => setPasswordUser(user)}>
-                        <KeyRound size={15} />
-                        {t("Reset password")}
-                      </Button>
-                    </div>
+                    {me?.can_manage_access ? (
+                      <div className="row-actions">
+                        <Button onClick={() => setEditing(user)}>
+                          <Pencil size={15} />
+                          {t("Edit")}
+                        </Button>
+                        <Button onClick={() => setPasswordUser(user)}>
+                          <KeyRound size={15} />
+                          {t("Reset password")}
+                        </Button>
+                        <Button onClick={() => setAccessUser(user)}>
+                          <ShieldCheck size={15} />
+                          {t("Access")}
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="form-hint">{t("View only")}</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -126,6 +136,9 @@ export default function Users() {
           </table>
         </div>
       )}
+      {accessUser ? (
+        <UserAccess user={accessUser} onClose={() => setAccessUser(null)} />
+      ) : null}
       {editing || passwordUser ? (
         <Modal
           title={t(

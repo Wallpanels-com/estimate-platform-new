@@ -13,6 +13,7 @@ import { AuthProvider, useAuth } from "./lib/auth";
 import { ApiError } from "./lib/api";
 import { Loading, NoticeProvider } from "./components/ui";
 import Shell from "./components/Shell";
+import { PageGate, NoPageAccess } from "./components/PageGate";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Auth from "./pages/Auth";
 import StaffFeedback from "./components/StaffFeedback";
@@ -59,7 +60,15 @@ function App() {
         <Route path="/register" element={<Auth register />} />
         <Route element={<Protected />}>
           <Route element={<Shell />}>
-            <Route index element={<Estimates />} />
+            <Route
+              index
+              element={
+                <PageGate page="estimates">
+                  <Estimates />
+                </PageGate>
+              }
+            />
+            <Route path="access" element={<NoPageAccess />} />
             <Route
               path="onboarding"
               element={
@@ -68,12 +77,21 @@ function App() {
                 </Suspense>
               }
             />
-            <Route path="trash" element={<Estimates trash />} />
+            <Route
+              path="trash"
+              element={
+                <PageGate page="trash">
+                  <Estimates trash />
+                </PageGate>
+              }
+            />
             <Route
               path="price-book"
               element={
                 <Suspense fallback={<Loading />}>
-                  <PriceBook />
+                  <PageGate page="price_book">
+                    <PriceBook />
+                  </PageGate>
                 </Suspense>
               }
             />
@@ -81,7 +99,9 @@ function App() {
               path="users"
               element={
                 <Suspense fallback={<Loading />}>
-                  <Users />
+                  <PageGate page="users">
+                    <Users />
+                  </PageGate>
                 </Suspense>
               }
             />
@@ -93,7 +113,9 @@ function App() {
               path="quick-estimate"
               element={
                 <Suspense fallback={<Loading />}>
-                  <QuickEstimate />
+                  <PageGate page="quick_estimate">
+                    <QuickEstimate />
+                  </PageGate>
                 </Suspense>
               }
             />

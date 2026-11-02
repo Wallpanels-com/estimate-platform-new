@@ -9,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
+import { canAccess, firstPage } from "../lib/access";
 import { Button } from "./ui";
 export function Brand() {
   return (
@@ -36,7 +37,7 @@ export default function Shell() {
       <aside className="app-nav">
         <div className="nav-brand">
           <NavLink
-            to="/"
+            to={firstPage(user)}
             className="brand-link"
             aria-label={t("WallPanels home")}
           >
@@ -45,26 +46,36 @@ export default function Shell() {
           <LanguageSwitch />
         </div>
         <nav aria-label={t("Main navigation")}>
-          <NavLink to="/" end>
-            <FileText size={18} />
-            {t("Estimates")}
-          </NavLink>
-          <NavLink to="/quick-estimate">
-            <WandSparkles size={18} />
-            {t("Quick estimate")}
-          </NavLink>
-          <NavLink to="/price-book">
-            <BookOpen size={18} />
-            {t("Price book")}
-          </NavLink>
-          <NavLink to="/users">
-            <Users size={18} />
-            {t("Team accounts")}
-          </NavLink>
-          <NavLink to="/trash">
-            <Trash2 size={18} />
-            {t("Trash")}
-          </NavLink>
+          {canAccess(user, "estimates") ? (
+            <NavLink to="/" end>
+              <FileText size={18} />
+              {t("Estimates")}
+            </NavLink>
+          ) : null}
+          {canAccess(user, "quick_estimate") ? (
+            <NavLink to="/quick-estimate">
+              <WandSparkles size={18} />
+              {t("Quick estimate")}
+            </NavLink>
+          ) : null}
+          {canAccess(user, "price_book") ? (
+            <NavLink to="/price-book">
+              <BookOpen size={18} />
+              {t("Price book")}
+            </NavLink>
+          ) : null}
+          {canAccess(user, "users") ? (
+            <NavLink to="/users">
+              <Users size={18} />
+              {t("Team accounts")}
+            </NavLink>
+          ) : null}
+          {canAccess(user, "trash") ? (
+            <NavLink to="/trash">
+              <Trash2 size={18} />
+              {t("Trash")}
+            </NavLink>
+          ) : null}
         </nav>
         <div className="nav-user">
           <span className="avatar" aria-hidden="true">
