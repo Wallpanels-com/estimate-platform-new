@@ -8,6 +8,9 @@ import {
   Search,
   MapPin,
   BriefcaseBusiness,
+  Eye,
+  EyeOff,
+  StickyNote,
 } from "lucide-react";
 import { request, post, patch, errorMessage } from "../lib/api";
 import { useI18n } from "../lib/i18n";
@@ -40,6 +43,7 @@ type Candidate = {
   source: string;
   status: string;
   priority: boolean;
+  hidden: boolean;
   location: string;
   location_verified: boolean;
   notes: string;
@@ -115,6 +119,10 @@ export default function HR() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState(false);
+  const [hiddenView, setHiddenView] = useState(false);
+  const [notesFocus, setNotesFocus] = useState(false);
+  const [pendingRows, setPendingRows] = useState<Set<string>>(new Set());
+  const actionLocks = useRef(new Set<string>());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(() => {
     try {
@@ -155,11 +163,12 @@ export default function HR() {
       priority,
       page,
       pageSize,
+      hiddenView,
     ],
     enabled: !!ident,
     queryFn: () =>
       request<Results>(
-        `/hr/vacancies/${ident}/candidates?${new URLSearchParams({ q: search, status: status || "", priority: String(priority), page: String(page), page_size: String(pageSize) }).toString().replace("status=&", "")}`,
+        `/hr/vacancies/${ident}/candidates?${new URLSearchParams({ q: search, status: status || "", priority: String(priority), page: String(page), page_size: String(pageSize), hidden: String(hiddenView) }).toString().replace("status=&", "")}`,
       ),
     refetchInterval: 20000,
     refetchOnWindowFocus: true,
@@ -168,8 +177,32 @@ export default function HR() {
     if (query.data && query.data.page !== page) setPage(query.data.page);
   }, [query.data, page]);
   function refresh() {
-    void client.invalidateQueries({ queryKey: ["hr-candidates"] });
-    void client.invalidateQueries({ queryKey: ["hr-vacancies"] });
+    return Promise.all([
+      client.invalidateQueries({ queryKey: ["hr-candidates"] }),
+      client.invalidateQueries({ queryKey: ["hr-vacancies"] }),
+    ]);
+  }
+  async function quickAction(c: Candidate, key: "priority" | "hidden") {
+    if (actionLocks.current.has(c.id)) return;
+    actionLocks.current.add(c.id);
+    setPendingRows(new Set(actionLocks.current));
+    try {
+      await patch<Candidate>(`/hr/candidates/${c.id}/quick`, {
+        version: c.version,
+        [key]: !c[key],
+      });
+      await refresh();
+      if (key === "hidden")
+        notify(
+          t(c.hidden ? "Candidate restored" : "Candidate moved to Hidden"),
+        );
+    } catch (e) {
+      notify(t(errorMessage(e)), true);
+      await refresh();
+    } finally {
+      actionLocks.current.delete(c.id);
+      setPendingRows(new Set(actionLocks.current));
+    }
   }
   async function saveVacancy(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -297,6 +330,38 @@ export default function HR() {
                   <Pencil size={17} />
                 </Button>
               </div>
+              <div
+                className="hr-view-tabs"
+                role="group"
+                aria-label={t("Candidate visibility")}
+              >
+                <Button
+                  variant={!hiddenView ? "primary" : "ghost"}
+                  aria-pressed={!hiddenView}
+                  onClick={() => {
+                    setHiddenView(false);
+                    setPriority(false);
+                    setStatus("");
+                    setPage(1);
+                  }}
+                >
+                  <Eye size={16} />
+                  {t("Visible candidates")}
+                </Button>
+                <Button
+                  variant={hiddenView ? "primary" : "ghost"}
+                  aria-pressed={hiddenView}
+                  onClick={() => {
+                    setHiddenView(true);
+                    setPriority(false);
+                    setStatus("");
+                    setPage(1);
+                  }}
+                >
+                  <EyeOff size={16} />
+                  {t("Hidden candidates")}
+                </Button>
+              </div>
               <div className="hr-toolbar">
                 <div className="hr-search">
                   <Search size={17} />
@@ -380,6 +445,7 @@ export default function HR() {
                           <th>{t("Experience & skills")}</th>
                           <th>{t("Candidate status")}</th>
                           <th>{t("Updated")}</th>
+                          <th>{t("Actions")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -391,11 +457,12 @@ export default function HR() {
                             <td>
                               <button
                                 className="hr-name"
-                                onClick={() => setCandidate(c)}
+                                disabled={pendingRows.has(c.id)}
+                                onClick={() => {
+                                  setNotesFocus(false);
+                                  setCandidate(c);
+                                }}
                               >
-                                {c.priority && (
-                                  <Star size={15} fill="currentColor" />
-                                )}
                                 {c.name}
                               </button>
                               {c.email && (
@@ -461,6 +528,59 @@ export default function HR() {
                               {date(c.updated_at)}
                               <small>{c.updated_by}</small>
                             </td>
+                            <td className="hr-action-cell">
+                              <div className="hr-row-actions">
+                                <Button
+                                  variant="ghost"
+                                  className={
+                                    c.priority ? "hr-star-selected" : ""
+                                  }
+                                  aria-label={t(
+                                    c.priority
+                                      ? "Remove candidate priority"
+                                      : "Prioritize candidate",
+                                  )}
+                                  aria-pressed={c.priority}
+                                  disabled={pendingRows.has(c.id)}
+                                  onClick={() =>
+                                    void quickAction(c, "priority")
+                                  }
+                                >
+                                  <Star
+                                    size={17}
+                                    fill={c.priority ? "currentColor" : "none"}
+                                  />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  aria-label={t("Candidate note")}
+                                  className={c.notes ? "hr-note-present" : ""}
+                                  disabled={pendingRows.has(c.id)}
+                                  onClick={() => {
+                                    setNotesFocus(true);
+                                    setCandidate(c);
+                                  }}
+                                >
+                                  <StickyNote size={17} />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  aria-label={t(
+                                    c.hidden
+                                      ? "Restore candidate"
+                                      : "Hide candidate",
+                                  )}
+                                  disabled={pendingRows.has(c.id)}
+                                  onClick={() => void quickAction(c, "hidden")}
+                                >
+                                  {c.hidden ? (
+                                    <Eye size={17} />
+                                  ) : (
+                                    <EyeOff size={17} />
+                                  )}
+                                </Button>
+                              </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -474,8 +594,16 @@ export default function HR() {
                   />
                 </>
               ) : (
-                <EmptyState title="No candidates found">
-                  {t("Import an Excel file or change your filters.")}
+                <EmptyState
+                  title={
+                    hiddenView ? "No hidden candidates" : "No candidates found"
+                  }
+                >
+                  {t(
+                    hiddenView
+                      ? "Hidden candidates appear here and can be restored at any time."
+                      : "Import an Excel file or change your filters.",
+                  )}
                 </EmptyState>
               )}
             </section>
@@ -537,6 +665,7 @@ export default function HR() {
       {candidate && (
         <CandidateCard
           initial={candidate}
+          focusNotes={notesFocus}
           onClose={() => setCandidate(null)}
           onSaved={(c) => {
             setCandidate(c);
@@ -549,6 +678,8 @@ export default function HR() {
           vacancy={current}
           onClose={() => setImporting(false)}
           onDone={(r) => {
+            setHiddenView(false);
+            setPage(1);
             refresh();
             setImporting(false);
             notify(
@@ -566,16 +697,22 @@ export default function HR() {
 }
 function CandidateCard({
   initial: c,
+  focusNotes = false,
   onClose,
   onSaved,
 }: {
   initial: Candidate;
+  focusNotes?: boolean;
   onClose: () => void;
   onSaved: (c: Candidate) => void;
 }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const notesInput = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (focusNotes) notesInput.current?.focus();
+  }, [focusNotes]);
   const history = useQuery({
     queryKey: ["hr-history", c.id, c.version],
     queryFn: () =>
@@ -684,6 +821,7 @@ function CandidateCard({
             <Field label="HR notes" className="span-all">
               <textarea
                 name="notes"
+                ref={notesInput}
                 rows={3}
                 maxLength={20000}
                 defaultValue={c.notes}

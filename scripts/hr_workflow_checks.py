@@ -57,7 +57,27 @@ async def check_hr(call, client, tokens):
         assert len(result['items'])==expected and result['page_size']==size
     assert (await call('GET',f'/hr/vacancies/{vid}/candidates?page_size=20&page=999')).json()['page']==4
     await call('GET',f'/hr/vacancies/{vid}/candidates?page_size=21',422)
+    # Quick actions change one field only and preserve hiring stage, notes and priority.
+    target=(await call('GET',f'/hr/vacancies/{vid}/candidates?q=First')).json()['items'][0]
+    quick=f"/hr/candidates/{target['id']}/quick"
+    starred=(await call('PATCH',quick,json={'version':target['version'],'priority':True})).json()
+    assert starred['priority'] and starred['status']==target['status'] and starred['notes']==target['notes']
+    await call('PATCH',quick,409,json={'version':target['version'],'hidden':True})
+    await call('PATCH',quick,422,json={'version':starred['version'],'hidden':True,'priority':False})
+    hidden=(await call('PATCH',quick,json={'version':starred['version'],'hidden':True})).json()
+    assert hidden['hidden'] and hidden['priority'] and hidden['status']==target['status']
+    assert (await call('GET',f'/hr/vacancies/{vid}/candidates?q=First')).json()['total']==0
+    hidden_list=(await call('GET',f'/hr/vacancies/{vid}/candidates?q=First&hidden=true')).json()
+    assert hidden_list['total']==1 and hidden_list['items'][0]['id']==target['id']
+    body={k:hidden[k] for k in ('version','status','priority','location','location_verified','notes')}
+    body['notes']='Note added while hidden'
+    edited=(await call('PATCH',f"/hr/candidates/{target['id']}",json=body)).json()
+    assert edited['hidden'] and edited['status']==target['status']
+    restored=(await call('PATCH',quick,json={'version':edited['version'],'hidden':False})).json()
+    assert not restored['hidden'] and restored['priority'] and restored['notes']==body['notes'] and restored['status']==target['status']
+    assert (await call('GET',f'/hr/vacancies/{vid}/candidates?q=First')).json()['total']==1
     client.headers['Authorization']='Bearer '+tokens[1]
     await call('GET',f'/hr/vacancies/{vid}/candidates',403)
     await call('PATCH',f"/hr/candidates/{low['id']}",403,json={**update,'version':2})
+    await call('PATCH',quick,403,json={'version':restored['version'],'hidden':True})
     client.headers['Authorization']='Bearer '+tokens[0]

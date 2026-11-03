@@ -933,5 +933,18 @@
   "{0} / page": "{0} / стр.",
   "Contact to verify": "Проверить контакт",
   "Phone +7 — contact to verify": "Телефон +7 — проверить контакт",
-  "Email .ru — contact to verify": "Почта .ru — проверить контакт"
+  "Email .ru — contact to verify": "Почта .ru — проверить контакт",
+  "Candidate visibility": "Видимость кандидатов",
+  "Visible candidates": "Кандидаты",
+  "Hidden candidates": "Скрытые",
+  "Prioritize candidate": "В приоритет",
+  "Remove candidate priority": "Убрать приоритет",
+  "Candidate note": "Заметка о кандидате",
+  "Hide candidate": "Скрыть кандидата",
+  "Restore candidate": "Вернуть кандидата",
+  "Candidate restored": "Кандидат возвращён в список",
+  "Candidate moved to Hidden": "Кандидат перемещён в «Скрытые»",
+  "This candidate has changed. The list has been refreshed; try again.": "Кандидат уже изменён. Список обновлён — повторите действие.",
+  "No hidden candidates": "Скрытых кандидатов пока нет",
+  "Hidden candidates appear here and can be restored at any time.": "Здесь будут скрытые кандидаты. Их можно вернуть в общий список в любой момент."
 }

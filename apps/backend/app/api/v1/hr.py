@@ -33,6 +33,12 @@ class CandidateInput(BaseModel):
     location_verified: bool = False
     notes: str = Field(default='',max_length=20000)
 
+class CandidateQuickInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    version: int = Field(ge=1)
+    priority: bool | None = None
+    hidden: bool | None = None
+
 class ImportInput(BaseModel):
     sheet: str = Field(max_length=160)
     mapping: dict[str,str]
@@ -48,7 +54,7 @@ def vacancy_out(v, count=0):
     return {k:getattr(v,k) for k in ('id','name','description','archived','created_at','updated_at')} | {'count':count}
 
 def candidate_out(c):
-    return {k:getattr(c,k) for k in ('id','vacancy_id','name','email','phone','answers','source','status','priority','location','location_verified','notes','updated_by','version','created_at','updated_at')} | {'contact_flags':contact_flags(c.phone,c.email), **qualification_score(c.answers)}
+    return {k:getattr(c,k) for k in ('id','vacancy_id','name','email','phone','answers','source','status','priority','hidden','location','location_verified','notes','updated_by','version','created_at','updated_at')} | {'contact_flags':contact_flags(c.phone,c.email), **qualification_score(c.answers)}
 
 @router.get('/vacancies')
 async def vacancies(db:AsyncSession=Depends(get_db), user=Depends(get_current_user)):
@@ -70,10 +76,10 @@ async def edit_vacancy(ident:uuid.UUID,body:VacancyInput,db:AsyncSession=Depends
     await db.flush();await db.refresh(v);return vacancy_out(v)
 
 @router.get('/vacancies/{ident}/candidates')
-async def candidates(ident:uuid.UUID,q:str=Query('',max_length=200),status:Status|None=None,priority:bool=False,page:int=Query(1,ge=1),page_size:int=Query(50,ge=20,le=100),db:AsyncSession=Depends(get_db),user=Depends(get_current_user)):
+async def candidates(ident:uuid.UUID,q:str=Query('',max_length=200),status:Status|None=None,priority:bool=False,hidden:bool=False,page:int=Query(1,ge=1),page_size:int=Query(50,ge=20,le=100),db:AsyncSession=Depends(get_db),user=Depends(get_current_user)):
     if page_size not in (20,50,100):raise HTTPException(422,'Choose 20, 50 or 100 candidates per page.')
     await vacancy(db,ident)
-    where=[Candidate.vacancy_id==ident]
+    where=[Candidate.vacancy_id==ident, Candidate.hidden.is_(hidden)]
     if status:where.append(Candidate.status==status)
     else:where.append(Candidate.status!='archived')
     if priority:where.append(Candidate.priority.is_(True))
@@ -95,6 +101,18 @@ async def edit_candidate(ident:uuid.UUID,body:CandidateInput,db:AsyncSession=Dep
     for key,value in body.model_dump(exclude={'version'}).items():setattr(c,key,value)
     c.version+=1;c.updated_by=user.name or user.email
     await db.flush();await db.refresh(c);return candidate_out(c)
+
+@router.patch('/candidates/{ident}/quick')
+async def quick_candidate(ident:uuid.UUID,body:CandidateQuickInput,db:AsyncSession=Depends(get_db),user=Depends(get_current_user)):
+    changes={k:v for k,v in body.model_dump(exclude={'version'}).items() if v is not None}
+    if len(changes)!=1:raise HTTPException(422,'Choose exactly one quick action.')
+    c=(await db.execute(select(Candidate).where(Candidate.id==ident).with_for_update())).scalar_one_or_none()
+    if not c:raise HTTPException(404,'Candidate not found.')
+    if body.version!=c.version:raise HTTPException(409,'This candidate has changed. The list has been refreshed; try again.')
+    for key,value in changes.items():setattr(c,key,value)
+    c.version+=1;c.updated_by=user.name or user.email
+    await db.flush();await db.refresh(c)
+    return candidate_out(c)
 
 @router.get('/candidates/{ident}/history')
 async def history(ident:uuid.UUID,db:AsyncSession=Depends(get_db),user=Depends(get_current_user)):

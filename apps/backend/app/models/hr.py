@@ -26,6 +26,7 @@ class Candidate(Base):
     answers: Mapped[dict] = mapped_column(JSON, default=dict)
     source: Mapped[str] = mapped_column(String(240), default='')
     status: Mapped[str] = mapped_column(String(30), default='new', index=True)
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false', nullable=False)
     priority: Mapped[bool] = mapped_column(Boolean, default=False)
     location: Mapped[str] = mapped_column(String(240), default='')
     location_verified: Mapped[bool] = mapped_column(Boolean, default=False)

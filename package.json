@@ -25,7 +25,8 @@
     "test:autosave-ui": "node scripts/test-autosave-ui.mjs",
     "audit:workflows": ".venv/bin/python scripts/audit_workflows.py",
     "audit:performance": ".venv/bin/python scripts/audit_performance.py",
-    "test:access-ui": "node scripts/test-page-access.mjs"
+    "test:access-ui": "node scripts/test-page-access.mjs",
+    "test:hr-ui": "node scripts/test-hr-actions.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

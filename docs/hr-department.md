@@ -8,8 +8,9 @@ Desktop route: `/hr`. Initial production access is limited to the configured imm
 2. Import an `.xlsx` workbook (up to 10 MB, 5,000 non-empty rows and 100 columns). Empty worksheets/rows are ignored. Choose the worksheet and check the proposed name/email/phone mapping.
 3. Check the preview and confirm. Facebook dummy leads, incomplete records and duplicate contact identities are reported separately. Confirmation is idempotent and imports into the selected vacancy only. Existing notes/statuses are never overwritten.
 4. Choose 20, 50 or 100 candidates per page. The table scrolls with the document, with numbered navigation and first/last boundaries. Page size is an optional browser preference; candidate records remain in PostgreSQL.
-5. Open a candidate by name. Set priority, status, HR notes, and confirmed place of residence/work. Archive candidates via status; select Archived in the status filter to restore them. Vacancies have a separate archive checkbox and Show archive control.
-6. Saved changes include editor attribution and transaction-level audit history. Concurrent edits return 409 instead of overwriting another employee's changes.
+5. Row actions: star toggles manual priority; note opens and focuses HR notes; crossed eye hides the candidate, and the open eye restores them in the Hidden view. These controls have accessible names and no visual tooltips. Hiding is reversible, stored separately from stage/notes/priority, and never deletes records.
+6. Open a candidate by name. Set priority, status, HR notes, and confirmed place of residence/work. Archive candidates via status; select Archived in the status filter to restore them. Vacancies have a separate archive checkbox and Show archive control.
+7. Saved changes include editor attribution and transaction-level audit history. Concurrent edits return 409 instead of overwriting another employee's changes.
 
 Names, phone numbers and original answers are retained as supplied. No messages are sent to candidates. Candidate workbook files, credentials, import results and personal data must never be committed to Git.
 
@@ -44,3 +45,5 @@ Rollback baseline: `2420c2b`. Local backup: `.local/backups/hr/before-hr.sql.gz`
 - Disposable local PostgreSQL workflow audit: preview/confirm/deduplication, concurrent-version protection, priority ordering, audit history, archive/restore and non-owner API denial; existing Pre/Final PDF and XLSX checks remain intact.
 - EN/RU access controls, catalogue UI regression, translations, production build and repository checks.
 - Desktop visual checks of the candidate table and card; workbook preview/mapping exercised without modifying existing estimates.
+
+Revision `0008_hr_candidate_visibility` adds a non-null `hidden` boolean with false default. All existing candidates retain their previous visibility. Version-checked quick-action PATCH requests update one field only; hiding/restoring does not reset the hiring stage. Local pre-migration backup: `.local/backups/hr/before-quick-actions.sql.gz`. Rollback to an earlier application revision requires a coordinated schema plan; dropping the flag would lose hidden/visible selections.
