@@ -737,8 +737,8 @@ function CandidateCard({
           version: c.version,
           status: f.get("status"),
           priority: f.get("priority") === "on",
-          location: f.get("location"),
-          location_verified: f.get("location_verified") === "on",
+          location: c.location,
+          location_verified: c.location_verified,
           notes: f.get("notes"),
         }),
       );
@@ -802,21 +802,6 @@ function CandidateCard({
               />
               <Star size={16} />
               {t("Priority candidate")}
-            </label>
-            <Field label="Current place of residence / work">
-              <input
-                name="location"
-                maxLength={240}
-                defaultValue={c.location}
-              />
-            </Field>
-            <label className="hr-checkbox">
-              <input
-                name="location_verified"
-                type="checkbox"
-                defaultChecked={c.location_verified}
-              />
-              {t("Location confirmed with candidate")}
             </label>
             <Field label="HR notes" className="span-all">
               <textarea

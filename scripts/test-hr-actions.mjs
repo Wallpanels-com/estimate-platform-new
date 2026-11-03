@@ -72,8 +72,8 @@ try {
       priority: false,
       hidden: false,
       notes: "Existing note",
-      location: "",
-      location_verified: false,
+      location: "Previously recorded location",
+      location_verified: true,
       version: 1,
       updated_by: "Preview",
       updated_at: new Date().toISOString(),
@@ -105,6 +105,16 @@ try {
           return new Response(JSON.stringify({ detail: "Concurrent edit" }), {
             status: 409,
           });
+        assert.equal(body.version, row.version);
+        row = { ...row, ...body, version: row.version + 1 };
+        result = row;
+      } else if (
+        url.pathname.endsWith("/candidates/synthetic") &&
+        options.method === "PATCH"
+      ) {
+        const body = JSON.parse(options.body);
+        assert.equal(body.location, "Previously recorded location");
+        assert.equal(body.location_verified, true);
         assert.equal(body.version, row.version);
         row = { ...row, ...body, version: row.version + 1 };
         result = row;
@@ -180,7 +190,22 @@ try {
       document.activeElement,
       document.querySelector("textarea[name=notes]"),
     );
-    await click(language === "ru" ? "Отмена" : "Cancel");
+    assert.equal(document.querySelector('input[name="location"]'), null);
+    assert.equal(
+      document.querySelector('input[name="location_verified"]'),
+      null,
+    );
+    await act(async () =>
+      document
+        .querySelector("dialog form")
+        .dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        ),
+    );
+    await settle();
+    assert.equal(document.querySelector("dialog"), null);
+    assert.equal(row.location, "Previously recorded location");
+    assert.equal(row.location_verified, true);
     fail = true;
     await click(labels[3]);
     assert.equal(row.hidden, false);
@@ -206,7 +231,7 @@ try {
     document.getElementById("root").innerHTML = "";
   }
   console.log(
-    "HR actions UI passed: EN/RU star, note focus, hide/restore, no tooltips, conflict recovery and preserved stage/notes.",
+    "HR actions UI passed: EN/RU star, note focus, hide/restore, no tooltips, conflict recovery and preserved stage/notes and removed location controls without data loss.",
   );
 } finally {
   await rm(dir, { recursive: true, force: true });
