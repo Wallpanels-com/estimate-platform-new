@@ -76,6 +76,19 @@ async def check_hr(call, client, tokens):
     restored=(await call('PATCH',quick,json={'version':edited['version'],'hidden':False})).json()
     assert not restored['hidden'] and restored['priority'] and restored['notes']==body['notes'] and restored['status']==target['status']
     assert (await call('GET',f'/hr/vacancies/{vid}/candidates?q=First')).json()['total']==1
+    profile_body={k:restored[k] for k in ('version','status','priority','location','location_verified','notes')}
+    profile_body['telegram_username']='https://t.me/example_user'
+    profile=(await call('PATCH',f"/hr/candidates/{target['id']}",json=profile_body)).json()
+    assert profile['telegram_username']=='example_user'
+    await call('PATCH',f"/hr/candidates/{target['id']}",422,json={**profile_body,'version':profile['version'],'telegram_username':'https://evil.example/profile'})
+    legacy={k:profile[k] for k in ('version','status','priority','location','location_verified','notes')}
+    legacy['notes']='Legacy client still preserves saved Telegram handle'
+    profile=(await call('PATCH',f"/hr/candidates/{target['id']}",json=legacy)).json()
+    assert profile['telegram_username']=='example_user'
+    read=(await call('GET',f'/hr/vacancies/{vid}/candidates?q=First')).json()['items'][0]
+    assert read['telegram_username']=='example_user'
+    cleared=(await call('PATCH',f"/hr/candidates/{target['id']}",json={**legacy,'version':profile['version'],'telegram_username':None})).json()
+    assert cleared['telegram_username'] is None and cleared['notes']==legacy['notes']
     client.headers['Authorization']='Bearer '+tokens[1]
     await call('GET',f'/hr/vacancies/{vid}/candidates',403)
     await call('PATCH',f"/hr/candidates/{low['id']}",403,json={**update,'version':2})

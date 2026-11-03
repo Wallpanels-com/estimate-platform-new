@@ -4239,3 +4239,14 @@ input[aria-invalid="true"] {
   outline: 2px solid var(--accent, #87683c);
   outline-offset: 2px;
 }
+
+.hr-telegram-field {
+  max-width: 360px;
+}
+
+.hr-telegram-web {
+  color: #74786e;
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

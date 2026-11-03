@@ -947,5 +947,10 @@
   "This candidate has changed. The list has been refreshed; try again.": "Кандидат уже изменён. Список обновлён — повторите действие.",
   "No hidden candidates": "Скрытых кандидатов пока нет",
   "Hidden candidates appear here and can be restored at any time.": "Здесь будут скрытые кандидаты. Их можно вернуть в общий список в любой момент.",
-  "Open Telegram by phone": "Открыть Telegram по номеру"
+  "Open Telegram by phone": "Открыть Telegram по номеру",
+  "Telegram username": "Telegram @username",
+  "@username or https://t.me/username": "@username или https://t.me/username",
+  "Open Telegram profile": "Открыть профиль Telegram",
+  "Open Telegram in browser": "Открыть Telegram в браузере",
+  "Web": "Веб"
 }

@@ -40,6 +40,7 @@ type Candidate = {
   name: string;
   email: string;
   phone: string;
+  telegram_username?: string | null;
   answers: Record<string, string>;
   source: string;
   status: string;
@@ -478,7 +479,7 @@ export default function HR() {
                                   {c.email}
                                 </div>
                               )}
-                              {c.phone && (
+                              {(c.phone || c.telegram_username) && (
                                 <div className="hr-phone-row">
                                   <span
                                     className={`hr-contact${c.contact_flags.includes("phone_plus7") ? " hr-contact-review" : ""}`}
@@ -490,7 +491,10 @@ export default function HR() {
                                   >
                                     {c.phone}
                                   </span>
-                                  <CandidateTelegram phone={c.phone} />
+                                  <CandidateTelegram
+                                    phone={c.phone}
+                                    username={c.telegram_username}
+                                  />
                                 </div>
                               )}
                               {c.contact_flags.length > 0 && (
@@ -744,6 +748,7 @@ function CandidateCard({
           location: c.location,
           location_verified: c.location_verified,
           notes: f.get("notes"),
+          telegram_username: f.get("telegram_username") || null,
         }),
       );
       onClose();
@@ -767,7 +772,10 @@ function CandidateCard({
             <span>{c.email}</span>
             <span className="hr-phone-row">
               <span>{c.phone}</span>
-              <CandidateTelegram phone={c.phone} />
+              <CandidateTelegram
+                phone={c.phone}
+                username={c.telegram_username}
+              />
             </span>
           </div>
           {c.contact_flags.length > 0 && (
@@ -810,6 +818,18 @@ function CandidateCard({
               <Star size={16} />
               {t("Priority candidate")}
             </label>
+            <Field
+              label="Telegram username"
+              className="span-all hr-telegram-field"
+            >
+              <input
+                name="telegram_username"
+                maxLength={200}
+                defaultValue={c.telegram_username || ""}
+                placeholder={t("@username or https://t.me/username")}
+                autoComplete="off"
+              />
+            </Field>
             <Field label="HR notes" className="span-all">
               <textarea
                 name="notes"

@@ -36,7 +36,7 @@ const dir = await mkdtemp(resolve(".local/hr-actions-ui-"));
 try {
   const out = await build({
     stdin: {
-      contents: `export{telegramPhoneLink}from'./apps/frontend/src/lib/contactLinks';export{default as HR}from'./apps/frontend/src/pages/HR';export{LanguageProvider}from'./apps/frontend/src/lib/i18n';export{NoticeProvider}from'./apps/frontend/src/components/ui';export{QueryClient,QueryClientProvider}from'@tanstack/react-query';export{createElement,act}from'react';export{createRoot}from'react-dom/client';`,
+      contents: `export{telegramPhoneLink,telegramContactLink}from'./apps/frontend/src/lib/contactLinks';export{default as HR}from'./apps/frontend/src/pages/HR';export{LanguageProvider}from'./apps/frontend/src/lib/i18n';export{NoticeProvider}from'./apps/frontend/src/components/ui';export{QueryClient,QueryClientProvider}from'@tanstack/react-query';export{createElement,act}from'react';export{createRoot}from'react-dom/client';`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -52,6 +52,7 @@ try {
   const {
     HR,
     telegramPhoneLink,
+    telegramContactLink,
     LanguageProvider,
     NoticeProvider,
     QueryClient,
@@ -79,6 +80,19 @@ try {
     ["+380671234567 / +13055550100", null],
   ])
     assert.equal(telegramPhoneLink(input), expected, input);
+  assert.equal(
+    telegramContactLink("+380000000000"),
+    "tg://resolve?phone=380000000000",
+  );
+  assert.equal(
+    telegramContactLink("+380000000000", "@example_user"),
+    "https://t.me/example_user",
+  );
+  assert.equal(
+    telegramContactLink("", "example_user"),
+    "https://t.me/example_user",
+  );
+  assert.equal(telegramContactLink("javascript:bad", "bad/route"), null);
   for (const language of ["en", "ru"]) {
     localStorage.setItem("wallpanels.ui-language", language);
     let row = {
@@ -136,7 +150,12 @@ try {
         assert.equal(body.location, "Previously recorded location");
         assert.equal(body.location_verified, true);
         assert.equal(body.version, row.version);
-        row = { ...row, ...body, version: row.version + 1 };
+        row = {
+          ...row,
+          ...body,
+          telegram_username: body.telegram_username?.replace(/^@/, "") || null,
+          version: row.version + 1,
+        };
         result = row;
       } else throw new Error(`Unexpected request ${path}`);
       return new Response(JSON.stringify(result), {
@@ -199,9 +218,16 @@ try {
       ),
     );
     const telegram = document.querySelector(".hr-telegram");
-    assert.equal(telegram.getAttribute("href"), "https://t.me/+380000000000");
-    assert.equal(telegram.getAttribute("target"), "_blank");
+    assert.equal(
+      telegram.getAttribute("href"),
+      "tg://resolve?phone=380000000000",
+    );
+    assert.equal(telegram.getAttribute("target"), null);
     assert.equal(telegram.getAttribute("rel"), "noopener noreferrer");
+    assert.equal(
+      document.querySelector(".hr-telegram-web").getAttribute("href"),
+      "https://t.me/+380000000000",
+    );
     assert.equal(writes.length, 0); // Rendering a contact link must never change hiring status.
     await click(labels[0]);
     assert.ok(row.priority);
@@ -220,6 +246,8 @@ try {
       document.querySelector('input[name="location_verified"]'),
       null,
     );
+    document.querySelector('input[name="telegram_username"]').value =
+      "@example_user";
     await act(async () =>
       document
         .querySelector("dialog form")
@@ -231,6 +259,15 @@ try {
     assert.equal(document.querySelector("dialog"), null);
     assert.equal(row.location, "Previously recorded location");
     assert.equal(row.location_verified, true);
+    assert.equal(
+      document.querySelector(".hr-telegram").getAttribute("href"),
+      "https://t.me/example_user",
+    );
+    assert.equal(
+      document.querySelector(".hr-telegram").textContent.trim(),
+      "@example_user",
+    );
+    assert.equal(document.querySelector(".hr-telegram-web"), null);
     fail = true;
     await click(labels[3]);
     assert.equal(row.hidden, false);

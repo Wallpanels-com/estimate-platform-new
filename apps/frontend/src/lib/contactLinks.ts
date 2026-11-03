@@ -12,3 +12,17 @@ export function telegramPhoneLink(phone: string): string | null {
   }
   return /^\+[1-9]\d{6,14}$/.test(number) ? `https://t.me/${number}` : null;
 }
+
+/** Known public handles take precedence. Phone fallback is resolved by Telegram itself. */
+export function telegramContactLink(
+  phone: string,
+  username?: string | null,
+): string | null {
+  const name = username?.trim().replace(/^@/, "");
+  if (name && /^[A-Za-z0-9_]{3,32}$/.test(name) && !/^\d+$/.test(name))
+    return `https://t.me/${name}`;
+  const web = telegramPhoneLink(phone);
+  return web
+    ? `tg://resolve?phone=${web.slice("https://t.me/+".length)}`
+    : null;
+}

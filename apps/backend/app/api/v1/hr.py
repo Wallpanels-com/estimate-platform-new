@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from sqlalchemy import select, func, or_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
@@ -33,6 +33,14 @@ class CandidateInput(BaseModel):
     location_verified: bool = False
     notes: str = Field(default='',max_length=20000)
 
+    telegram_username: str | None = Field(default=None,max_length=200)
+
+    @field_validator('telegram_username')
+    @classmethod
+    def telegram_handle(cls,value):
+        from app.services.telegram_contacts import normalize_username
+        return normalize_username(value)
+
 class CandidateQuickInput(BaseModel):
     model_config = ConfigDict(extra='forbid')
     version: int = Field(ge=1)
@@ -54,7 +62,7 @@ def vacancy_out(v, count=0):
     return {k:getattr(v,k) for k in ('id','name','description','archived','created_at','updated_at')} | {'count':count}
 
 def candidate_out(c):
-    return {k:getattr(c,k) for k in ('id','vacancy_id','name','email','phone','answers','source','status','priority','hidden','location','location_verified','notes','updated_by','version','created_at','updated_at')} | {'contact_flags':contact_flags(c.phone,c.email), **qualification_score(c.answers)}
+    return {k:getattr(c,k) for k in ('id','vacancy_id','name','email','phone','telegram_username','answers','source','status','priority','hidden','location','location_verified','notes','updated_by','version','created_at','updated_at')} | {'contact_flags':contact_flags(c.phone,c.email), **qualification_score(c.answers)}
 
 @router.get('/vacancies')
 async def vacancies(db:AsyncSession=Depends(get_db), user=Depends(get_current_user)):
@@ -98,7 +106,8 @@ async def edit_candidate(ident:uuid.UUID,body:CandidateInput,db:AsyncSession=Dep
     if not c:raise HTTPException(404,'Candidate not found.')
     if body.version!=c.version:raise HTTPException(409,'This candidate has changed. Close and reopen the card before saving. Your changes have not been saved.')
     if body.location_verified and not body.location.strip():raise HTTPException(422,'Enter the confirmed location first.')
-    for key,value in body.model_dump(exclude={'version'}).items():setattr(c,key,value)
+    for key,value in body.model_dump(exclude={'version','telegram_username'}).items():setattr(c,key,value)
+    if 'telegram_username' in body.model_fields_set:c.telegram_username=body.telegram_username
     c.version+=1;c.updated_by=user.name or user.email
     await db.flush();await db.refresh(c);return candidate_out(c)
 

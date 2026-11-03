@@ -22,6 +22,7 @@ class Candidate(Base):
     fingerprint: Mapped[str] = mapped_column(String(64))
     name: Mapped[str] = mapped_column(String(240))
     email: Mapped[str] = mapped_column(String(320), default='')
+    telegram_username: Mapped[str | None] = mapped_column(String(32), nullable=True)
     phone: Mapped[str] = mapped_column(String(100), default='')
     answers: Mapped[dict] = mapped_column(JSON, default=dict)
     source: Mapped[str] = mapped_column(String(240), default='')
