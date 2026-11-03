@@ -36,7 +36,7 @@ const dir = await mkdtemp(resolve(".local/hr-actions-ui-"));
 try {
   const out = await build({
     stdin: {
-      contents: `export{default as HR}from'./apps/frontend/src/pages/HR';export{LanguageProvider}from'./apps/frontend/src/lib/i18n';export{NoticeProvider}from'./apps/frontend/src/components/ui';export{QueryClient,QueryClientProvider}from'@tanstack/react-query';export{createElement,act}from'react';export{createRoot}from'react-dom/client';`,
+      contents: `export{telegramPhoneLink}from'./apps/frontend/src/lib/contactLinks';export{default as HR}from'./apps/frontend/src/pages/HR';export{LanguageProvider}from'./apps/frontend/src/lib/i18n';export{NoticeProvider}from'./apps/frontend/src/components/ui';export{QueryClient,QueryClientProvider}from'@tanstack/react-query';export{createElement,act}from'react';export{createRoot}from'react-dom/client';`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -51,6 +51,7 @@ try {
   await writeFile(resolve(dir, "app.mjs"), out.outputFiles[0].contents);
   const {
     HR,
+    telegramPhoneLink,
     LanguageProvider,
     NoticeProvider,
     QueryClient,
@@ -59,6 +60,25 @@ try {
     act,
     createRoot,
   } = await import(pathToFileURL(resolve(dir, "app.mjs")));
+  for (const [input, expected] of [
+    ["+380 (67) 123-45-67", "https://t.me/+380671234567"],
+    ["00380 67 123 45 67", "https://t.me/+380671234567"],
+    ["p:+1 (305) 555-0100", "https://t.me/+13055550100"],
+    ["380671234567", "https://t.me/+380671234567"],
+    ["+7 777 123-45-67", "https://t.me/+77771234567"],
+    ["", null],
+    ["Hhjj", null],
+    ["0671234567", null],
+    ["87003593598", null],
+    ["12345", null],
+    ["+380671234567 ext 2", null],
+    ["javascript:alert(1)", null],
+    ["+380671234567?text=hello", null],
+    ["+0123456789", null],
+    ["+38067123456789012", null],
+    ["+380671234567 / +13055550100", null],
+  ])
+    assert.equal(telegramPhoneLink(input), expected, input);
   for (const language of ["en", "ru"]) {
     localStorage.setItem("wallpanels.ui-language", language);
     let row = {
@@ -178,6 +198,11 @@ try {
         (b) => !b.hasAttribute("title"),
       ),
     );
+    const telegram = document.querySelector(".hr-telegram");
+    assert.equal(telegram.getAttribute("href"), "https://t.me/+380000000000");
+    assert.equal(telegram.getAttribute("target"), "_blank");
+    assert.equal(telegram.getAttribute("rel"), "noopener noreferrer");
+    assert.equal(writes.length, 0); // Rendering a contact link must never change hiring status.
     await click(labels[0]);
     assert.ok(row.priority);
     assert.deepEqual(Object.keys(writes[0]).sort(), ["priority", "version"]);
@@ -231,7 +256,7 @@ try {
     document.getElementById("root").innerHTML = "";
   }
   console.log(
-    "HR actions UI passed: EN/RU star, note focus, hide/restore, no tooltips, conflict recovery and preserved stage/notes and removed location controls without data loss.",
+    "HR actions UI passed: EN/RU star, note focus, hide/restore, no tooltips, conflict recovery and preserved stage/notes, retained location data, and safe Telegram phone links.",
   );
 } finally {
   await rm(dir, { recursive: true, force: true });

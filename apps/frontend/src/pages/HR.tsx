@@ -25,6 +25,7 @@ import {
 } from "../components/ui";
 import Select from "../components/Select";
 import HRPagination from "../components/HRPagination";
+import CandidateTelegram from "../components/CandidateTelegram";
 
 type Vacancy = {
   id: string;
@@ -478,15 +479,18 @@ export default function HR() {
                                 </div>
                               )}
                               {c.phone && (
-                                <div
-                                  className={`hr-contact${c.contact_flags.includes("phone_plus7") ? " hr-contact-review" : ""}`}
-                                  title={
-                                    c.contact_flags.includes("phone_plus7")
-                                      ? t("Phone +7 — contact to verify")
-                                      : undefined
-                                  }
-                                >
-                                  {c.phone}
+                                <div className="hr-phone-row">
+                                  <span
+                                    className={`hr-contact${c.contact_flags.includes("phone_plus7") ? " hr-contact-review" : ""}`}
+                                    title={
+                                      c.contact_flags.includes("phone_plus7")
+                                        ? t("Phone +7 — contact to verify")
+                                        : undefined
+                                    }
+                                  >
+                                    {c.phone}
+                                  </span>
+                                  <CandidateTelegram phone={c.phone} />
                                 </div>
                               )}
                               {c.contact_flags.length > 0 && (
@@ -761,7 +765,10 @@ function CandidateCard({
         <div className="modal-body hr-candidate-body">
           <div className="hr-candidate-contact">
             <span>{c.email}</span>
-            <span>{c.phone}</span>
+            <span className="hr-phone-row">
+              <span>{c.phone}</span>
+              <CandidateTelegram phone={c.phone} />
+            </span>
           </div>
           {c.contact_flags.length > 0 && (
             <div className="hr-contact-flags">
