@@ -1,4 +1,4 @@
-from pydantic import field_validator
+from pydantic import field_validator, Field
 from pydantic_settings import BaseSettings
 from typing import Literal
 from uuid import UUID
@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
     OPENAI_API_KEY: str = ""
+    GROQ_API_KEY: str = Field(default="", repr=False)
+    HR_AI_MODEL: str = "openai/gpt-oss-120b"
     FRONTEND_DIST: str = ""
     AGENTATION_USER_ID: UUID | None = None
     ACCESS_MANAGER_USER_ID: UUID | None = None

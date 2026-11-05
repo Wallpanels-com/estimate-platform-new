@@ -26,6 +26,7 @@ import {
 import Select from "../components/Select";
 import HRPagination from "../components/HRPagination";
 import CandidateTelegram from "../components/CandidateTelegram";
+import CandidateAI from "../components/CandidateAI";
 
 type Vacancy = {
   id: string;
@@ -225,6 +226,7 @@ export default function HR() {
       setSelected(v.id);
       setEdit(null);
       refresh();
+      void client.invalidateQueries({ queryKey: ["hr-ai"] });
       notify(t("Vacancy saved"));
     } catch (e) {
       setError(errorMessage(e));
@@ -717,6 +719,9 @@ function CandidateCard({
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [cardTab, setCardTab] = useState<"ai" | "application">(
+    focusNotes ? "application" : "ai",
+  );
   const notesInput = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (focusNotes) notesInput.current?.focus();
@@ -762,6 +767,7 @@ function CandidateCard({
     <Modal
       title={c.name}
       wide
+      className="hr-review-modal"
       onClose={() => {
         if (!busy) onClose();
       }}
@@ -799,109 +805,142 @@ function CandidateCard({
               </span>
             </div>
           )}
-          <div className="form-grid">
-            <Field label="Candidate status">
-              <Select name="status" defaultValue={c.status}>
-                {Object.entries(statuses).map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {t(l)}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <label className="hr-checkbox hr-priority-control">
-              <input
-                name="priority"
-                type="checkbox"
-                defaultChecked={c.priority}
-              />
-              <Star size={16} />
-              {t("Priority candidate")}
-            </label>
-            <Field
-              label="Telegram username"
-              className="span-all hr-telegram-field"
+          <div
+            className="hr-card-tabs"
+            role="tablist"
+            aria-label={t("Candidate card")}
+          >
+            <Button
+              role="tab"
+              aria-selected={cardTab === "ai"}
+              aria-controls="hr-ai-panel"
+              variant={cardTab === "ai" ? "primary" : "ghost"}
+              onClick={() => setCardTab("ai")}
             >
-              <input
-                name="telegram_username"
-                maxLength={200}
-                defaultValue={c.telegram_username || ""}
-                placeholder={t("@username or https://t.me/username")}
-                autoComplete="off"
-              />
-            </Field>
-            <Field label="HR notes" className="span-all">
-              <textarea
-                name="notes"
-                ref={notesInput}
-                rows={3}
-                maxLength={20000}
-                defaultValue={c.notes}
-              />
-            </Field>
+              {t("AI review")}
+            </Button>
+            <Button
+              role="tab"
+              aria-selected={cardTab === "application"}
+              aria-controls="hr-application-panel"
+              variant={cardTab === "application" ? "primary" : "ghost"}
+              onClick={() => setCardTab("application")}
+            >
+              {t("Application & notes")}
+            </Button>
           </div>
-          <section className="hr-answers">
-            <h3>
-              {t("Professional match")}:{" "}
-              {c.score === null ? t("Not scored") : `${c.score}/100`}
-            </h3>
-            <p className="hr-muted">
-              {t(
-                "Equal weight for available criteria: experience, English, US market and technical drawings. Self-reported answers; human review required.",
+          <div id="hr-ai-panel" role="tabpanel" hidden={cardTab !== "ai"}>
+            <CandidateAI key={c.id} id={c.id} />
+          </div>
+          <div
+            id="hr-application-panel"
+            role="tabpanel"
+            hidden={cardTab !== "application"}
+          >
+            <div className="form-grid">
+              <Field label="Candidate status">
+                <Select name="status" defaultValue={c.status}>
+                  {Object.entries(statuses).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {t(l)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <label className="hr-checkbox hr-priority-control">
+                <input
+                  name="priority"
+                  type="checkbox"
+                  defaultChecked={c.priority}
+                />
+                <Star size={16} />
+                {t("Priority candidate")}
+              </label>
+              <Field
+                label="Telegram username"
+                className="span-all hr-telegram-field"
+              >
+                <input
+                  name="telegram_username"
+                  maxLength={200}
+                  defaultValue={c.telegram_username || ""}
+                  placeholder={t("@username or https://t.me/username")}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field label="HR notes" className="span-all">
+                <textarea
+                  name="notes"
+                  ref={notesInput}
+                  rows={3}
+                  maxLength={20000}
+                  defaultValue={c.notes}
+                />
+              </Field>
+            </div>
+            <section className="hr-answers">
+              <h3>
+                {t("Professional match")}:{" "}
+                {c.score === null ? t("Not scored") : `${c.score}/100`}
+              </h3>
+              <p className="hr-muted">
+                {t(
+                  "Equal weight for available criteria: experience, English, US market and technical drawings. Self-reported answers; human review required.",
+                )}
+              </p>
+              <dl>
+                {c.evidence.map((e) => (
+                  <div key={e.criterion}>
+                    <dt>{friendly(e.question)}</dt>
+                    <dd>
+                      {friendly(e.answer) || "—"} · {e.points}/{e.maximum}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+            <section className="hr-answers">
+              <h3>{t("Application answers")}</h3>
+              <dl>
+                {professional(c.answers).map(([k, v]) => (
+                  <div key={k}>
+                    <dt>{friendly(k)}</dt>
+                    <dd>{friendly(v) || "—"}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+            <details className="hr-source">
+              <summary>{t("Original import data")}</summary>
+              <p>{c.source}</p>
+              <dl>
+                {Object.entries(c.answers).map(([k, v]) => (
+                  <div key={k}>
+                    <dt>{friendly(k)}</dt>
+                    <dd>{v || "—"}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+            <details className="hr-source">
+              <summary>{t("Change history")}</summary>
+              {history.isError ? (
+                <ErrorNotice retry={() => void history.refetch()}>
+                  {errorMessage(history.error)}
+                </ErrorNotice>
+              ) : (
+                history.data?.map((r) => (
+                  <p key={r.id}>
+                    {new Date(r.created_at).toLocaleString()} · {r.actor_name} ·{" "}
+                    {t(r.action === "create" ? "Created" : "Updated")} ·{" "}
+                    {r.fields
+                      .filter((f) => !["fingerprint", "answers"].includes(f))
+                      .join(", ")}
+                  </p>
+                ))
               )}
-            </p>
-            <dl>
-              {c.evidence.map((e) => (
-                <div key={e.criterion}>
-                  <dt>{friendly(e.question)}</dt>
-                  <dd>
-                    {friendly(e.answer) || "—"} · {e.points}/{e.maximum}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-          <section className="hr-answers">
-            <h3>{t("Application answers")}</h3>
-            <dl>
-              {professional(c.answers).map(([k, v]) => (
-                <div key={k}>
-                  <dt>{friendly(k)}</dt>
-                  <dd>{friendly(v) || "—"}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-          <details className="hr-source">
-            <summary>{t("Original import data")}</summary>
-            <p>{c.source}</p>
-            <dl>
-              {Object.entries(c.answers).map(([k, v]) => (
-                <div key={k}>
-                  <dt>{friendly(k)}</dt>
-                  <dd>{v || "—"}</dd>
-                </div>
-              ))}
-            </dl>
-          </details>
-          <details className="hr-source">
-            <summary>{t("Change history")}</summary>
-            {history.isError ? (
-              <ErrorNotice retry={() => void history.refetch()}>
-                {errorMessage(history.error)}
-              </ErrorNotice>
-            ) : (
-              history.data?.map((r) => (
-                <p key={r.id}>
-                  {new Date(r.created_at).toLocaleString()} · {r.actor_name} ·{" "}
-                  {t(r.action === "create" ? "Created" : "Updated")} ·{" "}
-                  {r.fields
-                    .filter((f) => !["fingerprint", "answers"].includes(f))
-                    .join(", ")}
-                </p>
-              ))
-            )}
-          </details>
+            </details>
+          </div>
           {error && (
             <p role="alert" className="error-message">
               {error}
@@ -910,11 +949,13 @@ function CandidateCard({
         </div>
         <footer className="modal-footer">
           <Button disabled={busy} onClick={onClose}>
-            {t("Cancel")}
+            {t(cardTab === "ai" ? "Close" : "Cancel")}
           </Button>
-          <Button type="submit" busy={busy} variant="primary">
-            {t("Save changes")}
-          </Button>
+          {cardTab === "application" && (
+            <Button type="submit" busy={busy} variant="primary">
+              {t("Save changes")}
+            </Button>
+          )}
         </footer>
       </form>
     </Modal>

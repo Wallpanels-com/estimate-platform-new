@@ -4250,3 +4250,131 @@ input[aria-invalid="true"] {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* HR review shares the existing modal/grid tokens; no nested scrolling panels. */
+.access-create {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.hr-ai {
+  display: grid;
+  gap: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 8px);
+  padding: 24px;
+  min-width: 0;
+}
+.hr-ai-heading,
+.hr-ai-message-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.hr-ai-heading > div,
+.hr-ai-message-actions > small {
+  min-width: 0;
+}
+.hr-ai-heading h3,
+.hr-ai-message h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.hr-ai-heading p,
+.hr-ai-meta,
+.hr-ai-message-actions small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.hr-ai-heading p {
+  margin: 8px 0 0;
+}
+.hr-ai-heading .button,
+.hr-ai-message-actions .button-row {
+  flex-shrink: 0;
+}
+.hr-ai-overview,
+.hr-ai-questions,
+.hr-ai-message {
+  display: grid;
+  gap: 12px;
+}
+.hr-ai h4 {
+  margin: 0;
+  font-size: 15px;
+}
+.hr-ai p {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.hr-ai-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.hr-ai-evidence-grid > section {
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.hr-ai ul,
+.hr-ai ol {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 16px;
+  line-height: 1.6;
+}
+.hr-ai details {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.hr-ai summary {
+  color: var(--muted);
+  cursor: pointer;
+}
+.hr-ai blockquote {
+  margin: 8px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.hr-ai-message {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+}
+.hr-ai-message textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 240px;
+  line-height: 1.65;
+}
+.hr-ai-stale {
+  padding: 12px 16px;
+  background: var(--surface-alt, #f4f1ea);
+  border-radius: 6px;
+}
+
+.hr-card-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+}
+#hr-application-panel:not([hidden]) {
+  display: grid;
+  gap: 24px;
+}
+
+/* The candidate review has two evidence columns; give them a readable desktop measure. */
+.modal.hr-review-modal {
+  width: min(1040px, calc(100vw - 48px));
+}
+.hr-ai-overview p {
+  white-space: pre-line;
+}

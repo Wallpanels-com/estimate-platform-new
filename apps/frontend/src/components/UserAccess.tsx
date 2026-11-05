@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { request, errorMessage } from "../lib/api";
-import { PAGES, type PageKey } from "../lib/access";
+import { type PageKey } from "../lib/access";
 import { useI18n } from "../lib/i18n";
 import type { User } from "../lib/types";
 import { Button, ErrorNotice, Loading, Modal, useNotice } from "./ui";
+
+import PageAccessOptions from "./PageAccessOptions";
 
 type Access = {
   pages: PageKey[];
@@ -114,28 +116,11 @@ function AccessForm({
           )}
         </p>
         {error ? <ErrorNotice retry={reload}>{error}</ErrorNotice> : null}
-        <fieldset
-          className="access-options"
+        <PageAccessOptions
+          pages={pages}
+          onChange={setPages}
           disabled={busy || access.protected_owner}
-        >
-          <legend className="sr-only">{t("Available pages")}</legend>
-          {PAGES.map((page) => (
-            <label className="access-option" key={page.key}>
-              <input
-                type="checkbox"
-                checked={pages.includes(page.key)}
-                onChange={(event) =>
-                  setPages((current) =>
-                    event.target.checked
-                      ? [...current, page.key]
-                      : current.filter((key) => key !== page.key),
-                  )
-                }
-              />
-              <span>{t(page.label)}</span>
-            </label>
-          ))}
-        </fieldset>
+        />
         {access.protected_owner ? (
           <p className="form-hint">
             {t("Your account always has access to all pages.")}

@@ -55,3 +55,22 @@ When no handle is supplied, the button uses `tg://resolve?phone=<international-n
 Formatting, an explicit `00` prefix and Facebook `p:` prefix are normalized only for the link; original phone text remains unchanged. Short local numbers, ambiguous 11-digit domestic `8…` numbers, multiple numbers, extensions and unsupported text do not produce a phone link. Nothing sends messages, looks up contacts in the background, or changes recruitment status.
 
 Revision `0009_hr_telegram_username` adds a nullable public-handle column. Existing rows start with no handle. Version checks protect edits; older clients that omit the field preserve saved handles. Explicitly clearing the field restores the phone fallback. Local backup: `.local/backups/hr/before-telegram-handles.sql.gz`. Production rollback must coordinate the application's expected schema revision; downgrading would discard stored handles.
+
+
+## AI-assisted application review (Groq)
+
+Open a candidate → **AI review → Analyze application**. This is an on-demand aid for the recruiter, not a hiring decision or automated ranking. The existing candidate score/order/status/priority are unchanged. **Application & notes** retains all existing fields and imported answers.
+
+The server sends only selected professional Q&A and vacancy requirements to `https://api.groq.com/openai/v1/chat/completions`. Names, contact columns, internal notes, Meta metadata and location fields are excluded; email/phone/URL fragments are redacted. Do not add sensitive personal information to professional answers or requirements. Imported text is treated as data, not model instructions. Exact source quotations in strengths/limitations are checked against submitted answers. The recruiter must verify the generated interpretation; missing experience is unknown, not proof of unsuitability.
+
+The response includes an overview, experience summary, evidence, interview questions and a Ukrainian first-contact draft. Recruiter name and vacancy are inserted locally. There is no automatic sending. Drafts can be edited, saved and copied. Editing a draft uses optimistic concurrency; a conflict keeps the unsaved text in the editor. Updated requirements mark the old analysis as stale. An edited saved draft survives analysis refresh.
+
+`GROQ_API_KEY` is server-only. `HR_AI_MODEL` defaults to `openai/gpt-oss-120b`. Set these in the ignored root `.env` locally and service variables in corporate Railway. Never use a VITE-prefixed key. No new SDK/dependency is required. Provider errors, invalid evidence, timeouts and rate limits show bounded messages without leaking provider responses or credentials. Generation is limited to two simultaneous requests per worker, deduplicated per candidate across workers with a PostgreSQL transaction lock; explicit refresh has a 30-second cooldown. Unchanged reviews are reused without another provider request. No import-wide automatic analysis or background bulk transmission.
+
+Migration `0010_hr_ai_reviews` adds a separate `hr_ai_reviews` table. Existing candidate/estimate/pricing rows are not migrated or rewritten. Reviews and message drafts persist in PostgreSQL. Rollback: revert feature code while retaining migration 0010 and the existing table, so the startup revision check remains aligned. Do not roll back to an old image expecting revision 0009 without a separate migration plan. Do not drop this table if saved drafts are needed. The local pre-migration DB copy is ignored by Git. Production deployment runs the normal Alembic upgrade.
+
+### Creating employees with access
+
+The owner can choose page checkboxes in **Team accounts → Add employee**. `POST /users` validates the selected page keys and creates the account and grants atomically. No selections means no accessible business pages. Existing users' grants and the owner's immutable full access are unchanged; non-owners cannot create accounts or change grants. The same checkbox component is used for later access editing.
+
+Verification: `npm run test:hr-ai-ui`, `npm run test:access-ui`, `npm run test:hr-ui`, Python `tests/test_hr_ai.py`, and `npm run audit:workflows` in an isolated loopback schema. Provider connectivity is checked separately using synthetic application data, never by bulk-sending real candidate files.

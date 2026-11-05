@@ -79,6 +79,7 @@ try {
   let profile,
     grants,
     puts = [],
+    creates = [],
     fail = false;
   const employee = {
     id: "employee",
@@ -109,7 +110,10 @@ try {
         grants = { ...grants, pages: puts.at(-1).pages, updated_at: "v2" };
       }
       body = grants;
-    } else if (path.endsWith("/users")) body = [employee];
+    } else if (path.endsWith("/users")) {
+      if (options.method === "POST") { creates.push(JSON.parse(options.body)); body = {...employee, ...creates.at(-1)}; }
+      else body = [employee];
+    }
     else throw Error("Unexpected request " + path);
     return new Response(JSON.stringify(body), {
       headers: { "Content-Type": "application/json" },
@@ -214,6 +218,17 @@ try {
     assert.equal(puts.length, 2);
     assert.ok(!puts.at(-1).pages.includes("price_book"));
     assert.equal(puts.at(-1).expected_updated_at, "v1");
+    await act(async () => buttons(lang === "ru" ? "Добавить сотрудника" : "Add employee")[0].click());
+    const creationBoxes = [...document.querySelectorAll(".access-create input[type=checkbox]")];
+    assert.equal(creationBoxes.length, 6);
+    assert.ok(creationBoxes.every(b => !b.checked));
+    await act(async () => { creationBoxes[0].click(); creationBoxes[PAGES.findIndex(p => p.key === 'hr')].click(); });
+    document.querySelector('input[name=name]').value = 'Example Employee';
+    document.querySelector('input[name=email]').value = 'example.employee';
+    document.querySelector('input[name=password]').value = 'SyntheticPassword123';
+    await act(async () => document.querySelector('dialog form').dispatchEvent(new Event('submit', {bubbles:true,cancelable:true})));
+    assert.deepEqual(creates.at(-1).page_access, ['estimates','hr']);
+
     await act(async () => root.unmount());
     client.clear();
     ({ root, client } = await mount(lang, false));

@@ -132,6 +132,7 @@ try {
           counts: {},
         };
       } else if (url.pathname.endsWith("/history")) result = [];
+      else if (url.pathname.endsWith("/ai")) result = {enabled: false, review: null};
       else if (url.pathname.endsWith("/quick")) {
         const body = JSON.parse(options.body);
         writes.push(body);

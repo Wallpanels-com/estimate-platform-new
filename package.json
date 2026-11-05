@@ -26,7 +26,8 @@
     "audit:workflows": ".venv/bin/python scripts/audit_workflows.py",
     "audit:performance": ".venv/bin/python scripts/audit_performance.py",
     "test:access-ui": "node scripts/test-page-access.mjs",
-    "test:hr-ui": "node scripts/test-hr-actions.mjs"
+    "test:hr-ui": "node scripts/test-hr-actions.mjs",
+    "test:hr-ai-ui": "node scripts/test-hr-ai-ui.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

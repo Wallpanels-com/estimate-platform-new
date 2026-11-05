@@ -8,6 +8,8 @@ import type { User } from "../lib/types";
 import { Button, Field, Modal, Loading, ErrorNotice } from "../components/ui";
 import UserAccess from "../components/UserAccess";
 import Select from "../components/Select";
+import PageAccessOptions from "../components/PageAccessOptions";
+import type { PageKey } from "../lib/access";
 
 export default function Users() {
   const { t } = useI18n();
@@ -20,6 +22,7 @@ export default function Users() {
   const [editing, setEditing] = useState<User | "new" | null>(null);
   const [accessUser, setAccessUser] = useState<User | null>(null);
   const [passwordUser, setPasswordUser] = useState<User | null>(null);
+  const [newPages, setNewPages] = useState<PageKey[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   function close() {
@@ -40,7 +43,10 @@ export default function Users() {
           password: form.get("password"),
         });
       else if (editing === "new")
-        await post("/users", Object.fromEntries(form));
+        await post("/users", {
+          ...Object.fromEntries(form),
+          page_access: newPages,
+        });
       else if (editing)
         await patch(`/users/${editing.id}`, {
           email: form.get("email"),
@@ -81,7 +87,13 @@ export default function Users() {
           </p>
         </div>
         {me?.can_manage_access ? (
-          <Button variant="primary" onClick={() => setEditing("new")}>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setNewPages([]);
+              setEditing("new");
+            }}
+          >
             <Plus size={17} />
             {t("Add employee")}
           </Button>
@@ -221,6 +233,23 @@ export default function Users() {
                     maxLength={72}
                   />
                 </Field>
+              ) : null}
+              {editing === "new" && !passwordUser ? (
+                <section className="span-all access-create">
+                  <h3>{t("Page access")}</h3>
+                  <PageAccessOptions
+                    pages={newPages}
+                    onChange={setNewPages}
+                    disabled={busy}
+                  />
+                  {!newPages.length && (
+                    <p className="form-hint">
+                      {t(
+                        "No pages selected. This employee will see an access request screen after signing in.",
+                      )}
+                    </p>
+                  )}
+                </section>
               ) : null}
             </div>
             <footer className="modal-footer">

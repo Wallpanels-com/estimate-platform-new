@@ -46,3 +46,15 @@ class ImportBatch(Base):
     payload: Mapped[dict] = mapped_column(JSON)
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CandidateAIReview(Base):
+    __tablename__ = 'hr_ai_reviews'
+    candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('hr_candidates.id'), primary_key=True)
+    source_hash: Mapped[str] = mapped_column(String(64))
+    content: Mapped[dict] = mapped_column(JSON)
+    message_draft: Mapped[str] = mapped_column(String)
+    model: Mapped[str] = mapped_column(String(100))
+    created_by: Mapped[str] = mapped_column(String(240))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

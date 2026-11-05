@@ -89,6 +89,8 @@ async def check_hr(call, client, tokens):
     assert read['telegram_username']=='example_user'
     cleared=(await call('PATCH',f"/hr/candidates/{target['id']}",json={**legacy,'version':profile['version'],'telegram_username':None})).json()
     assert cleared['telegram_username'] is None and cleared['notes']==legacy['notes']
+    from hr_ai_workflow_checks import check_hr_ai
+    await check_hr_ai(call,client,tokens,vid,cleared)
     client.headers['Authorization']='Bearer '+tokens[1]
     await call('GET',f'/hr/vacancies/{vid}/candidates',403)
     await call('PATCH',f"/hr/candidates/{low['id']}",403,json={**update,'version':2})

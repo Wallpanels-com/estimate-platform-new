@@ -28,7 +28,7 @@ async def create_user(data: UserCreate, db: AsyncSession = Depends(get_db), acto
     email = str(data.email).lower()
     if (await db.execute(select(User).where(User.email == email))).scalar_one_or_none():
         raise HTTPException(409, "Email already registered.")
-    user = User(email=email, name=data.name, role=data.role, page_access=[], password_hash=get_password_hash(data.password))
+    user = User(email=email, name=data.name, role=data.role, page_access=list(data.page_access), password_hash=get_password_hash(data.password))
     db.add(user)
     await db.commit()
     return user

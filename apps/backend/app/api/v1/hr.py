@@ -185,3 +185,6 @@ async def confirm_import(ident:uuid.UUID,body:ImportInput,db:AsyncSession=Depend
     batch.result=info|{'added':added,'duplicates':duplicates}
     batch.payload={}  # candidate answers are now durable; do not keep a second copy
     await db.flush();return batch.result
+
+from app.api.v1.hr_ai import router as ai_router
+router.include_router(ai_router)

@@ -56,7 +56,19 @@ class PasswordInput(BaseModel):
         return password
 
 
+PageKey = Literal["estimates", "quick_estimate", "price_book", "users", "trash", "hr"]
+
+
 class UserCreate(PasswordInput):
+    page_access: list[PageKey] = Field(default_factory=list, max_length=6)
+
+    @field_validator("page_access")
+    @classmethod
+    def unique_access(cls, pages):
+        if len(set(pages)) != len(pages):
+            raise ValueError("Choose each page only once.")
+        return pages
+
     email: str = Field(min_length=3, max_length=254)
     _login = field_validator("email")(login_identifier)
     name: str = Field(min_length=1, max_length=120)
@@ -79,9 +91,6 @@ class UserUpdate(BaseModel):
 class ProfileUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
     onboarding_completed: bool | None = None
-
-
-PageKey = Literal["estimates", "quick_estimate", "price_book", "users", "trash", "hr"]
 
 
 class UserAccessUpdate(BaseModel):
