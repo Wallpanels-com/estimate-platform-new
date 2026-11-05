@@ -1,4 +1,8 @@
 {
+  "Formatted text (.rtf)": "Текст с форматированием (.rtf)",
+  "Open the RTF file in TextEdit, copy its text, then paste into Telegram with Cmd+V.": "Откройте RTF в TextEdit, скопируйте текст и вставьте в Telegram через Cmd+V.",
+  "Expand menu": "Развернуть меню",
+  "Collapse menu": "Свернуть меню",
   "PDF presentations are generated only for preview and download. Only XLSX versions can be saved here.": "PDF-презентации создаются только для предпросмотра и скачивания. Здесь можно сохранить только версию XLSX.",
   "PDF presentations are generated for preview and download only. Saving PDF versions is disabled.": "PDF-презентации создаются только для предпросмотра и скачивания. Сохранение PDF-версий отключено.",
   "PDF presentations are no longer stored. Open the estimate to preview or download its current PDF.": "PDF-презентации больше не хранятся. Откройте смету для предпросмотра или скачивания актуального PDF.",

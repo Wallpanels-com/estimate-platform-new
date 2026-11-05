@@ -436,6 +436,7 @@ html[lang="ru"] .line-head {
   position: sticky;
   top: 0;
   height: 100dvh;
+  overflow-y: auto;
   background: var(--ink);
   color: #fafbf6;
   padding: 28px 16px 18px;
@@ -472,6 +473,81 @@ html[lang="ru"] .line-head {
 .app-nav nav a.active {
   color: #f0ddba;
   background: #3b3b30;
+}
+/* One shared grid owns both navigation states; page content remains flexible. */
+.app-shell.nav-collapsed {
+  --nav: 88px;
+}
+.nav-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+.nav-toggle {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #55574d;
+  border-radius: 6px;
+  color: #c0c5b5;
+  background: transparent;
+}
+.nav-toggle:hover {
+  color: white;
+  background: #34372e;
+}
+.app-nav nav svg {
+  flex-shrink: 0;
+}
+.nav-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.nav-collapsed .app-nav {
+  padding-inline: 12px;
+}
+.nav-collapsed .nav-brand {
+  justify-items: center;
+}
+.nav-collapsed .brand-link {
+  display: flex;
+  justify-content: center;
+  margin-left: 0;
+  width: 100%;
+}
+.nav-brand-mark {
+  display: block;
+}
+.nav-collapsed .nav-tools {
+  flex-direction: column;
+  gap: 12px;
+}
+.nav-collapsed .language-switch {
+  margin-left: 0;
+}
+.nav-collapsed .language-switch button {
+  min-width: 24px;
+  padding-inline: 4px;
+}
+.nav-collapsed .nav-label,
+.nav-collapsed .nav-user-details {
+  display: none;
+}
+.nav-collapsed .app-nav nav a {
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px;
+}
+.nav-collapsed .nav-user {
+  flex-direction: column;
+}
+.nav-collapsed .nav-user .button {
+  margin-left: 0;
 }
 .nav-user {
   margin-top: auto;

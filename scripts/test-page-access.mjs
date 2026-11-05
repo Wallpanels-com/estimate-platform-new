@@ -184,6 +184,22 @@ try {
   }
   for (const lang of ["en", "ru"]) {
     let { root, client } = await mount(lang, true);
+    const toggle = () => document.querySelector('.nav-toggle');
+    assert.equal(toggle().getAttribute('aria-expanded'), 'true');
+    await act(async () => toggle().click());
+    assert.ok(document.querySelector('.app-shell.nav-collapsed'));
+    assert.equal(localStorage.getItem('wallpanels.nav-collapsed'), 'true');
+    assert.equal(toggle().getAttribute('aria-expanded'), 'false');
+    assert.ok([...document.querySelectorAll('#main-navigation a')].every(a => a.getAttribute('aria-label') && a.getAttribute('title')));
+    // Route changes preserve collapsed state and icon links remain navigable.
+    await act(async () => document.querySelector('nav a[href="/"]').click());
+    assert.ok(document.querySelector('.app-shell.nav-collapsed'));
+    await act(async () => document.querySelector('nav a[href="/users"]').click());
+    await act(async () => root.unmount()); client.clear();
+    ({root, client} = await mount(lang, true));
+    assert.equal(toggle().getAttribute('aria-expanded'), 'false', 'Collapse survives remount');
+    await act(async () => toggle().click());
+    assert.equal(localStorage.getItem('wallpanels.nav-collapsed'), 'false');
     const access = lang === "ru" ? "Доступы" : "Access";
     assert.equal(buttons(access).length, 1);
     await act(async () => buttons(access)[0].click());

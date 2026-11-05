@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { LanguageSwitch, useI18n } from "../lib/i18n";
 import { NavLink, Outlet } from "react-router-dom";
 import {
@@ -8,6 +9,8 @@ import {
   LogOut,
   Users,
   BriefcaseBusiness,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { canAccess, firstPage } from "../lib/access";
@@ -30,8 +33,26 @@ export default function Shell() {
   const { t } = useI18n();
 
   const { user, signOut } = useAuth();
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("wallpanels.nav-collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const toggleNavigation = () => {
+    setCollapsed((current) => {
+      const next = !current;
+      try {
+        localStorage.setItem("wallpanels.nav-collapsed", String(next));
+      } catch {
+        // Navigation still works when browser storage is unavailable.
+      }
+      return next;
+    });
+  };
   return (
-    <div className="app-shell">
+    <div className={`app-shell${collapsed ? " nav-collapsed" : ""}`}>
       <a className="skip-link" href="#main-content">
         {t("Skip to content")}
       </a>
@@ -42,45 +63,97 @@ export default function Shell() {
             className="brand-link"
             aria-label={t("WallPanels home")}
           >
-            <Brand />
+            {collapsed ? (
+              <img
+                className="nav-brand-mark"
+                src="/favicon.svg"
+                alt="WallPanels"
+                width={40}
+                height={40}
+              />
+            ) : (
+              <Brand />
+            )}
           </NavLink>
-          <LanguageSwitch />
+          <div className="nav-tools">
+            <LanguageSwitch />
+            <button
+              type="button"
+              className="nav-toggle"
+              aria-label={t(collapsed ? "Expand menu" : "Collapse menu")}
+              title={t(collapsed ? "Expand menu" : "Collapse menu")}
+              aria-expanded={!collapsed}
+              aria-controls="main-navigation"
+              onClick={toggleNavigation}
+            >
+              {collapsed ? (
+                <PanelLeftOpen size={18} />
+              ) : (
+                <PanelLeftClose size={18} />
+              )}
+            </button>
+          </div>
         </div>
-        <nav aria-label={t("Main navigation")}>
+        <nav id="main-navigation" aria-label={t("Main navigation")}>
           {canAccess(user, "estimates") ? (
-            <NavLink to="/" end>
+            <NavLink
+              aria-label={t("Estimates")}
+              title={collapsed ? t("Estimates") : undefined}
+              to="/"
+              end
+            >
               <FileText size={18} />
-              {t("Estimates")}
+              <span className="nav-label">{t("Estimates")}</span>
             </NavLink>
           ) : null}
           {canAccess(user, "quick_estimate") ? (
-            <NavLink to="/quick-estimate">
+            <NavLink
+              aria-label={t("Quick estimate")}
+              title={collapsed ? t("Quick estimate") : undefined}
+              to="/quick-estimate"
+            >
               <WandSparkles size={18} />
-              {t("Quick estimate")}
+              <span className="nav-label">{t("Quick estimate")}</span>
             </NavLink>
           ) : null}
           {canAccess(user, "price_book") ? (
-            <NavLink to="/price-book">
+            <NavLink
+              aria-label={t("Price book")}
+              title={collapsed ? t("Price book") : undefined}
+              to="/price-book"
+            >
               <BookOpen size={18} />
-              {t("Price book")}
+              <span className="nav-label">{t("Price book")}</span>
             </NavLink>
           ) : null}
           {canAccess(user, "hr") ? (
-            <NavLink to="/hr">
+            <NavLink
+              aria-label={t("HR department")}
+              title={collapsed ? t("HR department") : undefined}
+              to="/hr"
+            >
               <BriefcaseBusiness size={18} />
-              {t("HR department")}
+              <span className="nav-label">{t("HR department")}</span>
             </NavLink>
           ) : null}
           {canAccess(user, "users") ? (
-            <NavLink to="/users">
+            <NavLink
+              aria-label={t("Team accounts")}
+              title={collapsed ? t("Team accounts") : undefined}
+              to="/users"
+            >
               <Users size={18} />
-              {t("Team accounts")}
+              <span className="nav-label">{t("Team accounts")}</span>
             </NavLink>
           ) : null}
           {canAccess(user, "trash") ? (
-            <NavLink to="/trash">
+            <NavLink
+              aria-label={t("Trash")}
+              title={collapsed ? t("Trash") : undefined}
+              to="/trash"
+            >
               <Trash2 size={18} />
-              {t("Trash")}
+              <span className="nav-label">{t("Trash")}</span>
             </NavLink>
           ) : null}
         </nav>
@@ -88,11 +161,16 @@ export default function Shell() {
           <span className="avatar" aria-hidden="true">
             {(user?.name || user?.email || "W").slice(0, 1).toUpperCase()}
           </span>
-          <div className="min-zero">
+          <div className="min-zero nav-user-details">
             <strong>{user?.name || t("Your account")}</strong>
             <small>{user?.email}</small>
           </div>
-          <Button variant="ghost" aria-label={t("Sign out")} onClick={signOut}>
+          <Button
+            variant="ghost"
+            aria-label={t("Sign out")}
+            title={collapsed ? t("Sign out") : undefined}
+            onClick={signOut}
+          >
             <LogOut size={17} />
           </Button>
         </div>

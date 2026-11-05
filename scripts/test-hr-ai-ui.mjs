@@ -11,11 +11,14 @@ Object.defineProperty(globalThis,'navigator',{value:dom.window.navigator,configu
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const dir=await mkdtemp(resolve('.local/hr-ai-ui-'));
 try {
- const b=await build({stdin:{contents:`export{default as CandidateAI}from'./apps/frontend/src/components/CandidateAI';export{outreachHtml,copyOutreach}from'./apps/frontend/src/lib/outreachRich';export{loadCandidateReview}from'./apps/frontend/src/lib/hrReview';export{LanguageProvider}from'./apps/frontend/src/lib/i18n';export{NoticeProvider}from'./apps/frontend/src/components/ui';export{QueryClient,QueryClientProvider}from'@tanstack/react-query';export{createElement,act}from'react';export{createRoot}from'react-dom/client';`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,packages:'external',platform:'node',format:'esm',jsx:'automatic',write:false,define:{'import.meta.env.VITE_API_ORIGIN':'""'}});
+ const b=await build({stdin:{contents:`export{default as CandidateAI}from'./apps/frontend/src/components/CandidateAI';export{outreachHtml,outreachRtf,copyOutreach}from'./apps/frontend/src/lib/outreachRich';export{loadCandidateReview}from'./apps/frontend/src/lib/hrReview';export{LanguageProvider}from'./apps/frontend/src/lib/i18n';export{NoticeProvider}from'./apps/frontend/src/components/ui';export{QueryClient,QueryClientProvider}from'@tanstack/react-query';export{createElement,act}from'react';export{createRoot}from'react-dom/client';`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,packages:'external',platform:'node',format:'esm',jsx:'automatic',write:false,define:{'import.meta.env.VITE_API_ORIGIN':'""'}});
  await writeFile(resolve(dir,'app.mjs'),b.outputFiles[0].contents);
- const {CandidateAI,outreachHtml,copyOutreach,loadCandidateReview,LanguageProvider,NoticeProvider,QueryClient,QueryClientProvider,createElement:h,act,createRoot}=await import(pathToFileURL(resolve(dir,'app.mjs')));
+ const {CandidateAI,outreachHtml,outreachRtf,copyOutreach,loadCandidateReview,LanguageProvider,NoticeProvider,QueryClient,QueryClientProvider,createElement:h,act,createRoot}=await import(pathToFileURL(resolve(dir,'app.mjs')));
  assert.ok(outreachHtml('<script>alert(1)</script>').includes('&lt;script&gt;'));
  assert.ok(!outreachHtml('<img src=x onerror=bad>').includes('<img'));
+ assert.ok(outreachRtf('Вітаю!\nПривіт 🙂').startsWith('{\\rtf1'));
+ assert.ok(outreachRtf('Вітаю!').includes('{\\b '));
+ assert.ok(outreachRtf('a{b}\\c').includes('a\\{b\\}\\\\c'));
  const settle=async()=>{for(let i=0;i<5;i++)await act(async()=>new Promise(r=>setTimeout(r,10)));};
  const sample='Вітаю!\n\nПро компанію\nWallpanels.com.\n\nПро вакансію\nКоординація проєктів.\n\nНаступний крок\nНадішліть резюме.\n\nСайт: https://wallpanels.com\nInstagram: https://www.instagram.com/wallpanels_com';
  for(const lang of ['en','ru']) {
@@ -45,7 +48,7 @@ try {
   assert.equal(writes.length,1,'Reopening in a fresh client reuses the review persisted on the server');
   const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===text);
   await act(async()=>button(lang==='ru'?'Скопировать сообщение':'Copy message').click());
-  assert.equal(copied,sample);assert.ok(rich.includes('<strong>Наступний крок</strong>'));assert.ok(rich.includes('<strong>Instagram:</strong>'));
+  assert.equal(copied,sample);assert.ok(rich.includes('<strong style="font-weight:700">Наступний крок</strong>'));assert.ok(rich.includes('<strong style="font-weight:700">Instagram:</strong>'));
   await act(async()=>button(lang==='ru'?'Редактировать текст':'Edit message').click());
   const input=document.querySelector('textarea');
   await act(async()=>{Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'Відредагований чернетковий текст');input.dispatchEvent(new Event('input',{bubbles:true}));});
@@ -58,6 +61,19 @@ try {
   Object.defineProperty(navigator,'clipboard',{value:{write:async()=>{throw Error('unsupported');},writeText:async text=>{copied=text;}},configurable:true});
   assert.equal(await copyOutreach(sample),'plain');assert.equal(copied,sample);
  }
+ // RTF-capable clipboard clients receive native rich data; rejection retries HTML.
+ ClipboardItem.supports = type => type === 'text/rtf';
+ let nativeRtf='', htmlWrites=0;
+ Object.defineProperty(navigator,'clipboard',{value:{write:async items=>{
+   if(items[0].data['text/rtf']) nativeRtf=await items[0].data['text/rtf'].text();
+   else htmlWrites++;
+ }},configurable:true});
+ assert.equal(await copyOutreach('Вітаю!'),'rich');assert.equal(nativeRtf,outreachRtf('Вітаю!'));
+ Object.defineProperty(navigator,'clipboard',{value:{write:async items=>{
+   if(items[0].data['text/rtf']) throw Error('RTF denied');
+   htmlWrites++;
+ }},configurable:true});
+ assert.equal(await copyOutreach('Вітаю!'),'rich');assert.equal(htmlWrites,1);
  // A second user/tab waits for the already-running review with GETs, never a second POST.
  let gets=0,posts=0;
  const complete={enabled:true,review:{stale:false}};
