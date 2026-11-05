@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.hr import Candidate, Vacancy, CandidateAIReview
 from app.services import hr_ai
+from app.services.hr_outreach import format_outreach
 
 router=APIRouter()
 _capacity=asyncio.Semaphore(2)
@@ -24,7 +25,11 @@ class DraftInput(BaseModel):
 
 def output(review, source):
     if not review:return None
-    return {'content':review.content,'message_draft':review.message_draft,'model':review.model,'created_by':review.created_by,'created_at':review.created_at,'updated_at':review.updated_at,'stale':review.source_hash!=hr_ai.fingerprint(source)}
+    content=dict(review.content)
+    original=content.get('message_uk','')
+    content['message_uk']=format_outreach(original,source['vacancy'],review.created_by)
+    draft=content['message_uk'] if review.message_draft==original else review.message_draft
+    return {'content':content,'message_draft':draft,'model':review.model,'created_by':review.created_by,'created_at':review.created_at,'updated_at':review.updated_at,'stale':review.source_hash!=hr_ai.fingerprint(source)}
 
 async def records(db, ident):
     c=await db.get(Candidate,ident)
@@ -60,9 +65,7 @@ async def generate(ident:uuid.UUID,body:GenerateInput,db:AsyncSession=Depends(ge
     await db.refresh(c);await db.refresh(v)
     if hr_ai.fingerprint(hr_ai.source_data(c,v))!=source_hash:
         raise HTTPException(409,'Application or requirements changed during analysis. Generate a fresh review.')
-    message=content['message_uk'].replace('{{recruiter_name}}',user.name or user.email).replace('{{vacancy_name}}',v.name)
-    if '{{recruiter_name}}' not in content['message_uk']:
-        message='Вітаю!\nМене звати '+(user.name or user.email)+', я рекрутер Wallpanels.com.\n\n'+message.removeprefix('Вітаю!').lstrip()
+    message=format_outreach(content['message_uk'],v.name)
     content['message_uk']=message
     now=datetime.now(timezone.utc)
     if review:
