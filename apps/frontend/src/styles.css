@@ -4378,3 +4378,37 @@ input[aria-invalid="true"] {
 .hr-ai-overview p {
   white-space: pre-line;
 }
+
+.hr-copy-contact {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  cursor: copy;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.hr-copy-contact:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.hr-copy-contact:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+.hr-message-preview {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface, #fff);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.hr-message-preview strong {
+  font-weight: 700;
+}

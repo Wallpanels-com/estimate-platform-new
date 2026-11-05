@@ -25,7 +25,7 @@ import {
 } from "../components/ui";
 import Select from "../components/Select";
 import HRPagination from "../components/HRPagination";
-import CandidateTelegram from "../components/CandidateTelegram";
+import CopyContact from "../components/CopyContact";
 import CandidateAI from "../components/CandidateAI";
 
 type Vacancy = {
@@ -469,41 +469,26 @@ export default function HR() {
                               >
                                 {c.name}
                               </button>
-                              {c.email && (
-                                <div
-                                  className={`hr-contact${c.contact_flags.includes("email_ru") ? " hr-contact-review" : ""}`}
-                                  title={
-                                    c.contact_flags.includes("email_ru")
-                                      ? t("Email .ru — contact to verify")
-                                      : undefined
+                              <CopyContact
+                                value={c.email}
+                                kind="email"
+                                className={
+                                  c.contact_flags.includes("email_ru")
+                                    ? "hr-contact-review"
+                                    : ""
+                                }
+                              />
+                              <div className="hr-phone-row">
+                                <CopyContact
+                                  value={c.phone}
+                                  kind="phone"
+                                  className={
+                                    c.contact_flags.includes("phone_plus7")
+                                      ? "hr-contact-review"
+                                      : ""
                                   }
-                                >
-                                  {c.email}
-                                </div>
-                              )}
-                              {(c.phone || c.telegram_username) && (
-                                <div className="hr-phone-row">
-                                  <span
-                                    className={`hr-contact${c.contact_flags.includes("phone_plus7") ? " hr-contact-review" : ""}`}
-                                    title={
-                                      c.contact_flags.includes("phone_plus7")
-                                        ? t("Phone +7 — contact to verify")
-                                        : undefined
-                                    }
-                                  >
-                                    {c.phone}
-                                  </span>
-                                  <CandidateTelegram
-                                    phone={c.phone}
-                                    username={c.telegram_username}
-                                  />
-                                </div>
-                              )}
-                              {c.contact_flags.length > 0 && (
-                                <small className="hr-contact hr-contact-review">
-                                  {t("Contact to verify")}
-                                </small>
-                              )}
+                                />
+                              </div>
                             </td>
                             <td>
                               <div className="hr-skills">
@@ -775,14 +760,8 @@ function CandidateCard({
       <form onSubmit={save}>
         <div className="modal-body hr-candidate-body">
           <div className="hr-candidate-contact">
-            <span>{c.email}</span>
-            <span className="hr-phone-row">
-              <span>{c.phone}</span>
-              <CandidateTelegram
-                phone={c.phone}
-                username={c.telegram_username}
-              />
-            </span>
+            <CopyContact value={c.email} kind="email" />
+            <CopyContact value={c.phone} kind="phone" />
           </div>
           {c.contact_flags.length > 0 && (
             <div className="hr-contact-flags">
@@ -817,7 +796,7 @@ function CandidateCard({
               variant={cardTab === "ai" ? "primary" : "ghost"}
               onClick={() => setCardTab("ai")}
             >
-              {t("AI review")}
+              {t("Application review")}
             </Button>
             <Button
               role="tab"
@@ -830,7 +809,7 @@ function CandidateCard({
             </Button>
           </div>
           <div id="hr-ai-panel" role="tabpanel" hidden={cardTab !== "ai"}>
-            <CandidateAI key={c.id} id={c.id} />
+            <CandidateAI key={c.id} id={c.id} active={cardTab === "ai"} />
           </div>
           <div
             id="hr-application-panel"

@@ -74,3 +74,12 @@ Migration `0010_hr_ai_reviews` adds a separate `hr_ai_reviews` table. Existing c
 The owner can choose page checkboxes in **Team accounts → Add employee**. `POST /users` validates the selected page keys and creates the account and grants atomically. No selections means no accessible business pages. Existing users' grants and the owner's immutable full access are unchanged; non-owners cannot create accounts or change grants. The same checkbox component is used for later access editing.
 
 Verification: `npm run test:hr-ai-ui`, `npm run test:access-ui`, `npm run test:hr-ui`, Python `tests/test_hr_ai.py`, and `npm run audit:workflows` in an isolated loopback schema. Provider connectivity is checked separately using synthetic application data, never by bulk-sending real candidate files.
+
+
+## Review and contact workflow update
+
+Opening a candidate's review tab now loads the saved review first and generates only when none exists or professional answers/requirements have changed. The note shortcut does not trigger AI until the review tab is opened. React Query deduplicates requests in a tab; the existing PostgreSQL lock deduplicates across tabs/users. A second requester polls the saved result instead of restarting generation. Closing a card does not discard the server result. Failed generation is not automatically retried in a loop. There is no manual refresh button; errors retain an explicit retry action.
+
+The heading is **Application review / Разбор анкеты**, with a ScanText icon and no subtitle. Phone/email are keyboard-accessible copy buttons in both table and card; copying changes no candidate fields. Telegram/web buttons and the redundant contact-verification badge were removed. Existing stored handles, source answers and contact data remain intact. No automatic row highlighting or ranking based on telephone country codes or email domains was added.
+
+Recruiter messages now have a formatted preview, explicit Edit message mode and safe rich clipboard output (`text/html` plus `text/plain`). Recognized greeting/section/link labels become bold; imported/model text is escaped, never interpreted as HTML. Applications that accept rich paste can preserve bold headings; clients without rich clipboard support fall back to plain text and show a corresponding notice. Messages are never sent automatically. Generated legacy messages receive section headings without another model request; manually edited drafts are preserved.

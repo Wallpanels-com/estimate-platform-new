@@ -994,5 +994,17 @@
   "Enter a message.": "Введите сообщение.",
   "Candidate card": "Карточка кандидата",
   "AI review": "ИИ-разбор",
-  "Application & notes": "Анкета и заметки"
+  "Application & notes": "Анкета и заметки",
+  "Application review": "Разбор анкеты",
+  "Recruiter message preview": "Предпросмотр сообщения рекрутёра",
+  "Edit message": "Редактировать текст",
+  "Message copied with formatting": "Сообщение скопировано с форматированием",
+  "Message copied as plain text": "Сообщение скопировано без форматирования",
+  "You have unsaved message changes.": "Есть несохранённые изменения сообщения.",
+  "Copy email {0}": "Скопировать почту {0}",
+  "Copy phone {0}": "Скопировать телефон {0}",
+  "Email copied": "Почта скопирована",
+  "Phone copied": "Телефон скопирован",
+  "Could not copy. Select and copy the contact manually.": "Не удалось скопировать. Выделите и скопируйте контакт вручную.",
+  "Updating the review for changed application or job requirements…": "Обновляем разбор с учётом изменений анкеты или требований…"
 }

@@ -28,4 +28,18 @@ def format_outreach(message: str, vacancy_name: str, author_name: str = '') -> s
             sentence=re.sub(r'(?im)^\s*(?:Сайт|Instagram|Інстаграм|Наш сайт та інстаграм|Більше про нас|Детальніше про нас|Додаткова інформація про компанію доступна на)\s*[:—–-]?\s*[,;]?\s*$', '',sentence).strip()
             if sentence and sentence not in (',',';','та','і'):
                 paragraphs.append(sentence)
+    # Give older generated messages the same section hierarchy as new ones.
+    if not any(re.search(r'(?m)^(?:Про компанію|Про вакансію|Наступний крок)\s*$',p) for p in paragraphs):
+        role=[];conditions=[];next_step=[]
+        for part in paragraphs:
+            if re.match(r'^(?:Вітаю|Мене звати|Я Вікторія|Дяку|Ваша заявка|Ваш відгук)',part,re.I):continue
+            if re.match(r'^(?:Wallpanels|Ми\s*[—–-]|Наша компанія|Ми компанія)',part,re.I):continue
+            if re.match(r'^(?:Будь ласка|Надішліть|Буду рада|Чекаємо|Просимо)',part,re.I):next_step.append(part)
+            elif re.match(r'^(?:Робота|Графік|Умови|Формат роботи)',part,re.I):conditions.append(part)
+            else:role.append(part)
+        paragraphs=['Вітаю!','Мене звати Вікторія, я рекрутер Wallpanels.com.',f'Дякую за відгук на вакансію «{vacancy_name}».',
+            'Про компанію\nWallpanels.com створює інтер’єрні стінові панелі та дизайнерські рішення для житлових і комерційних просторів у США.',
+            'Про вакансію\n'+('\n\n'.join(role) if role else 'Буду рада розповісти детальніше про завдання під час короткої розмови.')]
+        if conditions:paragraphs.append('Умови\n'+'\n\n'.join(conditions))
+        paragraphs.append('Наступний крок\n'+('\n\n'.join(next_step) if next_step else 'Будь ласка, надішліть ваше актуальне резюме або портфоліо та повідомте про вашу доступність для короткої розмови.'))
     return '\n\n'.join(paragraphs)+'\n\nСайт: '+LINKS[0]+'\nInstagram: '+LINKS[1]

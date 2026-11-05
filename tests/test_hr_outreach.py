@@ -10,13 +10,14 @@ class OutreachTests(unittest.TestCase):
   raw='Вітаю! Мене звати Dmitry, я рекрутер Wallpanels.com. Дякую за відгук на вакансію Project Manager. Робота віддалена, вечірній графік. Будь ласка, надішліть резюме. Детальніше про нас: https://wallpanels.com, https://www.instagram.com/wallpanels_com'
   result=format_outreach(raw,'Project Manager','Dmitry')
   self.assertIn('Мене звати Вікторія',result);self.assertNotIn('Dmitry',result)
-  self.assertIn('\n\nРобота віддалена',result)
+  self.assertIn('Умови\nРобота віддалена',result)
+  self.assertIn('Про компанію\n',result);self.assertIn('Наступний крок\n',result)
   self.assertIn('Сайт: https://wallpanels.com\nInstagram:',result)
   self.assertEqual(result.count('https://wallpanels.com'),1)
   self.assertEqual(result,format_outreach(result,'Project Manager','Dmitry'))
  def test_intro_keeps_role_when_name_is_followed_by_conjunction(self):
   text=format_outreach('Вітаю! Мене звати Dmitry і я рекрутер Wallpanels.com. Надішліть резюме.','PM','Dmitry')
-  self.assertIn('Вікторія і я рекрутер Wallpanels.com',text)
+  self.assertIn('Мене звати Вікторія, я рекрутер Wallpanels.com.',text)
  def test_new_template_is_not_account_dependent(self):
   result=format_outreach('Вітаю! Мене звати {{recruiter_name}}, я рекрутер.\n\nПро вакансію\n{{vacancy_name}}.\n\nНаступний крок\nНадішліть резюме.','Marketer')
   self.assertIn('Вікторія',result);self.assertIn('Про вакансію\nMarketer',result)

@@ -1,40 +1,38 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Sparkles, Copy, RefreshCw, Check, MessageSquare } from "lucide-react";
-import { request, post, patch, errorMessage } from "../lib/api";
+import { ScanText, Copy, Check, MessageSquare, Pencil } from "lucide-react";
+import { patch, errorMessage } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 import { Button, ErrorNotice, useNotice } from "./ui";
 
-type Evidence = { text: string; question: string; answer: string };
-type Review = {
-  content: {
-    summary: string;
-    experience: string;
-    strengths: Evidence[];
-    gaps: Evidence[];
-    interview_questions: string[];
-    message_uk: string;
-  };
-  message_draft: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  stale: boolean;
-};
-type Result = { enabled: boolean; review: Review | null };
-export default function CandidateAI({ id }: { id: string }) {
+import {
+  loadCandidateReview,
+  type ReviewResult as Result,
+  type Evidence,
+} from "../lib/hrReview";
+import { outreachLine, copyOutreach } from "../lib/outreachRich";
+export default function CandidateAI({
+  id,
+  active = true,
+}: {
+  id: string;
+  active?: boolean;
+}) {
   const { t, language } = useI18n();
   const notify = useNotice();
   const client = useQueryClient();
   const key = ["hr-ai", id];
   const query = useQuery({
     queryKey: key,
-    queryFn: () => request<Result>(`/hr/candidates/${id}/ai`),
+    queryFn: () => loadCandidateReview(id),
+    enabled: active,
     retry: false,
     staleTime: 30_000,
-    refetchInterval: 30_000,
+    refetchOnWindowFocus: false,
+    refetchInterval: (query) =>
+      query.state.status === "error" ? false : 30_000,
   });
-  const [busy, setBusy] = useState(false);
+  const [editingMessage, setEditingMessage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [edited, setEdited] = useState<{
@@ -42,24 +40,9 @@ export default function CandidateAI({ id }: { id: string }) {
     version: string;
   } | null>(null);
   const review = query.data?.review;
+  const busy = query.isFetching && (!review || review.stale);
   const message = edited?.text ?? review?.message_draft ?? "";
   const dirty = !!review && message !== review.message_draft;
-  async function generate() {
-    if (busy || saving || dirty) return;
-    setBusy(true);
-    setError("");
-    try {
-      const result = await post<Result>(`/hr/candidates/${id}/ai`, {
-        refresh: !!review && !review.stale,
-      });
-      client.setQueryData(key, result);
-      setEdited(null);
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  }
   async function saveMessage() {
     if (!review || saving || busy || !dirty) return;
     setSaving(true);
@@ -71,6 +54,7 @@ export default function CandidateAI({ id }: { id: string }) {
       });
       client.setQueryData(key, result);
       setEdited(null);
+      setEditingMessage(false);
       notify(t("Message saved"));
     } catch (e) {
       setError(errorMessage(e));
@@ -83,34 +67,14 @@ export default function CandidateAI({ id }: { id: string }) {
       <header className="hr-ai-heading">
         <div>
           <h3 id={`ai-${id}`}>
-            <Sparkles size={18} />
-            {t("AI application review")}
+            <ScanText size={18} />
+            {t("Application review")}
           </h3>
-          <p>
-            {t(
-              "Evidence from the application. The recruiter makes the decision.",
-            )}
-          </p>
         </div>
-        <Button
-          onClick={() => void generate()}
-          busy={busy}
-          disabled={!query.data?.enabled || saving || dirty}
-          variant={review ? "ghost" : "primary"}
-        >
-          {review ? <RefreshCw size={16} /> : <Sparkles size={16} />}
-          {t(
-            busy
-              ? "Preparing review…"
-              : review
-                ? "Refresh review"
-                : "Analyze application",
-          )}
-        </Button>
       </header>
       {query.isPending ? (
         <p role="status" className="hr-muted">
-          {t("Loading saved review…")}
+          {t("Preparing review…")}
         </p>
       ) : query.isError ? (
         <ErrorNotice retry={() => void query.refetch()}>
@@ -121,7 +85,7 @@ export default function CandidateAI({ id }: { id: string }) {
           {t("HR AI is not configured. Contact Dmitry.")}
         </p>
       ) : null}
-      {busy && (
+      {busy && !query.isPending && (
         <p role="status" className="hr-muted">
           {t(
             "Checking professional answers and preparing a Ukrainian message…",
@@ -129,19 +93,12 @@ export default function CandidateAI({ id }: { id: string }) {
         </p>
       )}
       {error && <ErrorNotice>{t(error)}</ErrorNotice>}
-      {!review && !query.isPending && !query.isError && (
-        <p className="hr-muted">
-          {t(
-            "Only professional answers and vacancy requirements are sent to Groq. Phone, email and HR notes are excluded. Analysis runs only when requested.",
-          )}
-        </p>
-      )}
       {review && (
         <>
           {review.stale && (
             <p className="hr-ai-stale" role="status">
               {t(
-                "The application or job requirements changed. Refresh the review before using it.",
+                "Updating the review for changed application or job requirements…",
               )}
             </p>
           )}
@@ -193,19 +150,38 @@ export default function CandidateAI({ id }: { id: string }) {
               <MessageSquare size={17} />
               {t("First contact · Ukrainian")}
             </h4>
-            <textarea
-              aria-label={t("Recruiter message")}
-              value={message}
-              onChange={(e) =>
-                setEdited({
-                  text: e.target.value,
-                  version: edited?.version ?? review.updated_at,
-                })
-              }
-              maxLength={6000}
-              rows={9}
-              disabled={saving || busy}
-            />
+            {editingMessage ? (
+              <textarea
+                aria-label={t("Recruiter message")}
+                value={message}
+                onChange={(e) =>
+                  setEdited({
+                    text: e.target.value,
+                    version: edited?.version ?? review.updated_at,
+                  })
+                }
+                maxLength={6000}
+                rows={9}
+                disabled={saving || busy}
+              />
+            ) : (
+              <div
+                className="hr-message-preview"
+                role="document"
+                aria-label={t("Recruiter message preview")}
+                tabIndex={0}
+              >
+                {message.split("\n").map((line, i) => {
+                  const { heading, rest } = outreachLine(line);
+                  return (
+                    <div key={i}>
+                      {heading && <strong>{heading}</strong>}
+                      {rest || (!heading ? "\u00a0" : "")}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <div className="hr-ai-message-actions">
               <small>
                 {t(
@@ -213,21 +189,38 @@ export default function CandidateAI({ id }: { id: string }) {
                 )}
               </small>
               <div className="button-row">
-                <Button
-                  onClick={() => void saveMessage()}
-                  busy={saving}
-                  disabled={!dirty || busy || !message.trim()}
-                >
-                  <Check size={16} />
-                  {t("Save message")}
-                </Button>
+                {!editingMessage && (
+                  <Button
+                    onClick={() => setEditingMessage(true)}
+                    disabled={busy}
+                  >
+                    <Pencil size={16} />
+                    {t("Edit message")}
+                  </Button>
+                )}
+                {editingMessage && (
+                  <Button
+                    onClick={() => void saveMessage()}
+                    busy={saving}
+                    disabled={!dirty || busy || !message.trim()}
+                  >
+                    <Check size={16} />
+                    {t("Save message")}
+                  </Button>
+                )}
                 <Button
                   variant="primary"
                   disabled={!message.trim()}
                   onClick={async () => {
                     try {
-                      await navigator.clipboard.writeText(message);
-                      notify(t("Message copied"));
+                      const format = await copyOutreach(message);
+                      notify(
+                        t(
+                          format === "rich"
+                            ? "Message copied with formatting"
+                            : "Message copied as plain text",
+                        ),
+                      );
                     } catch {
                       setError(
                         t(
@@ -244,9 +237,7 @@ export default function CandidateAI({ id }: { id: string }) {
             </div>
             {dirty && (
               <p role="status" className="hr-muted">
-                {t(
-                  "You have unsaved message changes. Save them before refreshing the review.",
-                )}
+                {t("You have unsaved message changes.")}
               </p>
             )}
           </section>

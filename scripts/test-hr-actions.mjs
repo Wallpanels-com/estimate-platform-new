@@ -218,18 +218,15 @@ try {
         (b) => !b.hasAttribute("title"),
       ),
     );
-    const telegram = document.querySelector(".hr-telegram");
-    assert.equal(
-      telegram.getAttribute("href"),
-      "tg://resolve?phone=380000000000",
-    );
-    assert.equal(telegram.getAttribute("target"), null);
-    assert.equal(telegram.getAttribute("rel"), "noopener noreferrer");
-    assert.equal(
-      document.querySelector(".hr-telegram-web").getAttribute("href"),
-      "https://t.me/+380000000000",
-    );
-    assert.equal(writes.length, 0); // Rendering a contact link must never change hiring status.
+    assert.equal(document.querySelector(".hr-telegram"), null);
+    assert.equal(document.querySelector(".hr-telegram-web"), null);
+    let copiedContact = "";
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: async value => { copiedContact = value; } }, configurable: true });
+    await click(language === "ru" ? "Скопировать телефон +380000000000" : "Copy phone +380000000000");
+    assert.equal(copiedContact, "+380000000000");
+    await click(language === "ru" ? "Скопировать почту example@example.com" : "Copy email example@example.com");
+    assert.equal(copiedContact, "example@example.com");
+    assert.equal(writes.length, 0); // Copying a contact never changes the candidate.
     await click(labels[0]);
     assert.ok(row.priority);
     assert.deepEqual(Object.keys(writes[0]).sort(), ["priority", "version"]);
@@ -260,14 +257,8 @@ try {
     assert.equal(document.querySelector("dialog"), null);
     assert.equal(row.location, "Previously recorded location");
     assert.equal(row.location_verified, true);
-    assert.equal(
-      document.querySelector(".hr-telegram").getAttribute("href"),
-      "https://t.me/example_user",
-    );
-    assert.equal(
-      document.querySelector(".hr-telegram").textContent.trim(),
-      "@example_user",
-    );
+    assert.equal(row.telegram_username, "example_user");
+    assert.equal(document.querySelector(".hr-telegram"), null);
     assert.equal(document.querySelector(".hr-telegram-web"), null);
     fail = true;
     await click(labels[3]);
@@ -294,7 +285,7 @@ try {
     document.getElementById("root").innerHTML = "";
   }
   console.log(
-    "HR actions UI passed: EN/RU star, note focus, hide/restore, no tooltips, conflict recovery and preserved stage/notes, retained location data, and safe Telegram phone links.",
+    "HR actions UI passed: EN/RU star, note focus, hide/restore, no tooltips, conflict recovery and preserved stage/notes, retained location data, and one-click contact copying with no Telegram links.",
   );
 } finally {
   await rm(dir, { recursive: true, force: true });
