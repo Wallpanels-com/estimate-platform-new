@@ -30,6 +30,12 @@ class HRAITests(unittest.IsolatedAsyncioTestCase):
         with patch('app.services.hr_ai.settings.GROQ_API_KEY','test-secret'),patch('httpx.AsyncClient.post',new=AsyncMock(return_value=fake)):
             with self.assertRaises(AIUnavailable) as err:await generate_review(source)
             self.assertIn('verified',err.exception.message)
+        response['strengths']=[{'text':'Stated English level','question':'English level','answer':'B2'}]*9
+        fake=SimpleNamespace(status_code=200,is_success=True,json=lambda:{'choices':[{'message':{'content':json.dumps(response)}}]})
+        with patch('app.services.hr_ai.settings.GROQ_API_KEY','test-secret'),patch('httpx.AsyncClient.post',new=AsyncMock(return_value=fake)) as transport:
+            result=await generate_review(source)
+            self.assertEqual(len(result['strengths']),6)
+            self.assertNotIn('maxItems',json.dumps(transport.call_args.kwargs['json']['response_format']))
         fake=SimpleNamespace(status_code=401,is_success=False)
         with patch('app.services.hr_ai.settings.GROQ_API_KEY','test-secret'),patch('httpx.AsyncClient.post',new=AsyncMock(return_value=fake)):
             with self.assertRaises(AIUnavailable) as err:await generate_review(source)
