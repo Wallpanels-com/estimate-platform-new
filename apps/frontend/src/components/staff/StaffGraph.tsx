@@ -226,6 +226,8 @@ export default function StaffGraph({
         minZoom={0.08}
         maxZoom={1.5}
         preventScrolling={false}
+        zoomOnScroll={false}
+        zoomOnDoubleClick={false}
         attributionPosition="top-right"
       >
         <Background
