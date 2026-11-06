@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   StickyNote,
+  UsersRound,
 } from "lucide-react";
 import { request, post, patch, errorMessage } from "../lib/api";
 import { useI18n } from "../lib/i18n";
@@ -26,6 +27,8 @@ import {
 import Select from "../components/Select";
 import HRPagination from "../components/HRPagination";
 import CopyContact from "../components/CopyContact";
+import { Link } from "react-router-dom";
+import { useAuth } from "../lib/auth";
 import CandidateAI from "../components/CandidateAI";
 
 type Vacancy = {
@@ -109,6 +112,7 @@ const professional = (answers: Record<string, string>) =>
       !k.match(/имя|адрес|номер|email|name|phone/i),
   );
 export default function HR() {
+  const { user } = useAuth();
   const { t, language } = useI18n();
   const client = useQueryClient();
   const notify = useNotice();
@@ -243,6 +247,12 @@ export default function HR() {
           <h1>{t("HR department")}</h1>
         </div>
         <div className="page-actions">
+          {user?.can_manage_access && (
+            <Link className="button" to="/hr/staff">
+              <UsersRound size={17} />
+              {language === "ru" ? "Сотрудники" : "Staff"}
+            </Link>
+          )}
           <Button
             onClick={() => {
               setEdit("new");

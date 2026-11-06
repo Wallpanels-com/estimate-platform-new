@@ -24,6 +24,7 @@ const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Builder = lazy(() => import("./pages/Builder"));
 const PriceBook = lazy(() => import("./pages/PriceBook"));
 const QuickEstimate = lazy(() => import("./pages/QuickEstimate"));
+const Staff = lazy(() => import("./pages/Staff"));
 const HR = lazy(() => import("./pages/HR"));
 const Users = lazy(() => import("./pages/Users"));
 const client = new QueryClient({
@@ -75,6 +76,14 @@ function App() {
               element={
                 <PageGate page="hr">
                   <HR />
+                </PageGate>
+              }
+            />
+            <Route
+              path="hr/staff"
+              element={
+                <PageGate page="hr">
+                  <Staff />
                 </PageGate>
               }
             />

@@ -188,3 +188,6 @@ async def confirm_import(ident:uuid.UUID,body:ImportInput,db:AsyncSession=Depend
 
 from app.api.v1.hr_ai import router as ai_router
 router.include_router(ai_router)
+
+from app.api.v1.staff import router as staff_router
+router.include_router(staff_router)
