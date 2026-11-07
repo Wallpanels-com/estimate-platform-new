@@ -1,24 +1,29 @@
 import { useId, useState, type FormEvent, type ReactNode } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   BriefcaseBusiness,
   Check,
   ExternalLink,
   FileText,
-  History,
   Pause,
   Pencil,
   Save,
   UserRound,
   UserRoundX,
 } from "lucide-react";
-import { request, patch, errorMessage } from "../../lib/api";
+import { patch, errorMessage } from "../../lib/api";
 import type { StaffDirectory, StaffMember } from "../../lib/staff";
 import Select from "../Select";
+import { StaffContacts, StaffReserveContacts } from "./StaffContacts";
+import {
+  documentCaption,
+  documentLink,
+  locationName,
+} from "../../lib/staffProfile";
 import { useI18n } from "../../lib/i18n";
-import { Button, ErrorNotice, Field, Loading, Modal, useNotice } from "../ui";
+import { Button, ErrorNotice, Field, Modal, useNotice } from "../ui";
 
-type Tab = "overview" | "documents" | "history";
+type Tab = "overview" | "notes";
 const statuses = [
   ["active", Check, "Active", "Работает"],
   ["paused", Pause, "Paused", "На паузе"],
@@ -80,20 +85,6 @@ export default function StaffCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<Tab>("overview");
-  const history = useQuery({
-    queryKey: ["staff-history", person.id],
-    queryFn: () =>
-      request<
-        {
-          id: string;
-          actor_name: string;
-          created_at: string;
-          action: string;
-          fields: string[];
-        }[]
-      >(`/hr/staff/${person.id}/history`),
-    enabled: tab === "history",
-  });
   const dirty = JSON.stringify(form) !== JSON.stringify(person);
   function dismiss() {
     if (
@@ -144,8 +135,7 @@ export default function StaffCard({
   }
   const tabs = [
     ["overview", UserRound, L("Overview", "Обзор")],
-    ["documents", FileText, L("Documents & notes", "Документы и заметки")],
-    ["history", History, L("History", "История")],
+    ["notes", FileText, L("Notes", "Заметки")],
   ] as const;
   const status = statuses.find(([s]) => s === form.status)!;
   const StatusIcon = status[1];
@@ -155,16 +145,29 @@ export default function StaffCard({
     .slice(0, 2)
     .map((n) => n[0])
     .join("");
-  const documents = [
+  const notes = [
     ...new Set([
-      "M",
       "N",
-      "O",
       "P",
       ...Object.keys(form.fields),
       ...Object.keys(form.links),
     ]),
-  ].filter((k) => !new Set("ABCDEFGHIJKL".split("")).has(k));
+  ].filter((k) => !new Set("ABCDEFGHIJKLMO".split("")).has(k));
+  const visibleNotes = editing
+    ? notes
+    : notes.filter((k) => form.fields[k]?.trim() || form.links[k]);
+  const caption = (key: string) =>
+    key === "F"
+      ? L("Telegram & phone", "Telegram и телефон")
+      : key === "K"
+        ? L("Email & PayPal", "Email и PayPal")
+        : key === "O"
+          ? L("Backup contacts", "Резервные контакты")
+          : key === "N"
+            ? L("Note", "Заметка")
+            : key === "P"
+              ? L("Additional note", "Дополнительная заметка")
+              : label(key);
   const nameInput = (key: "name" | "title" | "department", caption: string) => (
     <Field
       label={caption}
@@ -183,26 +186,28 @@ export default function StaffCard({
     </Field>
   );
   const sourceField = (k: string) => (
-    <Field key={k} label={label(k)} className="staff-source-field">
+    <Field key={k} label={caption(k)} className="staff-source-field">
       {editing ? (
         <div className="staff-edit-field">
-          {documents.includes(k) || (form.fields[k] || "").includes("\n") ? (
+          {notes.includes(k) ||
+          ["F", "K", "O"].includes(k) ||
+          (form.fields[k] || "").includes("\n") ? (
             <textarea
               rows={3}
               value={form.fields[k] || ""}
               maxLength={20000}
               onChange={(e) => field(k, e.target.value)}
-              aria-label={label(k)}
+              aria-label={caption(k)}
             />
           ) : (
             <input
               value={form.fields[k] || ""}
               maxLength={20000}
               onChange={(e) => field(k, e.target.value)}
-              aria-label={label(k)}
+              aria-label={caption(k)}
             />
           )}
-          {(form.links[k] || k === "M") && (
+          {form.links[k] && /https?:\/\//i.test(form.links[k]) && (
             <input
               aria-label={`${label(k)} URL`}
               type="url"
@@ -223,8 +228,14 @@ export default function StaffCard({
         </div>
       ) : (
         <div>
-          <ReadValue value={form.fields[k] || ""} />
-          {form.links[k] && /^(https?:\/\/|mailto:)/i.test(form.links[k]) && (
+          <ReadValue
+            value={
+              k === "H"
+                ? locationName(form.fields[k] || "")
+                : form.fields[k] || ""
+            }
+          />
+          {form.links[k] && /^https?:\/\//i.test(form.links[k]) && (
             <a
               className="staff-document"
               href={form.links[k]}
@@ -234,6 +245,62 @@ export default function StaffCard({
               <ExternalLink size={14} />
               {L("Open link", "Открыть ссылку")}
             </a>
+          )}
+        </div>
+      )}
+    </Field>
+  );
+  const documentUrl = documentLink(form.fields.M, form.links.M);
+  const docCaption = documentCaption(form.fields.M || "");
+  const documents = (
+    <Field label={L("Documents", "Документы")} className="staff-profile-full">
+      {editing ? (
+        <div className="staff-edit-field">
+          {docCaption && (
+            <input
+              aria-label={L("Document name", "Название документа")}
+              value={form.fields.M || ""}
+              maxLength={20000}
+              onChange={(e) => field("M", e.target.value)}
+            />
+          )}
+          <input
+            aria-label={L("Document URL", "Ссылка на документы")}
+            type="url"
+            placeholder="https://"
+            value={
+              form.links.M ?? (documentLink(form.fields.M) ? form.fields.M : "")
+            }
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                fields: documentLink(person.fields.M)
+                  ? { ...f.fields, M: e.target.value }
+                  : f.fields,
+                links: e.target.value
+                  ? { ...f.links, M: e.target.value }
+                  : Object.fromEntries(
+                      Object.entries(f.links).filter(([k]) => k !== "M"),
+                    ),
+              }))
+            }
+          />
+        </div>
+      ) : (
+        <div>
+          {docCaption && <ReadValue value={docCaption} />}
+          {documentUrl ? (
+            <a
+              className="staff-document button secondary"
+              href={documentUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLink size={14} />
+              {L("Open link", "Открыть ссылку")}
+            </a>
+          ) : (
+            !docCaption && <ReadValue value="" />
           )}
         </div>
       )}
@@ -400,70 +467,55 @@ export default function StaffCard({
                     </>,
                     "staff-profile-employment",
                   )}
-                  <div className="staff-profile-side">
-                    {panel(
-                      L("Contact information", "Контактная информация"),
-                      <UserRound size={17} />,
-                      ["F", "K", "H"].map(sourceField),
-                    )}
-                    {panel(
-                      L("Personal information", "Личные сведения"),
-                      <UserRound size={17} />,
-                      sourceField("L"),
-                    )}
-                  </div>
+                  {panel(
+                    L("Contact information", "Контактная информация"),
+                    <UserRound size={17} />,
+                    editing ? (
+                      ["F", "K"].map(sourceField)
+                    ) : (
+                      <StaffContacts
+                        contact={form.fields.F || ""}
+                        email={form.fields.K || ""}
+                        ru={ru}
+                      />
+                    ),
+                    `staff-profile-contacts ${editing ? "staff-profile-contacts-editing" : ""}`,
+                  )}
+                  {panel(
+                    L("Personal information", "Личные сведения"),
+                    <UserRound size={17} />,
+                    <>
+                      {["H", "L"].map(sourceField)}
+                      {documents}
+                    </>,
+                    "staff-profile-personal",
+                  )}
+                  {panel(
+                    L("Backup contacts", "Резервные контакты"),
+                    <UserRound size={17} />,
+                    editing ? (
+                      sourceField("O")
+                    ) : (
+                      <StaffReserveContacts value={form.fields.O || ""} />
+                    ),
+                    "staff-profile-reserve",
+                  )}
                 </div>
               </>
             )}
-            {tab === "documents" &&
+            {tab === "notes" &&
               panel(
-                L(
-                  "Documents & additional information",
-                  "Документы и дополнительные сведения",
-                ),
+                L("Notes", "Заметки"),
                 <FileText size={17} />,
-                documents.map(sourceField),
-                "staff-profile-documents",
-              )}
-            {tab === "history" && (
-              <section className="staff-profile-section">
-                <h3>
-                  <History size={17} />
-                  {L("Change history", "История изменений")}
-                </h3>
-                {history.isLoading ? (
-                  <Loading />
-                ) : history.error ? (
-                  <ErrorNotice>{errorMessage(history.error)}</ErrorNotice>
-                ) : history.data?.length ? (
-                  <ul className="staff-history">
-                    {history.data.map((h) => (
-                      <li key={h.id}>
-                        <strong>{h.actor_name}</strong>
-                        <span>
-                          {new Date(h.created_at).toLocaleString(
-                            ru ? "ru-RU" : "en-US",
-                          )}
-                        </span>
-                        <small>
-                          {h.action === "create"
-                            ? L("Employee imported", "Сотрудник импортирован")
-                            : L("Employee updated", "Данные обновлены")}
-                        </small>
-                      </li>
-                    ))}
-                  </ul>
+                visibleNotes.length ? (
+                  visibleNotes.map(sourceField)
                 ) : (
                   <p className="staff-profile-empty">
-                    {L("No changes recorded yet.", "Изменений пока нет.")}
+                    {L("No notes yet.", "Заметок пока нет.")}
                   </p>
-                )}
-                <p className="staff-source">
-                  {L("Source", "Источник")}: {person.source_sheet} ·{" "}
-                  {L("row", "строка")} {person.source_row}
-                </p>
-              </section>
-            )}
+                ),
+                "staff-profile-notes",
+              )}
           </fieldset>
         </div>
         <footer className="modal-footer staff-profile-footer">

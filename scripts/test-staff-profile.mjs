@@ -1,0 +1,22 @@
+/** Contact presentation is derived from source cells; no real employee data. */
+import assert from 'node:assert/strict';
+import {build} from 'esbuild';
+const bundle=await build({entryPoints:['apps/frontend/src/lib/staffProfile.ts'],bundle:true,write:false,format:'esm',platform:'node'});
+const{primaryContacts,emailContacts,contactTokens,locationName,documentLink,documentCaption}=await import('data:text/javascript;base64,'+Buffer.from(bundle.outputFiles[0].text).toString('base64'));
+assert.deepEqual(primaryContacts('@staff_name\n+38 (099) 111-22-33'),{telegram:['@staff_name'],phones:['+38 (099) 111-22-33'],other:''});
+assert.deepEqual(primaryContacts('@staff_name ; @other_name').telegram,['@staff_name','@other_name']);
+assert.equal(primaryContacts('380991112233.0').phones[0],'380991112233');
+assert.equal(primaryContacts('Unknown contact').other,'Unknown contact');
+assert.equal(contactTokens('user@example.com').length,0);
+assert.equal(contactTokens('2024-01-02').length,0);
+for(const value of ['PayPal - billing@example.com','billing@example.com -Pay Pal','PayPal\nbilling@example.com'])assert.deepEqual(emailContacts(value),{email:[],paypal:['billing@example.com'],other:''});
+assert.deepEqual(emailContacts('work@example.com     PayPal - billing@example.com'),{email:['work@example.com'],paypal:['billing@example.com'],other:''});
+assert.deepEqual(emailContacts('PayPal: billing@example.com\nEmail: work@example.com'),{email:['work@example.com'],paypal:['billing@example.com'],other:''});
+assert.deepEqual(emailContacts('PayPal: billing@example.com; Email: work@example.com'),{email:['work@example.com'],paypal:['billing@example.com'],other:''});
+assert.deepEqual(emailContacts('paypal.user@example.com'),{email:['paypal.user@example.com'],paypal:[],other:''},'PayPal inside an address is not a payment label');
+assert.deepEqual(emailContacts('work@example.com\nPRIVATE IBAN'),{email:['work@example.com'],paypal:[],other:'PRIVATE IBAN'});
+const backup='+15550101111 Mother Anna\n+15550102222 Brother Max';
+assert.deepEqual(contactTokens(backup).map(x=>x.value),['+15550101111','+15550102222']);
+assert.equal(locationName('UA'),'Ukraine');assert.equal(locationName('USA'),'USA');assert.equal(locationName('America'),'USA');assert.equal(locationName('UA, Kyiv'),'Ukraine, Kyiv');assert.equal(locationName('Unknown location'),'Unknown location');
+assert.equal(documentLink('Link','https://example.com/doc'),'https://example.com/doc');assert.equal(documentCaption('Link'),'');assert.equal(documentLink('https://example.com/doc'),'https://example.com/doc');assert.equal(documentLink('Link','javascript:alert(1)'),null);assert.equal(documentLink('Link','mailto:user@example.com'),null);
+console.log('Staff profile: phone/Telegram separation, email/PayPal labels, preserved unknown details, backup contacts, country names and safe document links passed.');

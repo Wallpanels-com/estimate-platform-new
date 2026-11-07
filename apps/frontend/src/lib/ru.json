@@ -1,4 +1,6 @@
 {
+  "Copy Telegram {0}": "Скопировать Telegram {0}",
+  "Telegram copied": "Telegram скопирован",
   "Formatted text (.rtf)": "Текст с форматированием (.rtf)",
   "Open the RTF file in TextEdit, copy its text, then paste into Telegram with Cmd+V.": "Откройте RTF в TextEdit, скопируйте текст и вставьте в Telegram через Cmd+V.",
   "Expand menu": "Развернуть меню",

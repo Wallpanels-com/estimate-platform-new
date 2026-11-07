@@ -1231,9 +1231,9 @@
 }
 .staff-profile-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
 }
 .staff-profile-section {
   min-width: 0;
@@ -1268,11 +1268,6 @@
 .staff-profile-employment .staff-profile-full {
   grid-column: 1 / -1;
 }
-.staff-profile-side {
-  display: grid;
-  gap: 20px;
-  min-width: 0;
-}
 .staff-card .field {
   gap: 5px;
   min-width: 0;
@@ -1305,18 +1300,18 @@
   font-size: 11px;
   color: #60694f;
 }
-.staff-profile-documents .staff-profile-fields {
+.staff-profile-notes .staff-profile-fields {
   gap: 0;
 }
-.staff-profile-documents .staff-source-field {
+.staff-profile-notes .staff-source-field {
   padding: 18px 0;
   border-top: 1px solid #e8e9e3;
 }
-.staff-profile-documents .staff-source-field:first-child {
+.staff-profile-notes .staff-source-field:first-child {
   border-top: 0;
   padding-top: 0;
 }
-.staff-profile-documents .staff-source-field:last-child {
+.staff-profile-notes .staff-source-field:last-child {
   padding-bottom: 0;
 }
 .staff-edit-field {
@@ -1385,24 +1380,58 @@
   color: #6b7264;
   padding: 12px 0;
 }
-.staff-history {
-  list-style: none;
+
+.staff-profile-contacts .staff-profile-fields,
+.staff-profile-personal .staff-profile-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.staff-profile-contacts-editing .staff-profile-fields {
+  grid-template-columns: minmax(0, 1fr);
+}
+.staff-profile-fields .staff-profile-full {
+  grid-column: 1 / -1;
+}
+.staff-contact-values {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.staff-card .hr-copy-contact {
+  display: inline;
+  border: 0;
   padding: 0;
   margin: 0;
+  background: transparent;
+  color: #343b30;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.65;
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: copy;
+  text-decoration: underline;
+  text-decoration-color: #b9beb0;
+  text-underline-offset: 4px;
+  width: fit-content;
+  max-width: 100%;
 }
-.staff-history li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 5px 12px;
-  padding: 16px 0;
-  border-top: 1px solid #e8e9e3;
-  font-size: 12px;
+.staff-card .hr-copy-contact:hover {
+  color: #526549;
+  text-decoration-color: currentColor;
+}
+.staff-reserve-text {
+  color: #51594b;
+  font-size: 13px;
+  line-height: 1.9;
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.staff-history li > span,
-.staff-history small {
-  color: #727969;
+.staff-reserve-text .hr-copy-contact {
+  display: inline;
 }
-.staff-history small {
-  grid-column: 1/-1;
+.staff-profile-personal .staff-document {
+  margin-top: 0;
 }
