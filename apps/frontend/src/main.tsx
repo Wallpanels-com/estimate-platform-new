@@ -18,6 +18,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Auth from "./pages/Auth";
 import StaffFeedback from "./components/StaffFeedback";
 import Estimates from "./pages/Estimates";
+import "@fontsource-variable/montserrat";
 import "./styles.css";
 import { LanguageProvider } from "./lib/i18n";
 const Onboarding = lazy(() => import("./pages/Onboarding"));

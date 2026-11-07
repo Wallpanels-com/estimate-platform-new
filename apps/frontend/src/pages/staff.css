@@ -103,7 +103,7 @@
   font-size: 27px;
   line-height: 1.2;
   color: #304b40;
-  font-weight: 550;
+  font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
 }
 .staff-overview > button > span {
@@ -344,7 +344,7 @@
 .staff-style-option strong {
   display: block;
   font-size: 13px;
-  font-weight: 550;
+  font-weight: var(--weight-semibold);
   color: #3e594b;
 }
 .staff-style-option > svg:last-child:not(:first-child) {
@@ -1102,7 +1102,7 @@
   color: #252d39;
   font-size: 14px;
   line-height: 22px;
-  font-weight: 550;
+  font-weight: var(--weight-semibold);
 }
 .staff-canvas-teams .staff-person-title {
   font-size: 12px;
@@ -1160,7 +1160,7 @@
   background: #efedff;
   color: #30314f;
   font-size: 16px;
-  font-weight: 550;
+  font-weight: var(--weight-semibold);
 }
 .staff-scene-departments {
   position: absolute;
