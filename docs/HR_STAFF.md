@@ -23,7 +23,7 @@ These starting relationships need recruiter validation. They can be changed in a
 
 Table and eight chart variants share search, department and Active/Paused/Inactive/All filters. The initial filter is Active. Charts initially show managers with reports; switch to Entire team for all matching people. Search/department filters reveal all matching staff regardless of this overview toggle. The original views remain: vertical tree, horizontal flow, radial orbits, department columns, and layered terraces.
 
-Reference variants **07 Teams**, **08 Holi Tree**, and **09 Holi Compact** add pastel department frames/filters and a right-hand employee drawer, a classic lavender hierarchy with report counts, and a compact stacked hierarchy. Cards use real employee data and initials. Full screen, pan, zoom, fit and minimap controls remain available. Ordinary mouse-wheel scrolling continues to scroll the page. Animations respect reduced motion.
+Reference variants **07 Teams**, **08 Holi Tree**, and **09 Holi Compact** add pastel department frames/filters, a classic lavender hierarchy with report counts, and a compact stacked hierarchy. Cards use real employee data and initials. Full screen, pan, zoom, fit and minimap controls remain available. Ordinary mouse-wheel scrolling continues to scroll the page. Animations respect reduced motion.
 
 ### Editing the chart
 
