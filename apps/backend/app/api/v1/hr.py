@@ -14,9 +14,10 @@ from app.models.governance import AuditEvent
 from app.services.hr_import import parse_workbook, suggest_mapping, prepare_rows, contact_flags, MAX_BYTES
 
 from app.services.hr_scoring import qualification_score
+from app.services.hr_statuses import validate_status
 
 router=APIRouter(prefix='/hr', tags=['HR'])
-Status=Literal['new','review','contacted','interview','offer','hired','rejected','archived']
+Status=str
 
 class VacancyInput(BaseModel):
     name: str = Field(min_length=1,max_length=160)
@@ -27,7 +28,7 @@ class VacancyInput(BaseModel):
 class CandidateInput(BaseModel):
     model_config=ConfigDict(extra='forbid')
     version: int = Field(ge=1)
-    status: Status
+    status: str = Field(min_length=1,max_length=30)
     priority: bool
     location: str = Field(default='',max_length=240)
     location_verified: bool = False
@@ -84,13 +85,20 @@ async def edit_vacancy(ident:uuid.UUID,body:VacancyInput,db:AsyncSession=Depends
     await db.flush();await db.refresh(v);return vacancy_out(v)
 
 @router.get('/vacancies/{ident}/candidates')
-async def candidates(ident:uuid.UUID,q:str=Query('',max_length=200),status:Status|None=None,priority:bool=False,hidden:bool=False,page:int=Query(1,ge=1),page_size:int=Query(50,ge=20,le=100),db:AsyncSession=Depends(get_db),user=Depends(get_current_user)):
+async def candidates(ident:uuid.UUID,q:str=Query('',max_length=200),status:str|None=Query(None,max_length=30),priority:bool=False,hidden:bool=False,contact:str=Query('',pattern='^(|email|phone|telegram)$'),notes:bool=False,score_min:int|None=Query(None,ge=0,le=100),score_max:int|None=Query(None,ge=0,le=100),created_from:datetime|None=None,created_to:datetime|None=None,page:int=Query(1,ge=1),page_size:int=Query(50,ge=20,le=100),db:AsyncSession=Depends(get_db),user=Depends(get_current_user)):
     if page_size not in (20,50,100):raise HTTPException(422,'Choose 20, 50 or 100 candidates per page.')
     await vacancy(db,ident)
     where=[Candidate.vacancy_id==ident, Candidate.hidden.is_(hidden)]
     if status:where.append(Candidate.status==status)
     else:where.append(Candidate.status!='archived')
     if priority:where.append(Candidate.priority.is_(True))
+    if contact:where.append(getattr(Candidate, 'telegram_username' if contact=='telegram' else contact).isnot(None));where.append(getattr(Candidate, 'telegram_username' if contact=='telegram' else contact)!='')
+    if notes:where.append(Candidate.notes!='')
+    if score_min is not None:where.append(Candidate.score>=score_min)
+    if score_max is not None:where.append(Candidate.score<=score_max)
+    if score_min is not None and score_max is not None and score_min>score_max:raise HTTPException(422,'Minimum score must not exceed maximum score.')
+    if created_from:where.append(Candidate.created_at>=created_from)
+    if created_to:where.append(Candidate.created_at<created_to+timedelta(days=1))
     if q.strip():
         term='%'+q.strip().replace('\\','\\\\').replace('%','\\%').replace('_','\\_')+'%'
         where.append(or_(*(c.ilike(term) for c in (Candidate.name,Candidate.email,Candidate.phone))))
@@ -102,6 +110,7 @@ async def candidates(ident:uuid.UUID,q:str=Query('',max_length=200),status:Statu
 
 @router.patch('/candidates/{ident}')
 async def edit_candidate(ident:uuid.UUID,body:CandidateInput,db:AsyncSession=Depends(get_db),user=Depends(get_current_user)):
+    await validate_status(db,body.status)
     c=(await db.execute(select(Candidate).where(Candidate.id==ident).with_for_update())).scalar_one_or_none()
     if not c:raise HTTPException(404,'Candidate not found.')
     if body.version!=c.version:raise HTTPException(409,'This candidate has changed. Close and reopen the card before saving. Your changes have not been saved.')
@@ -191,3 +200,6 @@ router.include_router(ai_router)
 
 from app.api.v1.staff import router as staff_router
 router.include_router(staff_router)
+
+from app.api.v1.hr_tools import router as tools_router
+router.include_router(tools_router)

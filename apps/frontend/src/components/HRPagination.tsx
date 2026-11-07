@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "./ui";
 import { useI18n } from "../lib/i18n";
@@ -26,11 +27,13 @@ export default function HRPagination({
   pageSize,
   total,
   onChange,
+  sizeControl,
 }: {
   page: number;
   pageSize: number;
   total: number;
   onChange: (page: number) => void;
+  sizeControl?: ReactNode;
 }) {
   const { t } = useI18n();
   const last = Math.max(1, Math.ceil(total / pageSize));
@@ -44,6 +47,7 @@ export default function HRPagination({
           total,
         )}
       </span>
+      {sizeControl}
       <nav aria-label={t("Candidate pages")}>
         <Button
           disabled={page <= 1}

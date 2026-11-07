@@ -22,6 +22,8 @@ import {
 } from "../components/ui";
 import Select from "../components/Select";
 import { pageNumbers } from "../components/HRPagination";
+import CopyContact from "../components/CopyContact";
+import { primaryContacts, emailContacts } from "../lib/staffProfile";
 import StaffAvatar from "../components/staff/StaffAvatar";
 import StaffCard from "../components/staff/StaffCard";
 import StaffGraph from "../components/staff/StaffGraph";
@@ -32,12 +34,6 @@ export default function Staff() {
   const { user } = useAuth();
   return canAccess(user, "hr") ? <Directory /> : <Navigate to="/hr" replace />;
 }
-const contactPreview = (value: string | undefined) => {
-  const first = (value || "").split(/\r?\n/)[0].replace(/^(\d+)\.0$/, "$1");
-  return first.length > 50 ? first.slice(0, 47) + "…" : first || "—";
-};
-const emailPreview = (value: string | undefined) =>
-  (value || "").match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i)?.[0] || "";
 function Directory() {
   const { language } = useI18n();
   const ru = language === "ru";
@@ -45,6 +41,7 @@ function Directory() {
   const query = useQuery({
     queryKey: ["hr-staff"],
     queryFn: () => request<StaffDirectory>("/hr/staff"),
+    refetchInterval: 10000,
   });
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StaffStatus | "">("active");
@@ -268,8 +265,32 @@ function Directory() {
                   </td>
                   <td>{p.department || "—"}</td>
                   <td className="staff-table-contact">
-                    <span>{contactPreview(p.fields.F)}</span>
-                    <small>{emailPreview(p.fields.K)}</small>
+                    <div className="staff-table-contacts">
+                      {primaryContacts(p.fields.F || "").telegram.map(
+                        (value) => (
+                          <CopyContact
+                            key={value}
+                            value={value}
+                            kind="telegram"
+                          />
+                        ),
+                      )}
+                      {primaryContacts(p.fields.F || "").phones.map((value) => (
+                        <CopyContact key={value} value={value} kind="phone" />
+                      ))}
+                      {[
+                        ...new Set([
+                          ...emailContacts(p.fields.K || "").email,
+                          ...emailContacts(p.fields.K || "").paypal,
+                        ]),
+                      ].map((value) => (
+                        <CopyContact key={value} value={value} kind="email" />
+                      ))}
+                      {!p.fields.F && !p.fields.K && "—"}
+                      {primaryContacts(p.fields.F || "").other && (
+                        <span>{primaryContacts(p.fields.F || "").other}</span>
+                      )}
+                    </div>
                   </td>
                   <td>
                     <span className={`staff-status staff-status-${p.status}`}>

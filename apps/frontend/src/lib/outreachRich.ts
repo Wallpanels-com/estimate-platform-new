@@ -59,18 +59,6 @@ export function outreachRtf(message: string) {
     .join("\\par\n");
   return `{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Arial;}}\\uc1\\f0\\fs24\n${body}}`;
 }
-export function downloadOutreachRtf(message: string) {
-  const url = URL.createObjectURL(
-    new Blob([outreachRtf(message)], { type: "application/rtf" }),
-  );
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "WallPanels-recruiter-message.rtf";
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 export async function copyOutreach(message: string): Promise<"rich" | "plain"> {
   if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
     const formats = {

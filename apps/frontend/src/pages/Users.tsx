@@ -88,7 +88,7 @@ export default function Users() {
     <div className="team-page">
       <header className="page-heading">
         <div>
-          <h1>{t("Team accounts")}</h1>
+          <h1>{t("Access")}</h1>
           <p>
             {t("Page access is assigned individually by the platform owner.")}
           </p>

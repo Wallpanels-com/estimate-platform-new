@@ -19,7 +19,9 @@ async def check_staff(call, client, tokens):
     b=BytesIO();w.save(b)
     file={'file':('staff.xlsx',b.getvalue(),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}
     client.headers['Authorization']='Bearer '+tokens[0]
-    assert (await call('POST','/hr/staff/import',201,files=file)).json()['added']==4
+    with patch('app.services.staff_avatars.fetch_avatar',return_value=None) as automatic:
+        assert (await call('POST','/hr/staff/import',201,files=file)).json()['added']==4
+        assert automatic.call_count==1, 'Active employee import automatically fetches a public avatar'
     assert (await call('POST','/hr/staff/import',201,files=file)).json()=={'added':0,'duplicates':4,'sheet':'Main'}
     rows=(await call('GET','/hr/staff')).json()['items'];assert len(rows)==4
     ceo=next(r for r in rows if r['title']=='CEO');emp=next(r for r in rows if r['status']=='paused')

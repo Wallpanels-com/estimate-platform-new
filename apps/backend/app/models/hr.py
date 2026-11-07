@@ -58,3 +58,23 @@ class CandidateAIReview(Base):
     created_by: Mapped[str] = mapped_column(String(240))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class CandidateStatus(Base):
+    __tablename__ = 'hr_candidate_statuses'
+    key: Mapped[str] = mapped_column(String(30), primary_key=True)
+    name_en: Mapped[str] = mapped_column(String(120))
+    name_ru: Mapped[str] = mapped_column(String(120))
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class CandidateAttachment(Base):
+    __tablename__ = 'hr_candidate_attachments'
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('hr_candidates.id'), index=True)
+    name: Mapped[str] = mapped_column(String(240))
+    size: Mapped[int] = mapped_column(Integer)
+    created_by: Mapped[str] = mapped_column(String(240))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

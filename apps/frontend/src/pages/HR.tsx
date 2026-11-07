@@ -13,6 +13,8 @@ import {
   EyeOff,
   StickyNote,
   UsersRound,
+  SlidersHorizontal,
+  X,
 } from "lucide-react";
 import { request, post, patch, errorMessage } from "../lib/api";
 import { useI18n } from "../lib/i18n";
@@ -31,6 +33,12 @@ import HRPagination from "../components/HRPagination";
 import CopyContact from "../components/CopyContact";
 import { Link } from "react-router-dom";
 import { useAuth } from "../lib/auth";
+import HRStatusSelect from "../components/HRStatusSelect";
+import HRStatusManager from "../components/HRStatusManager";
+import ManualCandidate from "../components/ManualCandidate";
+import CandidateFiles from "../components/CandidateFiles";
+import { defaultStatuses, statusLabel, useHRStatuses } from "../lib/hrStatuses";
+import { criteria, hrText } from "../lib/hrText";
 import CandidateAI from "../components/CandidateAI";
 
 type Vacancy = {
@@ -41,7 +49,7 @@ type Vacancy = {
   updated_at: string;
   count: number;
 };
-type Candidate = {
+export type Candidate = {
   id: string;
   name: string;
   email: string;
@@ -88,16 +96,6 @@ type ImportResult = {
   test_rows: number;
   sample?: { name: string; email: string; phone: string }[];
 };
-const statuses: Record<string, string> = {
-  new: "New candidate",
-  review: "In review",
-  contacted: "Contacted",
-  interview: "Interview",
-  offer: "Offer",
-  hired: "Hired",
-  rejected: "Not selected",
-  archived: "Archived",
-};
 const friendly = (s: string) => s.replaceAll("_", " ");
 const professional = (answers: Record<string, string>) =>
   Object.entries(answers).filter(
@@ -127,6 +125,23 @@ export default function HR() {
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const statusesQuery = useHRStatuses();
+  const statuses = statusesQuery.data || defaultStatuses;
+  const [manageStatuses, setManageStatuses] = useState(false);
+  const [addingCandidate, setAddingCandidate] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    contact: "",
+    notes: false,
+    score_min: "",
+    score_max: "",
+    created_from: "",
+    created_to: "",
+  });
+  const filterCount = Object.values(filters).filter(Boolean).length;
+  useEffect(() => {
+    if (status && !statuses.some((s) => s.key === status)) setStatus("");
+  }, [statusesQuery.data, status]);
   const [priority, setPriority] = useState(false);
   const [hiddenView, setHiddenView] = useState(false);
   const [notesFocus, setNotesFocus] = useState(false);
@@ -173,11 +188,29 @@ export default function HR() {
       page,
       pageSize,
       hiddenView,
+      filters,
     ],
     enabled: !!ident,
     queryFn: () =>
       request<Results>(
-        `/hr/vacancies/${ident}/candidates?${new URLSearchParams({ q: search, status: status || "", priority: String(priority), page: String(page), page_size: String(pageSize), hidden: String(hiddenView) }).toString().replace("status=&", "")}`,
+        `/hr/vacancies/${ident}/candidates?${new URLSearchParams({
+          ...Object.fromEntries(
+            Object.entries(filters)
+              .filter(([, v]) => v !== false && v !== "")
+              .map(([k, v]) => [
+                k,
+                k.startsWith("created_") ? String(v) + "T00:00:00Z" : String(v),
+              ]),
+          ),
+          q: search,
+          status: status || "",
+          priority: String(priority),
+          page: String(page),
+          page_size: String(pageSize),
+          hidden: String(hiddenView),
+        })
+          .toString()
+          .replace("status=&", "")}`,
       ),
     refetchInterval: 20000,
     refetchOnWindowFocus: true,
@@ -240,8 +273,6 @@ export default function HR() {
       setBusy(false);
     }
   }
-  const date = (v: string) =>
-    new Date(v).toLocaleDateString(language === "ru" ? "ru-RU" : "en-US");
   return (
     <div className="hr-page">
       <header className="page-header">
@@ -255,6 +286,13 @@ export default function HR() {
               {language === "ru" ? "Сотрудники" : "Staff"}
             </Link>
           )}
+          <Button
+            disabled={!current || current.archived}
+            onClick={() => setAddingCandidate(true)}
+          >
+            <Plus size={17} />
+            {t("Add candidate")}
+          </Button>
           <Button
             onClick={() => {
               setEdit("new");
@@ -388,21 +426,15 @@ export default function HR() {
                     onChange={(e) => setQ(e.target.value)}
                   />
                 </div>
-                <Select
-                  aria-label={t("Candidate status")}
+                <HRStatusSelect
+                  all
                   value={status}
-                  onChange={(e) => {
-                    setStatus(e.target.value);
+                  onChange={(v) => {
+                    setStatus(v);
                     setPage(1);
                   }}
-                >
-                  <option value="">{t("All active statuses")}</option>
-                  {Object.entries(statuses).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {t(l)}
-                    </option>
-                  ))}
-                </Select>
+                  onManage={() => setManageStatuses(true)}
+                />
                 <Button
                   aria-pressed={priority}
                   onClick={() => {
@@ -413,38 +445,89 @@ export default function HR() {
                   <Star size={16} fill={priority ? "currentColor" : "none"} />
                   {t("Priority")}
                 </Button>
-                <div className="hr-page-size">
-                  <Field label="Candidates per page">
+                <Button
+                  aria-expanded={showFilters}
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <SlidersHorizontal size={17} />
+                  {t("Filters")}
+                  {filterCount > 0 && <span>{filterCount}</span>}
+                </Button>
+              </div>
+              {showFilters && (
+                <div className="hr-filter-panel form-grid">
+                  <Field label="Contact available">
                     <Select
-                      value={pageSize}
+                      value={filters.contact}
                       onChange={(e) => {
-                        const value = Number(e.target.value);
-                        setPageSize(value);
+                        setFilters({ ...filters, contact: e.target.value });
                         setPage(1);
-                        try {
-                          localStorage.setItem(
-                            "wallpanels.hr.page-size",
-                            String(value),
-                          );
-                        } catch {
-                          /* Preference is optional. */
-                        }
                       }}
                     >
-                      {[20, 50, 100].map((n) => (
-                        <option key={n} value={n}>
-                          {t("{0} / page", n)}
-                        </option>
-                      ))}
+                      <option value="">{t("Any contact")}</option>
+                      <option value="email">{t("Email")}</option>
+                      <option value="phone">{t("Phone")}</option>
+                      <option value="telegram">Telegram</option>
                     </Select>
                   </Field>
+                  <Field label="Notes">
+                    <Select
+                      value={String(filters.notes)}
+                      onChange={(e) => {
+                        setFilters({
+                          ...filters,
+                          notes: e.target.value === "true",
+                        });
+                        setPage(1);
+                      }}
+                    >
+                      <option value="false">{t("Any candidate")}</option>
+                      <option value="true">{t("With HR notes")}</option>
+                    </Select>
+                  </Field>
+                  {(
+                    [
+                      ["score_min", "Minimum match"],
+                      ["score_max", "Maximum match"],
+                      ["created_from", "Added from"],
+                      ["created_to", "Added through"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <Field key={key} label={label}>
+                      <input
+                        type={key.startsWith("created_") ? "date" : "number"}
+                        min={key.startsWith("score_") ? 0 : undefined}
+                        max={key.startsWith("score_") ? 100 : undefined}
+                        value={filters[key]}
+                        onChange={(e) => {
+                          setFilters({ ...filters, [key]: e.target.value });
+                          setPage(1);
+                        }}
+                      />
+                    </Field>
+                  ))}
+                  <div className="span-all">
+                    <Button
+                      variant="ghost"
+                      disabled={!filterCount}
+                      onClick={() => {
+                        setFilters({
+                          contact: "",
+                          notes: false,
+                          score_min: "",
+                          score_max: "",
+                          created_from: "",
+                          created_to: "",
+                        });
+                        setPage(1);
+                      }}
+                    >
+                      <X size={15} />
+                      {t("Clear filters")}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <p className="hr-sort-note">
-                {t(
-                  "HR priority first, then professional match: experience, English, US market and drawings.",
-                )}
-              </p>
+              )}
               {query.isPending ? (
                 <Loading />
               ) : query.isError ? (
@@ -457,19 +540,22 @@ export default function HR() {
                     <table className="hr-table">
                       <thead>
                         <tr>
+                          <th className="hr-number">№</th>
                           <th>{t("Candidate")}</th>
                           <th>{t("Experience & skills")}</th>
                           <th>{t("Candidate status")}</th>
-                          <th>{t("Updated")}</th>
                           <th>{t("Actions")}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {query.data.items.map((c) => (
+                        {query.data.items.map((c, index) => (
                           <tr
                             key={c.id}
                             className={c.priority ? "hr-priority" : ""}
                           >
+                            <td className="hr-number">
+                              {(query.data!.page - 1) * pageSize + index + 1}
+                            </td>
                             <td>
                               <button
                                 className="hr-name"
@@ -515,26 +601,22 @@ export default function HR() {
                                     ? t("Not scored")
                                     : `${c.score}/100`}
                                 </strong>
-                                {professional(c.answers)
-                                  .slice(0, 2)
-                                  .map(([k, v]) => (
-                                    <span key={k} title={friendly(k)}>
-                                      {friendly(v)}
-                                    </span>
-                                  ))}
+                                {c.evidence.slice(0, 2).map((e) => (
+                                  <span key={e.criterion}>
+                                    {t(criteria[e.criterion] || e.criterion)}:{" "}
+                                    {hrText(e.answer, language)}
+                                  </span>
+                                ))}
                               </div>
                             </td>
                             <td>
                               <span
                                 className={`hr-status hr-status-${c.status}`}
                               >
-                                {t(statuses[c.status] || c.status)}
+                                {statusLabel(statuses, c.status, language)}
                               </span>
                             </td>
-                            <td className="hr-updated">
-                              {date(c.updated_at)}
-                              <small>{c.updated_by}</small>
-                            </td>
+
                             <td className="hr-action-cell">
                               <div className="hr-row-actions">
                                 <Button
@@ -598,6 +680,34 @@ export default function HR() {
                     pageSize={pageSize}
                     total={query.data.total}
                     onChange={goToPage}
+                    sizeControl={
+                      <div className="hr-page-size">
+                        <Field label="Candidates per page">
+                          <Select
+                            value={pageSize}
+                            onChange={(e) => {
+                              const value = Number(e.target.value);
+                              setPageSize(value);
+                              setPage(1);
+                              try {
+                                localStorage.setItem(
+                                  "wallpanels.hr.page-size",
+                                  String(value),
+                                );
+                              } catch {
+                                /* Preference is optional. */
+                              }
+                            }}
+                          >
+                            {[20, 50, 100].map((n) => (
+                              <option key={n} value={n}>
+                                {t("{0} / page", n)}
+                              </option>
+                            ))}
+                          </Select>
+                        </Field>
+                      </div>
+                    }
                   />
                 </>
               ) : (
@@ -676,10 +786,31 @@ export default function HR() {
           <CandidateCard
             initial={candidate}
             focusNotes={notesFocus}
+            onManageStatuses={() => setManageStatuses(true)}
             onClose={() => setCandidate(null)}
             onSaved={(c) => {
               setCandidate(c);
               refresh();
+            }}
+          />
+        )}
+      </ModalPresence>
+      <ModalPresence>
+        {manageStatuses && (
+          <HRStatusManager close={() => setManageStatuses(false)} />
+        )}
+      </ModalPresence>
+      <ModalPresence>
+        {addingCandidate && ident && (
+          <ManualCandidate
+            vacancyId={ident}
+            close={() => setAddingCandidate(false)}
+            onManage={() => setManageStatuses(true)}
+            saved={(c) => {
+              setAddingCandidate(false);
+              setCandidate(c);
+              void refresh();
+              notify(t("Candidate added"));
             }}
           />
         )}
@@ -713,7 +844,9 @@ function CandidateCard({
   focusNotes = false,
   onClose,
   onSaved,
+  onManageStatuses,
 }: {
+  onManageStatuses: () => void;
   initial: Candidate;
   focusNotes?: boolean;
   onClose: () => void;
@@ -729,34 +862,51 @@ function CandidateCard({
   useEffect(() => {
     if (focusNotes) notesInput.current?.focus();
   }, [focusNotes]);
-  const history = useQuery({
-    queryKey: ["hr-history", c.id, c.version],
-    queryFn: () =>
-      request<
-        {
-          id: string;
-          actor_name: string;
-          created_at: string;
-          action: string;
-          fields: string[];
-        }[]
-      >(`/hr/candidates/${c.id}/history`),
+  const { language } = useI18n();
+  const [draft, setDraft] = useState({
+    status: c.status,
+    notes: c.notes,
+    telegram_username: c.telegram_username || "",
   });
+  const dirty =
+    draft.status !== c.status ||
+    draft.notes !== c.notes ||
+    draft.telegram_username !== (c.telegram_username || "");
+  function dismiss() {
+    if (!busy && (!dirty || window.confirm(t("Discard unsaved changes?"))))
+      onClose();
+  }
+  async function star() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      onSaved(
+        await patch<Candidate>(`/hr/candidates/${c.id}/quick`, {
+          version: c.version,
+          priority: !c.priority,
+        }),
+      );
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const f = new FormData(e.currentTarget);
     try {
       onSaved(
         await patch<Candidate>(`/hr/candidates/${c.id}`, {
           version: c.version,
-          status: f.get("status"),
-          priority: f.get("priority") === "on",
+          status: draft.status,
+          priority: c.priority,
           location: c.location,
           location_verified: c.location_verified,
-          notes: f.get("notes"),
-          telegram_username: f.get("telegram_username") || null,
+          notes: draft.notes,
+          telegram_username: draft.telegram_username || null,
         }),
       );
       onClose();
@@ -767,17 +917,24 @@ function CandidateCard({
     }
   }
   return (
-    <Modal
-      title={c.name}
-      wide
-      className="hr-review-modal"
-      onClose={() => {
-        if (!busy) onClose();
-      }}
-    >
+    <Modal title={c.name} wide className="hr-review-modal" onClose={dismiss}>
       <form onSubmit={save}>
         <div className="modal-body hr-candidate-body">
           <div className="hr-candidate-contact">
+            <Button
+              variant="ghost"
+              className="hr-card-priority"
+              aria-label={t(
+                c.priority
+                  ? "Remove candidate priority"
+                  : "Prioritize candidate",
+              )}
+              aria-pressed={c.priority}
+              disabled={busy}
+              onClick={() => void star()}
+            >
+              <Star size={20} fill={c.priority ? "currentColor" : "none"} />
+            </Button>
             <CopyContact value={c.email} kind="email" />
             <CopyContact value={c.phone} kind="phone" />
           </div>
@@ -836,31 +993,20 @@ function CandidateCard({
           >
             <div className="form-grid">
               <Field label="Candidate status">
-                <Select name="status" defaultValue={c.status}>
-                  {Object.entries(statuses).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {t(l)}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <label className="hr-checkbox hr-priority-control">
-                <input
-                  name="priority"
-                  type="checkbox"
-                  defaultChecked={c.priority}
+                <HRStatusSelect
+                  value={draft.status}
+                  onChange={(v) => setDraft({ ...draft, status: v })}
+                  onManage={onManageStatuses}
                 />
-                <Star size={16} />
-                {t("Priority candidate")}
-              </label>
-              <Field
-                label="Telegram username"
-                className="span-all hr-telegram-field"
-              >
+              </Field>
+              <Field label="Telegram username" className="hr-telegram-field">
                 <input
                   name="telegram_username"
                   maxLength={200}
-                  defaultValue={c.telegram_username || ""}
+                  value={draft.telegram_username}
+                  onChange={(e) =>
+                    setDraft({ ...draft, telegram_username: e.target.value })
+                  }
                   placeholder={t("@username or https://t.me/username")}
                   autoComplete="off"
                 />
@@ -871,7 +1017,10 @@ function CandidateCard({
                   ref={notesInput}
                   rows={3}
                   maxLength={20000}
-                  defaultValue={c.notes}
+                  value={draft.notes}
+                  onChange={(e) =>
+                    setDraft({ ...draft, notes: e.target.value })
+                  }
                 />
               </Field>
             </div>
@@ -888,9 +1037,10 @@ function CandidateCard({
               <dl>
                 {c.evidence.map((e) => (
                   <div key={e.criterion}>
-                    <dt>{friendly(e.question)}</dt>
+                    <dt>{hrText(e.question, language)}</dt>
                     <dd>
-                      {friendly(e.answer) || "—"} · {e.points}/{e.maximum}
+                      {hrText(e.answer, language) || "—"} · {e.points}/
+                      {e.maximum}
                     </dd>
                   </div>
                 ))}
@@ -901,51 +1051,18 @@ function CandidateCard({
               <dl>
                 {professional(c.answers).map(([k, v]) => (
                   <div key={k}>
-                    <dt>{friendly(k)}</dt>
-                    <dd>{friendly(v) || "—"}</dd>
+                    <dt>{hrText(k, language)}</dt>
+                    <dd>{hrText(v, language) || "—"}</dd>
                   </div>
                 ))}
               </dl>
             </section>
-            <details className="hr-source">
-              <summary>{t("Original import data")}</summary>
-              <p>{c.source}</p>
-              <dl>
-                {Object.entries(c.answers).map(([k, v]) => (
-                  <div key={k}>
-                    <dt>{friendly(k)}</dt>
-                    <dd>{v || "—"}</dd>
-                  </div>
-                ))}
-              </dl>
-            </details>
-            <details className="hr-source">
-              <summary>{t("Change history")}</summary>
-              {history.isError ? (
-                <ErrorNotice retry={() => void history.refetch()}>
-                  {errorMessage(history.error)}
-                </ErrorNotice>
-              ) : (
-                history.data?.map((r) => (
-                  <p key={r.id}>
-                    {new Date(r.created_at).toLocaleString()} · {r.actor_name} ·{" "}
-                    {t(r.action === "create" ? "Created" : "Updated")} ·{" "}
-                    {r.fields
-                      .filter((f) => !["fingerprint", "answers"].includes(f))
-                      .join(", ")}
-                  </p>
-                ))
-              )}
-            </details>
           </div>
-          {error && (
-            <p role="alert" className="error-message">
-              {error}
-            </p>
-          )}
+          <CandidateFiles id={c.id} />
+          {error && <ErrorNotice>{t(error)}</ErrorNotice>}
         </div>
         <footer className="modal-footer">
-          <Button disabled={busy} onClick={onClose}>
+          <Button disabled={busy} onClick={dismiss}>
             {t(cardTab === "ai" ? "Close" : "Cancel")}
           </Button>
           {cardTab === "application" && (

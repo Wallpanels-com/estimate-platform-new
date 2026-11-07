@@ -138,12 +138,12 @@ export default function Shell() {
           ) : null}
           {canAccess(user, "users") ? (
             <NavLink
-              aria-label={t("Team accounts")}
-              title={collapsed ? t("Team accounts") : undefined}
+              aria-label={t("Access")}
+              title={collapsed ? t("Access") : undefined}
               to="/users"
             >
               <Users size={18} />
-              <span className="nav-label">{t("Team accounts")}</span>
+              <span className="nav-label">{t("Access")}</span>
             </NavLink>
           ) : null}
           {canAccess(user, "trash") ? (

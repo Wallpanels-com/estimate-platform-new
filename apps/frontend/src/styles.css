@@ -4383,7 +4383,7 @@ input[aria-invalid="true"] {
 }
 
 .hr-telegram-field {
-  max-width: 360px;
+  min-width: 0;
 }
 
 .hr-telegram-web {
@@ -4604,4 +4604,202 @@ html:has(dialog[open]) {
   .zones-list {
     scroll-behavior: auto;
   }
+}
+
+/* HR workflow: one toolbar, a shared field grid and a quiet candidate profile. */
+.hr-toolbar {
+  grid-template-columns: minmax(220px, 1fr) 240px auto auto;
+  padding-bottom: 20px;
+}
+.hr-status-picker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.hr-status-picker > .choice {
+  flex: 1;
+  min-width: 0;
+}
+.hr-status-picker > .button {
+  flex: none;
+  padding: 8px;
+}
+.hr-filter-panel {
+  margin: 0 24px 24px;
+  padding: 20px;
+  background: var(--surface-muted, #f4f3ed);
+  border-radius: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.hr-table th:nth-child(1) {
+  width: 52px;
+}
+.hr-table th:nth-child(2) {
+  width: 36%;
+}
+.hr-table th:nth-child(3) {
+  width: 32%;
+}
+.hr-table th:nth-child(4) {
+  width: calc(32% - 184px);
+}
+.hr-table th:nth-child(5) {
+  width: 132px;
+}
+.hr-table .hr-number {
+  color: #72756b;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  padding-inline: 14px;
+}
+.hr-pagination .hr-page-size {
+  margin-left: auto;
+  width: 140px;
+}
+.hr-pagination .hr-page-size .field {
+  margin: 0;
+}
+.hr-status-list {
+  display: grid;
+  gap: 0;
+  margin-bottom: 20px;
+}
+.hr-status-list > div {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border-bottom: 1px solid #e3e5de;
+  padding: 8px 0;
+}
+.hr-status-list > div > span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.hr-status-list small {
+  color: #74796d;
+}
+.hr-status-manager form {
+  display: grid;
+  gap: 24px;
+}
+.hr-status-manager .button-row {
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+.hr-form-fieldset {
+  padding: 0;
+  border: 0;
+  margin: 0;
+  min-width: 0;
+}
+.hr-review-modal .hr-candidate-contact {
+  align-items: center;
+  gap: 12px 24px;
+  padding-bottom: 20px;
+  margin-bottom: 0;
+  border-bottom: 1px solid #e3e5de;
+}
+.hr-candidate-contact .hr-card-priority {
+  flex: none;
+  padding: 8px;
+}
+.hr-card-priority[aria-pressed="true"] {
+  color: #866733;
+}
+.hr-review-modal .hr-card-tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid #dfe2d9;
+  margin: 0 0 24px;
+}
+.hr-review-modal .hr-card-tabs .button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 16px 0;
+  color: #73786d;
+}
+.hr-review-modal .hr-card-tabs .button[aria-selected="true"] {
+  color: #282d23;
+  border-bottom-color: #68735b;
+}
+.hr-review-modal .hr-ai {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.hr-review-modal .hr-ai-evidence-grid {
+  gap: 24px;
+}
+.hr-review-modal .hr-ai-evidence-grid > section {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.hr-review-modal .hr-answers {
+  padding-top: 20px;
+  border-top: 1px solid #e3e5de;
+}
+.hr-review-modal .hr-candidate-body .form-grid {
+  align-items: start;
+}
+.hr-candidate-files {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e3e5de;
+}
+.hr-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.hr-section-heading h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.hr-file-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e7e8e2;
+}
+.hr-file-list > div > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.hr-file-list small {
+  display: block;
+  color: #73786d;
+  font-size: 11px;
+  margin-top: 4px;
+}
+.staff-table-contacts {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+.staff-table-contacts .hr-copy-contact {
+  font-size: 12px;
+  line-height: 1.5;
+  min-height: 0;
+  text-align: left;
+  padding: 0;
+  color: inherit;
+  border: 0;
+  background: transparent;
+  cursor: copy;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.staff-table-contacts .hr-copy-contact:hover {
+  color: #526549;
+  text-decoration: underline;
 }

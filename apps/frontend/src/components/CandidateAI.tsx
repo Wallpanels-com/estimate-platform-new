@@ -1,13 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ScanText,
-  Copy,
-  Check,
-  MessageSquare,
-  Pencil,
-  FileDown,
-} from "lucide-react";
+import { ScanText, Copy, Check, MessageSquare, Pencil } from "lucide-react";
 import { patch, errorMessage } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 import { Button, ErrorNotice, useNotice } from "./ui";
@@ -17,11 +10,7 @@ import {
   type ReviewResult as Result,
   type Evidence,
 } from "../lib/hrReview";
-import {
-  outreachLine,
-  copyOutreach,
-  downloadOutreachRtf,
-} from "../lib/outreachRich";
+import { outreachLine, copyOutreach } from "../lib/outreachRich";
 export default function CandidateAI({
   id,
   active = true,
@@ -194,11 +183,6 @@ export default function CandidateAI({
               </div>
             )}
             <div className="hr-ai-message-actions">
-              <small>
-                {t(
-                  "Review and edit before sending. Nothing is sent automatically.",
-                )}
-              </small>
               <div className="button-row">
                 {!editingMessage && (
                   <Button
@@ -244,20 +228,6 @@ export default function CandidateAI({
                   <Copy size={16} />
                   {t("Copy message")}
                 </Button>
-                <Button
-                  disabled={!message.trim()}
-                  onClick={() => {
-                    downloadOutreachRtf(message);
-                    notify(
-                      t(
-                        "Open the RTF file in TextEdit, copy its text, then paste into Telegram with Cmd+V.",
-                      ),
-                    );
-                  }}
-                >
-                  <FileDown size={16} />
-                  {t("Formatted text (.rtf)")}
-                </Button>
               </div>
             </div>
             {dirty && (
@@ -266,12 +236,6 @@ export default function CandidateAI({
               </p>
             )}
           </section>
-          <small className="hr-ai-meta">
-            {new Date(review.created_at).toLocaleString(
-              language === "ru" ? "ru-RU" : "en-US",
-            )}{" "}
-            · {review.created_by}
-          </small>
         </>
       )}
     </section>

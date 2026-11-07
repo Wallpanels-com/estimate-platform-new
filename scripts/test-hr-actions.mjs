@@ -118,12 +118,25 @@ try {
       evidence: [],
     };
     const writes = [];
+    const requests = [];
+    let statuses = [{key:'new',name_en:'New candidate',name_ru:'Новый кандидат',version:1,count:0}, {key:'interview',name_en:'Interview',name_ru:'Собеседование',version:1,count:1}];
     let fail = false;
     globalThis.fetch = async (path, options = {}) => {
       const url = new URL(path, "http://localhost");
+      requests.push({url, options});
       let result;
       if (url.pathname.endsWith("/vacancies"))
         result = [{ id: "vacancy", name: "Example vacancy", count: 1 }];
+      else if (url.pathname.endsWith('/statuses')) {
+        if (options.method === 'POST') {
+          const body=JSON.parse(options.body);
+          result={...body,key:'custom',version:1,count:0};statuses.push(result);
+        } else result=statuses;
+      }
+      else if (url.pathname.endsWith("/files")) result = [];
+      else if (url.pathname.endsWith('/candidates') && options.method === 'POST') {
+        const body=JSON.parse(options.body); row={...row,...body,id:'synthetic',version:1}; result=row;
+      }
       else if (url.pathname.endsWith("/candidates")) {
         const visible =
           row.hidden === (url.searchParams.get("hidden") === "true");
@@ -229,6 +242,26 @@ try {
     await click(language === "ru" ? "Скопировать почту example@example.com" : "Copy email example@example.com");
     assert.equal(copiedContact, "example@example.com");
     assert.equal(writes.length, 0); // Copying a contact never changes the candidate.
+    assert.equal(document.querySelector('.hr-sort-note'),null);
+    assert.equal(document.querySelector('.hr-updated'),null);
+    assert.equal(document.querySelector('tbody .hr-number').textContent,'1');
+    assert.ok(document.querySelector('.hr-pagination .hr-page-size'));
+    assert.ok(!document.querySelector('.hr-toolbar .hr-page-size'));
+    await click(language==='ru'?'Фильтры':'Filters');
+    assert.equal(document.querySelectorAll('.hr-filter-panel .field').length,6);
+    const minScore=document.querySelector('.hr-filter-panel input[type="number"]');
+    await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(minScore,'80');minScore.dispatchEvent(new Event('input',{bubbles:true}));});
+    await settle();
+    assert.ok(requests.some(r=>r.url.searchParams.get('score_min')==='80'));
+    await click(language==='ru'?'Сбросить фильтры':'Clear filters');
+    await click(language==='ru'?'Управление статусами':'Manage statuses');
+    await click(language==='ru'?'Добавить статус':'Add status');
+    const statusInputs=document.querySelectorAll('.hr-status-manager input');
+    await act(async()=>{for(const [i,value] of ['Portfolio ready','Портфолио получено'].entries()){Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(statusInputs[i],value);statusInputs[i].dispatchEvent(new Event('input',{bubbles:true}));}});
+    await act(async()=>document.querySelector('.hr-status-manager form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    await settle();
+    assert.ok(document.querySelector('.hr-status-list').textContent.includes(language==='ru'?'Портфолио получено':'Portfolio ready'));
+    await click(language==='ru'?'Закрыть':'Close');
     await click(labels[0]);
     assert.ok(row.priority);
     assert.deepEqual(Object.keys(writes[0]).sort(), ["priority", "version"]);
@@ -246,8 +279,7 @@ try {
       document.querySelector('input[name="location_verified"]'),
       null,
     );
-    document.querySelector('input[name="telegram_username"]').value =
-      "@example_user";
+    await act(async()=>{const input=document.querySelector('input[name="telegram_username"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'@example_user');input.dispatchEvent(new Event('input',{bubbles:true}));});
     await act(async () =>
       document
         .querySelector("dialog form")
@@ -282,6 +314,17 @@ try {
     assert.ok(document.querySelector(".hr-name"));
     await click(labels[1]);
     assert.equal(row.priority, false);
+    await click(language==='ru'?'Добавить кандидата':'Add candidate');
+    assert.ok(document.querySelector('.hr-create-candidate'));
+    await act(async()=>{for(const [name,value] of [['name','Manual UI person'],['email','manual@example.com']]){const input=document.querySelector('.hr-create-candidate [name="'+name+'"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));}});
+    await act(async()=>document.querySelector('.hr-create-candidate form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    await settle();
+    assert.equal(row.name,'Manual UI person');
+    assert.ok(document.querySelector('.hr-review-modal'));
+    assert.ok(document.querySelector('.hr-candidate-contact .hr-card-priority'));
+    assert.ok(!document.querySelector('.hr-review-modal .hr-source'));
+    assert.ok(document.querySelector('.hr-candidate-files'));
+    assert.equal(document.querySelector('.hr-create-candidate'),null);
     await act(async () => root.unmount());
     client.clear();
     document.getElementById("root").innerHTML = "";

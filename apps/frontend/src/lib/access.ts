@@ -2,7 +2,7 @@ export const PAGES = [
   { key: "estimates", label: "Estimates", path: "/" },
   { key: "quick_estimate", label: "Quick estimate", path: "/quick-estimate" },
   { key: "price_book", label: "Price book", path: "/price-book" },
-  { key: "users", label: "Team accounts", path: "/users" },
+  { key: "users", label: "Access", path: "/users" },
   { key: "hr", label: "HR department", path: "/hr" },
   { key: "trash", label: "Trash", path: "/trash" },
 ] as const;

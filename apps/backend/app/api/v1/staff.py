@@ -2,7 +2,7 @@
 import uuid
 from typing import Literal
 from fastapi.responses import FileResponse
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response, BackgroundTasks
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +10,8 @@ from starlette.concurrency import run_in_threadpool
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.config import settings
-from app.services.staff_avatars import avatar_entry, sync_active
+from app.services.staff_avatars import avatar_entry, sync_active, username
+from types import SimpleNamespace
 from app.models.staff import StaffMember
 from app.models.governance import AuditEvent
 from app.services.page_access import require_any
@@ -43,7 +44,7 @@ async def staff(db: AsyncSession = Depends(get_db)):
 
 
 @router.post('/import', status_code=201)
-async def import_main(file: UploadFile = File(...), db: AsyncSession = Depends(get_db), user=Depends(staff_access)):
+async def import_main(background_tasks: BackgroundTasks, file: UploadFile = File(...), db: AsyncSession = Depends(get_db), user=Depends(staff_access)):
     if not (file.filename or '').lower().endswith('.xlsx'):
         raise HTTPException(422, 'Upload an .xlsx workbook with a Main worksheet.')
     try:
@@ -66,6 +67,7 @@ async def import_main(file: UploadFile = File(...), db: AsyncSession = Depends(g
         key = reporting.get(r.source_key)
         r.manager_id = existing[key].id if key and key in existing else None
     await db.flush()
+    schedule_avatars(background_tasks, added)
     return {'added': len(added), 'duplicates': len(records) - len(added), 'sheet': 'Main'}
 
 
@@ -112,7 +114,7 @@ class StaffInput(BaseModel):
 
 
 @router.patch('/{ident}')
-async def edit_staff(ident: uuid.UUID, body: StaffInput, db: AsyncSession = Depends(get_db), user=Depends(staff_access)):
+async def edit_staff(ident: uuid.UUID, body: StaffInput, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db), user=Depends(staff_access)):
     await db.execute(text('SELECT pg_advisory_xact_lock(73110911)'))
     rows = {r.id: r for r in (await db.execute(select(StaffMember))).scalars()}
     member = rows.get(ident)
@@ -131,6 +133,7 @@ async def edit_staff(ident: uuid.UUID, body: StaffInput, db: AsyncSession = Depe
             raise HTTPException(422, 'The selected manager does not exist.')
         seen.add(parent)
         parent = rows[parent].manager_id
+    refresh_avatar = body.status == 'active' and (member.status != 'active' or username(member.fields.get('F')) != username(body.fields.get('F')))
     for key, value in body.model_dump(exclude={'version'}).items():
         setattr(member, key, value.strip() if isinstance(value, str) else value)
     member.fields = member.fields | {'A': member.name, 'B': member.status.title(), 'E': member.title, 'G': member.department}
@@ -138,6 +141,7 @@ async def edit_staff(ident: uuid.UUID, body: StaffInput, db: AsyncSession = Depe
     member.updated_by = user.name or user.email
     await db.flush()
     await db.refresh(member)
+    if refresh_avatar:schedule_avatars(background_tasks, [member])
     return output(member)
 
 
@@ -147,3 +151,16 @@ async def history(ident: uuid.UUID, db: AsyncSession = Depends(get_db)):
         raise HTTPException(404, 'Employee not found.')
     rows = (await db.execute(select(AuditEvent).where(AuditEvent.entity == 'hr_staff', AuditEvent.entity_id == str(ident)).order_by(AuditEvent.created_at.desc()).limit(50))).scalars().all()
     return [{'id': r.id, 'actor_name': r.actor_name, 'created_at': r.created_at, 'action': r.action, 'fields': list(r.changes)} for r in rows]
+
+
+def schedule_avatars(tasks, people):
+    # Snapshot detached data, then fetch off the response path without holding a DB session.
+    snapshots=[SimpleNamespace(id=p.id,name=p.name,status=p.status,fields=dict(p.fields)) for p in people if p.status=='active' and username(p.fields.get('F')) and not avatar_entry(p,settings.STORAGE_PATH)]
+    if snapshots:tasks.add_task(run_in_threadpool,refresh_avatars_safely,snapshots,settings.STORAGE_PATH)
+
+
+def refresh_avatars_safely(people, root):
+    try:sync_active(people,root)
+    except (OSError,ValueError):
+        import logging
+        logging.getLogger(__name__).warning('Staff avatar cache unavailable; employee data remains saved.')
