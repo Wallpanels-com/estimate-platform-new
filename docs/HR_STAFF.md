@@ -44,3 +44,7 @@ Migration `0012_hr_staff_charts` adds a separate settings table for additional e
 - `npm run test:staff-ui`: table/card/filter/status/save behavior and private frontend gate with synthetic transport only.
 
 To open Staff to other HR users later, change the dedicated backend owner dependency and frontend Staff gate/button together after the owner explicitly authorizes it. No employee page grants have been expanded by this feature.
+
+## Employee profile
+
+All table and chart variants open the same centered native dialog with a blurred backdrop. The profile combines a name/initials/position/status header with grouped employment, contact and personal details. Overview, Documents & notes and History tabs keep full source data and links available without displaying every field at once. Long text expands on demand. Edit profile enables fields and status controls; only Save changes persists edits. Switching tabs retains the draft, closing a dirty draft requires confirmation, and save failures preserve it. History loads only when selected. The footer and header stay visible while the body scrolls; keyboard tabs and native dialog focus/Escape behavior remain available. Staff visibility and API authorization are unchanged.

@@ -91,12 +91,16 @@ export function Modal({
   onClose,
   wide = false,
   className = "",
+  leading,
+  description,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
   className?: string;
+  leading?: ReactNode;
+  description?: ReactNode;
 }) {
   const { t } = useI18n();
 
@@ -136,7 +140,17 @@ export function Modal({
       }}
     >
       <header className="modal-header">
-        <h2 id={titleId}>{t(title)}</h2>
+        {leading || description ? (
+          <div className="modal-heading">
+            {leading}
+            <div className="modal-heading-text">
+              <h2 id={titleId}>{t(title)}</h2>
+              {description}
+            </div>
+          </div>
+        ) : (
+          <h2 id={titleId}>{t(title)}</h2>
+        )}
         <Button
           variant="ghost"
           aria-label={t("Close dialog")}

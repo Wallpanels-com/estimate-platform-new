@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState, type FormEvent } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Navigate, Link } from "react-router-dom";
 import {
   ArrowLeft,
   Search,
+  Check,
   Table2,
   Network,
   GitBranch,
@@ -11,15 +12,8 @@ import {
   Columns3,
   Layers3,
   LockKeyhole,
-  Pencil,
-  Check,
-  Pause,
-  UserRoundX,
-  ExternalLink,
-  Save,
   ChevronLeft,
   ChevronRight,
-  History,
   UsersRound,
   Blocks,
   Rows3,
@@ -27,18 +21,11 @@ import {
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
-import { request, patch, errorMessage } from "../lib/api";
-import {
-  Button,
-  Field,
-  Modal,
-  Loading,
-  ErrorNotice,
-  EmptyState,
-  useNotice,
-} from "../components/ui";
+import { request, errorMessage } from "../lib/api";
+import { Button, Loading, ErrorNotice, EmptyState } from "../components/ui";
 import Select from "../components/Select";
 import { pageNumbers } from "../components/HRPagination";
+import StaffCard from "../components/staff/StaffCard";
 import StaffGraph from "../components/staff/StaffGraph";
 import type {
   StaffMember,
@@ -432,335 +419,9 @@ function Directory() {
           person={selected}
           directory={query.data}
           close={() => setSelected(null)}
-          drawer={view === "chart" && layout === "teams"}
           ru={ru}
         />
       )}
     </div>
-  );
-}
-function StaffCard({
-  person,
-  directory,
-  close,
-  ru,
-  drawer = false,
-}: {
-  person: StaffMember;
-  directory: StaffDirectory;
-  close: () => void;
-  ru: boolean;
-  drawer?: boolean;
-}) {
-  const L = (en: string, ruText: string) => (ru ? ruText : en);
-  const client = useQueryClient();
-  const notify = useNotice();
-  const [form, setForm] = useState(person);
-  const [editing, setEditing] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [showHistory, setShowHistory] = useState(false);
-  const history = useQuery({
-    queryKey: ["staff-history", person.id],
-    queryFn: () =>
-      request<
-        {
-          id: string;
-          actor_name: string;
-          created_at: string;
-          action: string;
-          fields: string[];
-        }[]
-      >(`/hr/staff/${person.id}/history`),
-    enabled: showHistory,
-  });
-  const dirty = JSON.stringify(form) !== JSON.stringify(person);
-  function dismiss() {
-    if (
-      !busy &&
-      (!dirty ||
-        window.confirm(
-          L("Discard unsaved changes?", "Закрыть без сохранения изменений?"),
-        ))
-    )
-      close();
-  }
-  const field = (key: string, value: string) =>
-    setForm((f) => ({ ...f, fields: { ...f.fields, [key]: value } }));
-  function label(key: string) {
-    return (
-      directory.columns[key]?.[ru ? 1 : 0] ||
-      `${L("Source column", "Столбец")} ${key}`
-    );
-  }
-  async function save(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    setBusy(true);
-    try {
-      await patch(`/hr/staff/${person.id}`, {
-        version: person.version,
-        name: form.name,
-        title: form.title,
-        department: form.department,
-        status: form.status,
-        manager_id: form.manager_id,
-        fields: form.fields,
-        links: form.links,
-      });
-      await client.invalidateQueries({ queryKey: ["hr-staff"] });
-      notify(L("Employee saved", "Сотрудник сохранён"));
-      close();
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-  const groups: [string, string, string[]][] = [
-    ["Contacts", "Контакты", ["F", "K", "H"]],
-    ["Employment", "Работа", ["C", "D", "I", "J"]],
-    ["Personal information", "Личные сведения", ["L"]],
-    [
-      "Documents & additional information",
-      "Документы и дополнительные сведения",
-      [
-        "M",
-        "N",
-        "O",
-        "P",
-        ...Object.keys(form.fields).filter(
-          (k) => !"ABCDEFGHIJKLMNOP".includes(k),
-        ),
-      ],
-    ],
-  ];
-  const nameInput = (key: "name" | "title" | "department", caption: string) => (
-    <Field label={caption}>
-      {editing ? (
-        <input
-          value={form[key]}
-          required={key === "name"}
-          maxLength={key === "department" ? 160 : 240}
-          onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-        />
-      ) : (
-        <div className="staff-value">{form[key] || "—"}</div>
-      )}
-    </Field>
-  );
-  return (
-    <Modal
-      title={person.name}
-      onClose={dismiss}
-      wide
-      className={`staff-card ${drawer ? "staff-card-drawer" : ""}`}
-    >
-      <form onSubmit={save}>
-        <div className="modal-body">
-          <div className="staff-card-toolbar">
-            <span className="staff-source">
-              Main · {L("row", "строка")} {person.source_row}
-            </span>
-            <Button
-              variant="ghost"
-              onClick={() => setShowHistory((v) => !v)}
-              aria-expanded={showHistory}
-            >
-              <History size={16} />
-              {L("History", "История")}
-            </Button>
-            {!editing && (
-              <Button onClick={() => setEditing(true)}>
-                <Pencil size={16} />
-                {L("Edit", "Редактировать")}
-              </Button>
-            )}
-          </div>
-          {error && <ErrorNotice>{error}</ErrorNotice>}
-          <div className="form-grid">
-            {nameInput("name", L("Name", "Имя"))}
-            {nameInput("title", L("Position", "Должность"))}
-            {nameInput("department", L("Department", "Отдел"))}
-            <Field label={L("Manager", "Руководитель")}>
-              {editing ? (
-                <Select
-                  value={form.manager_id || ""}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      manager_id: e.target.value || null,
-                    }))
-                  }
-                >
-                  <option value="">
-                    {L("No manager", "Без руководителя")}
-                  </option>
-                  {directory.items
-                    .filter((p) => p.id !== person.id)
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} · {p.title}
-                      </option>
-                    ))}
-                </Select>
-              ) : (
-                <div className="staff-value">
-                  {directory.items.find((p) => p.id === form.manager_id)
-                    ?.name || "—"}
-                </div>
-              )}
-            </Field>
-          </div>
-          <div
-            className="staff-card-status"
-            role="group"
-            aria-label={L("Employment status", "Статус сотрудника")}
-          >
-            {(
-              [
-                ["active", Check, "Active", "Работает"],
-                ["paused", Pause, "Paused", "На паузе"],
-                ["inactive", UserRoundX, "Inactive", "Не работает"],
-              ] as const
-            ).map(([s, Icon, en, r]) => (
-              <Button
-                key={s}
-                variant={form.status === s ? "primary" : "ghost"}
-                disabled={busy}
-                aria-pressed={form.status === s}
-                onClick={() => {
-                  setEditing(true);
-                  setForm((f) => ({ ...f, status: s }));
-                }}
-              >
-                <Icon size={16} />
-                {L(en, r)}
-              </Button>
-            ))}
-          </div>
-          {groups.map(([en, r, keys]) => (
-            <section className="staff-card-section" key={en}>
-              <h3>{L(en, r)}</h3>
-              <div className="form-grid">
-                {keys.map((k) => (
-                  <Field
-                    key={k}
-                    label={label(k)}
-                    className={k >= "M" ? "span-all" : undefined}
-                  >
-                    {editing ? (
-                      <div className="staff-edit-field">
-                        {k >= "M" ? (
-                          <textarea
-                            rows={3}
-                            value={form.fields[k] || ""}
-                            maxLength={20000}
-                            onChange={(e) => field(k, e.target.value)}
-                          />
-                        ) : (
-                          <input
-                            value={form.fields[k] || ""}
-                            maxLength={20000}
-                            onChange={(e) => field(k, e.target.value)}
-                          />
-                        )}
-                        {(form.links[k] || k === "M") && (
-                          <input
-                            aria-label={`${label(k)} URL`}
-                            type="url"
-                            placeholder="https://"
-                            value={form.links[k] || ""}
-                            onChange={(e) =>
-                              setForm((f) => ({
-                                ...f,
-                                links: e.target.value
-                                  ? { ...f.links, [k]: e.target.value }
-                                  : Object.fromEntries(
-                                      Object.entries(f.links).filter(
-                                        ([key]) => key !== k,
-                                      ),
-                                    ),
-                              }))
-                            }
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <div className="staff-value">
-                        {form.fields[k] || "—"}
-                        {form.links[k] &&
-                          /^(https?:\/\/|mailto:)/i.test(form.links[k]) && (
-                            <a
-                              href={form.links[k]}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="staff-document"
-                            >
-                              <ExternalLink size={14} />
-                              {L("Open link", "Открыть ссылку")}
-                            </a>
-                          )}
-                      </div>
-                    )}
-                  </Field>
-                ))}
-              </div>
-            </section>
-          ))}
-          {showHistory && (
-            <section className="staff-card-section">
-              <h3>{L("Change history", "История изменений")}</h3>
-              {history.isLoading ? (
-                <Loading />
-              ) : history.error ? (
-                <ErrorNotice>{errorMessage(history.error)}</ErrorNotice>
-              ) : (
-                <ul className="staff-history">
-                  {history.data?.map((h) => (
-                    <li key={h.id}>
-                      <strong>{h.actor_name}</strong>
-                      <span>
-                        {new Date(h.created_at).toLocaleString(
-                          ru ? "ru-RU" : "en-US",
-                        )}
-                      </span>
-                      <small>
-                        {h.action === "create"
-                          ? L("Employee imported", "Сотрудник импортирован")
-                          : L("Employee updated", "Данные обновлены")}
-                      </small>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          )}
-          <p className="staff-save-meta">
-            {L("Last edited by", "Последнее изменение")}:{" "}
-            {person.updated_by || "—"} ·{" "}
-            {new Date(person.updated_at).toLocaleDateString(
-              ru ? "ru-RU" : "en-US",
-            )}
-          </p>
-        </div>
-        <footer className="modal-footer">
-          <Button onClick={dismiss} disabled={busy}>
-            {L("Close", "Закрыть")}
-          </Button>
-          {editing && (
-            <Button
-              type="submit"
-              variant="primary"
-              busy={busy}
-              disabled={!dirty}
-            >
-              <Save size={17} />
-              {L("Save changes", "Сохранить изменения")}
-            </Button>
-          )}
-        </footer>
-      </form>
-    </Modal>
   );
 }

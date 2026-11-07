@@ -17,13 +17,13 @@ try {
  const {Staff,LanguageProvider,NoticeProvider,QueryClient,QueryClientProvider,MemoryRouter,Routes,Route,createElement:h,act,createRoot}=await import(pathToFileURL(resolve(dir,'app.mjs')));
  for(const language of ['en','ru']) {
   localStorage.setItem('wallpanels.ui-language',language);globalThis.staffOwner=true;
-  const ru=language==='ru';let reads=0,writes=[];
+  const ru=language==='ru';let reads=0,writes=[],failSave=false;
   let rows=Array.from({length:24},(_,i)=>({id:'person-'+i,name:'Person '+String(i).padStart(2,'0'),title:'Role',department:'Sales',status:i<22?'active':'paused',manager_id:i?'person-0':null,fields:{F:'+15550100000',K:'payroll person@example.com\nPRIVATE IBAN',M:'Document label',O:'Original additional information'},links:{M:'https://example.com/document'},source_row:i+2,source_sheet:'Main',version:1,updated_by:'Owner',updated_at:'2026-11-06T12:00:00Z'}));
   globalThis.fetch=async(path,opts={})=>{
    let result;
    if(path.endsWith('/hr/staff')){reads++;result={items:rows,columns:{F:['Contact','Контакт'],K:['Email','Email'],O:['Additional information · O','Дополнительные сведения · O']}};}
    else if(path.endsWith('/history'))result=[];
-   else if(opts.method==='PATCH') {const body=JSON.parse(opts.body);writes.push(body);rows=rows.map(p=>path.endsWith('/'+p.id)?{...p,...body,version:p.version+1}:p);result=rows.find(p=>path.endsWith('/'+p.id));}
+   else if(opts.method==='PATCH') {if(failSave)return new Response(JSON.stringify({detail:'Conflict: employee updated by another user'}),{status:409,headers:{'Content-Type':'application/json'}});const body=JSON.parse(opts.body);writes.push(body);rows=rows.map(p=>path.endsWith('/'+p.id)?{...p,...body,version:p.version+1}:p);result=rows.find(p=>path.endsWith('/'+p.id));}
    else throw Error('Unexpected synthetic URL '+path);
    return new Response(JSON.stringify(result),{headers:{'Content-Type':'application/json'}});
   };
@@ -37,11 +37,37 @@ try {
   await click(ru?'Следующая страница':'Next page');assert.equal(document.querySelectorAll('tbody tr').length,2);
   await click(ru?'Предыдущая страница':'Previous page');
   await act(async()=>document.querySelector('.staff-name-button').click());await settle();
+  assert.ok(document.querySelector('dialog').classList.contains('staff-card'));
+  assert.ok(!document.querySelector('dialog').classList.contains('staff-card-drawer'));
+  assert.equal(document.querySelector('dialog input'),null,'Profile opens in readable view mode');
+  assert.equal(document.querySelectorAll('[role=tab]').length,3);
+  await click(ru?'Документы и заметки':'Documents & notes');
   assert.ok(document.querySelector('dialog').textContent.includes('Original additional information'));
   assert.equal(document.querySelector('.staff-document').href,'https://example.com/document');
+  await click(ru?'История':'History');
+  assert.ok(document.querySelector('dialog').textContent.includes(ru?'Изменений пока нет.':'No changes recorded yet.'));
+  await click(ru?'Редактировать':'Edit profile');
   await click(ru?'На паузе':'Paused');
+  await click(ru?'Документы и заметки':'Documents & notes');
+  assert.equal(document.querySelector('dialog textarea').value,'Document label');
+  await click(ru?'Обзор':'Overview');
+  assert.equal(document.querySelector('dialog textarea[aria-label="Email"]').value,'payroll person@example.com\nPRIVATE IBAN','Multiline source values preserved');
   await act(async()=>document.querySelector('dialog form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));await settle();
   assert.equal(writes.length,1);assert.equal(writes[0].status,'paused');assert.equal(writes[0].fields.O,'Original additional information');assert.equal(writes[0].version,1);assert.equal(writes[0].links.M,'https://example.com/document');
+  assert.equal(document.querySelector('dialog'),null);
+  await act(async()=>document.querySelector('.staff-name-button').click());await settle();
+  await click(ru?'Редактировать':'Edit profile');
+  const name=document.querySelector('dialog input[required]');
+  await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(name,'Updated draft');name.dispatchEvent(new Event('input',{bubbles:true}));});
+  window.confirm=()=>false;
+  await click(ru?'Закрыть':'Close');
+  assert.ok(document.querySelector('dialog'),'Dirty close can be cancelled');
+  failSave=true;
+  await act(async()=>document.querySelector('dialog form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));await settle();
+  assert.equal(document.querySelector('dialog input[required]').value,'Updated draft','Conflict retains draft');
+  assert.ok(document.querySelector('dialog').textContent.includes('Conflict'));
+  window.confirm=()=>true;
+  await click(ru?'Закрыть':'Close');
   assert.equal(document.querySelector('dialog'),null);
   await click(ru?'24Все сотрудники':'24All employees');
   await click(ru?'Структура':'Structure');assert.equal(document.querySelectorAll('.staff-style-option').length,8);
@@ -55,5 +81,5 @@ try {
   assert.equal(reads,before);assert.equal(document.querySelector('.staff-page'),null);assert.ok(document.body.textContent.includes('HR home'));
   await act(async()=>deniedRoot.unmount());deniedClient.clear();document.getElementById('root').innerHTML='';
  }
- console.log('Staff UI: EN/RU table pagination, private contacts preview, complete card, preserved fields/links, status save, 8 styles and non-owner gate without staff fetch.');
+ console.log('Staff UI: EN/RU table pagination, private contacts preview, centered tabbed profile, multiline fields/links, status save, conflict/dirty draft retention, 8 styles and non-owner gate without staff fetch.');
 } finally {await rm(dir,{recursive:true,force:true});}
