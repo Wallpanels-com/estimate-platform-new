@@ -1,3 +1,4 @@
+import StaffAvatar from "./StaffAvatar";
 import {
   memo,
   useCallback,
@@ -106,13 +107,7 @@ const Person = memo(function Person({ data }: NodeProps<PersonNode>) {
   const body = (
     <>
       <span className="staff-person-top">
-        <span className="staff-avatar">
-          {p.name
-            .split(/\s+/)
-            .slice(0, 2)
-            .map((n) => n[0])
-            .join("")}
-        </span>
+        <StaffAvatar person={p} />
         <span className={`staff-status-dot ${p.status}`} />
         {data.editing ? <GripVertical size={16} /> : <ArrowUpRight size={15} />}
       </span>

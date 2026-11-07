@@ -17,12 +17,13 @@ try {
  const {Staff,LanguageProvider,NoticeProvider,QueryClient,QueryClientProvider,MemoryRouter,Routes,Route,createElement:h,act,createRoot}=await import(pathToFileURL(resolve(dir,'app.mjs')));
  for(const language of ['en','ru']) {
   localStorage.setItem('wallpanels.ui-language',language);globalThis.staffOwner=false;globalThis.staffPages=['hr'];window.matchMedia=()=>({matches:true});
-  const ru=language==='ru';let reads=0,writes=[],failSave=false,historyReads=0,copied='';
+  const ru=language==='ru';let reads=0,writes=[],failSave=false,historyReads=0,avatarReads=0,copied='';
   Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async v=>{copied=v}}});
-  let rows=Array.from({length:24},(_,i)=>({id:'person-'+i,name:'Person '+String(i).padStart(2,'0'),title:'Role',department:'Sales',status:i<22?'active':'paused',manager_id:i?'person-0':null,fields:{F:'@staff_name\n+15550100000',H:'UA',K:'person@example.com\nPayPal - billing@example.com\nPRIVATE IBAN',M:'Link',N:'Original note',O:'+15550101111 Mother Anna\n+15550102222 Brother Max',P:'Additional note',AA:'Unknown source column'},links:{K:'mailto:person@example.com',M:'https://example.com/document'},source_row:i+2,source_sheet:'Main',version:1,updated_by:'Owner',updated_at:'2026-11-06T12:00:00Z'}));
+  let rows=Array.from({length:24},(_,i)=>({id:'person-'+i,name:'Person '+String(i).padStart(2,'0'),title:'Role',department:'Sales',status:i<22?'active':'paused',manager_id:i?'person-0':null,fields:{F:'@staff_name\n+15550100000',H:'UA',K:'person@example.com\nPayPal - billing@example.com\nPRIVATE IBAN',M:'Link',N:'Original note',O:'+15550101111 Mother Anna\n+15550102222 Brother Max',P:'Additional note',AA:'Unknown source column'},links:{K:'mailto:person@example.com',M:'https://example.com/document'},avatar_url:i===0?'/api/v1/hr/staff/person-0/avatar?v=preview':null,source_row:i+2,source_sheet:'Main',version:1,updated_by:'Owner',updated_at:'2026-11-06T12:00:00Z'}));
   globalThis.fetch=async(path,opts={})=>{
    let result;
    if(path.endsWith('/hr/staff')){reads++;result={items:rows,columns:{F:['Contact','Контакт'],K:['Email','Email'],O:['Additional information · O','Дополнительные сведения · O']}};}
+   else if(path.endsWith('/avatar?v=preview')){avatarReads++;return new Response(new Blob(['synthetic-image'],{type:'image/png'}));}
    else if(path.endsWith('/history')){historyReads++;result=[];}
    else if(opts.method==='PATCH') {if(failSave)return new Response(JSON.stringify({detail:'Conflict: employee updated by another user'}),{status:409,headers:{'Content-Type':'application/json'}});const body=JSON.parse(opts.body);writes.push(body);rows=rows.map(p=>path.endsWith('/'+p.id)?{...p,...body,version:p.version+1}:p);result=rows.find(p=>path.endsWith('/'+p.id));}
    else throw Error('Unexpected synthetic URL '+path);
@@ -43,6 +44,11 @@ try {
   assert.equal(document.querySelector('dialog input'),null,'Profile opens in readable view mode');
   assert.equal(document.querySelectorAll('[role=tab]').length,2);
   assert.equal(historyReads,0);
+  assert.equal(avatarReads,1,'Table and profile share one authenticated avatar request');
+  assert.ok(document.querySelector('dialog .staff-profile-avatar img')?.src.startsWith('blob:'),'Profile displays the cached avatar');
+  await act(async()=>document.querySelector('dialog .staff-profile-avatar img').dispatchEvent(new Event('error')));
+  assert.equal(document.querySelector('dialog .staff-profile-avatar img'),null,'Invalid image keeps initials');
+  assert.equal(document.querySelector('dialog .staff-profile-avatar').textContent,'P0');
   assert.equal(document.querySelector('.staff-document').href,'https://example.com/document');
   assert.equal(document.querySelectorAll('dialog a[href^="mailto:"]').length,0,'Do not show email links');
   assert.ok(document.querySelector('.staff-profile-personal').textContent.includes('Ukraine'));
@@ -120,5 +126,5 @@ try {
   assert.equal(reads,before);assert.equal(document.querySelector('.staff-page'),null);assert.ok(document.body.textContent.includes('HR home'));
   await act(async()=>deniedRoot.unmount());deniedClient.clear();document.getElementById('root').innerHTML='';
  }
- console.log('Staff UI: EN/RU table pagination, private contacts preview, two-tab profile, direct note editing/repeated save/reopen/conflict retention, one-click contacts, separate PayPal, documents in Overview, aligned source sections, raw fields/links, no history requests, status save, conflict/dirty draft retention, single Team spaces view, HR staff access and no-HR gate without staff fetch.');
+ console.log('Staff UI: EN/RU table pagination, private contacts preview, two-tab profile, direct note editing/repeated save/reopen/conflict retention, shared authenticated avatars with initials fallback, one-click contacts, separate PayPal, documents in Overview, aligned source sections, raw fields/links, no history requests, status save, conflict/dirty draft retention, single Team spaces view, HR staff access and no-HR gate without staff fetch.');
 } finally {await rm(dir,{recursive:true,force:true});}

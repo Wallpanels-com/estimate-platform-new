@@ -1,5 +1,7 @@
 """Shared HR staff API checks in the audit's disposable local schema."""
 from io import BytesIO
+from unittest.mock import patch
+from PIL import Image
 from openpyxl import Workbook
 
 
@@ -10,6 +12,7 @@ async def check_staff(call, client, tokens):
     s.append(['Test operations','Active',None,None,'Chief Operating Officer (COO)',None,'Administration'])
     s.append(['Test sales lead','Active',None,None,'Director',None,'Sales'])
     s.append(['Test employee','Paused',None,None,'Sales manager',None,'Sales'])
+    s['F2']='@synthetic_staff'
     s['M5']='Documents';s['M5'].hyperlink='https://example.com/document'
     s['O5']='Synthetic private note'
     w.create_sheet('Ignored').append(['No import'])
@@ -33,11 +36,23 @@ async def check_staff(call, client, tokens):
     await call('PATCH',f'/hr/staff/{emp["id"]}',403,json=body(emp))
     await call('POST','/hr/staff/import',403,files=file)
     await call('GET',f'/hr/staff/{emp["id"]}/history',403)
+    await call('GET',f'/hr/staff/{ceo["id"]}/avatar',403)
+    await call('POST','/hr/staff/avatars/sync',403)
     client.headers['Authorization']='Bearer '+tokens[0]
     await call('PUT',access_path,json={'pages':['hr'],'expected_updated_at':original['updated_at']})
     client.headers['Authorization']='Bearer '+tokens[1]
     assert len((await call('GET','/hr/staff')).json()['items'])==4
     await call('GET',f'/hr/staff/{emp["id"]}/history')
+    await call('GET',f'/hr/staff/{ceo["id"]}/avatar',204)
+    avatar=BytesIO();Image.new('RGB',(40,40),'#aaa').save(avatar,'PNG');photo=avatar.getvalue()
+    with patch('app.services.staff_avatars.fetch_avatar',return_value=(photo,'image/png')) as fetch:
+        synced=(await call('POST','/hr/staff/avatars/sync')).json()['items']
+        assert len(synced)==3 and fetch.call_count==1
+    with patch('app.services.staff_avatars.fetch_avatar',side_effect=AssertionError('No Telegram calls on reads')):
+        assert (await call('GET',f'/hr/staff/{ceo["id"]}/avatar')).content==photo
+        shown=next(p for p in (await call('GET','/hr/staff')).json()['items'] if p['id']==ceo['id'])
+        assert shown['avatar_url'].startswith(f'/api/v1/hr/staff/{ceo["id"]}/avatar?v=')
+        assert all(shown[k]==ceo[k] for k in ('name','fields','links','version','updated_by'))
     cycle=body(ceo)|{'manager_id':emp['id']}
     await call('PATCH',f'/hr/staff/{ceo["id"]}',422,json=cycle)
     await call('PATCH',f'/hr/staff/{emp["id"]}',422,json=body(emp)|{'manager_id':emp['id']})

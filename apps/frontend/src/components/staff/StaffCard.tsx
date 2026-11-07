@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { patch, errorMessage } from "../../lib/api";
 import type { StaffDirectory, StaffMember } from "../../lib/staff";
+import StaffAvatar from "./StaffAvatar";
 import Select from "../Select";
 import { StaffContacts, StaffReserveContacts } from "./StaffContacts";
 import {
@@ -146,12 +147,6 @@ export default function StaffCard({
   ] as const;
   const status = statuses.find(([s]) => s === form.status)!;
   const StatusIcon = status[1];
-  const initials = form.name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join("");
   const notes = [
     ...new Set([
       "N",
@@ -333,11 +328,7 @@ export default function StaffCard({
       onClose={dismiss}
       wide
       className="staff-card"
-      leading={
-        <div className="staff-profile-avatar" aria-hidden="true">
-          {initials}
-        </div>
-      }
+      leading={<StaffAvatar person={form} className="staff-profile-avatar" />}
       description={
         <div className="staff-profile-subtitle">
           <span>{form.title || L("Employee", "Сотрудник")}</span>

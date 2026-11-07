@@ -22,6 +22,7 @@ import {
 } from "../components/ui";
 import Select from "../components/Select";
 import { pageNumbers } from "../components/HRPagination";
+import StaffAvatar from "../components/staff/StaffAvatar";
 import StaffCard from "../components/staff/StaffCard";
 import StaffGraph from "../components/staff/StaffGraph";
 import type { StaffMember, StaffDirectory, StaffStatus } from "../lib/staff";
@@ -258,13 +259,7 @@ function Directory() {
                       className="staff-name-button"
                       onClick={() => open(p)}
                     >
-                      <span className="staff-avatar">
-                        {p.name
-                          .split(/\s+/)
-                          .slice(0, 2)
-                          .map((n) => n[0])
-                          .join("")}
-                      </span>
+                      <StaffAvatar person={p} />
                       <span>
                         <strong>{p.name}</strong>
                         <small>{p.title || "—"}</small>

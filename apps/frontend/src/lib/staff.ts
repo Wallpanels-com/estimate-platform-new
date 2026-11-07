@@ -2,6 +2,7 @@ import { referenceScene } from "./staffReferenceLayouts";
 export type StaffStatus = "active" | "inactive" | "paused";
 export type StaffMember = {
   id: string;
+  avatar_url?: string | null;
   name: string;
   status: StaffStatus;
   title: string;

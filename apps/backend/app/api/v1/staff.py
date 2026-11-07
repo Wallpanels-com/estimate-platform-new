@@ -1,6 +1,7 @@
 """Shared employee workspace for users with the HR page grant."""
 import uuid
 from typing import Literal
+from fastapi.responses import FileResponse
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from sqlalchemy import select, text
@@ -8,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.config import settings
+from app.services.staff_avatars import avatar_entry, sync_active
 from app.models.staff import StaffMember
 from app.models.governance import AuditEvent
 from app.services.page_access import require_any
@@ -25,7 +28,8 @@ router = APIRouter(prefix='/staff', tags=['Staff'], dependencies=[Depends(staff_
 
 
 def output(r):
-    return {k: getattr(r, k) for k in ('id', 'name', 'status', 'title', 'department', 'fields', 'links', 'manager_id', 'version', 'updated_by', 'created_at', 'updated_at')} | {'source_row': r.source.get('row'), 'source_sheet': 'Main'}
+    avatar = avatar_entry(r, settings.STORAGE_PATH)
+    return {k: getattr(r, k) for k in ('id', 'name', 'status', 'title', 'department', 'fields', 'links', 'manager_id', 'version', 'updated_by', 'created_at', 'updated_at')} | {'source_row': r.source.get('row'), 'source_sheet': 'Main', 'avatar_url': f"/api/v1/hr/staff/{r.id}/avatar?v={avatar[0]['sha256']}" if avatar else None}
 
 
 from app.api.v1.staff_chart import router as chart_router
@@ -63,6 +67,22 @@ async def import_main(file: UploadFile = File(...), db: AsyncSession = Depends(g
         r.manager_id = existing[key].id if key and key in existing else None
     await db.flush()
     return {'added': len(added), 'duplicates': len(records) - len(added), 'sheet': 'Main'}
+
+
+@router.post('/avatars/sync')
+async def sync_avatars(db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(select(StaffMember).where(StaffMember.status == 'active'))).scalars().all()
+    return {'items': await run_in_threadpool(sync_active, rows, settings.STORAGE_PATH)}
+
+
+@router.get('/{ident}/avatar')
+async def staff_avatar(ident: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    member = await db.get(StaffMember, ident)
+    avatar = avatar_entry(member, settings.STORAGE_PATH) if member else None
+    if not avatar:
+        return Response(status_code=204)
+    entry, path = avatar
+    return FileResponse(path, media_type=entry['mime'], headers={'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff'})
 
 
 class StaffInput(BaseModel):
