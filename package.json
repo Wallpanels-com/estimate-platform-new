@@ -28,7 +28,9 @@
     "test:access-ui": "node scripts/test-page-access.mjs",
     "test:hr-ui": "node scripts/test-hr-actions.mjs",
     "test:hr-ai-ui": "node scripts/test-hr-ai-ui.mjs",
-    "test:staff-ui": "node scripts/test-staff-ui.mjs"
+    "test:staff-ui": "node scripts/test-staff-ui.mjs",
+    "test:staff-chart": "node scripts/test-staff-chart.mjs",
+    "test:staff-editor-ui": "node scripts/test-staff-editor-ui.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

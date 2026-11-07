@@ -1,3 +1,4 @@
+import { referenceScene } from "./staffReferenceLayouts";
 export type StaffStatus = "active" | "inactive" | "paused";
 export type StaffMember = {
   id: string;
@@ -19,7 +20,14 @@ export type StaffDirectory = {
   columns: Record<string, [string, string]>;
 };
 export type StaffLayout =
-  "tree" | "horizontal" | "orbit" | "departments" | "terraces";
+  | "tree"
+  | "horizontal"
+  | "orbit"
+  | "departments"
+  | "terraces"
+  | "teams"
+  | "holi"
+  | "compact";
 export const STAFF_WIDTH = 246;
 export const STAFF_HEIGHT = 112;
 
@@ -45,6 +53,8 @@ export function staffPositions(
   parents: Map<string, string | null>,
   layout: StaffLayout,
 ) {
+  if (layout === "teams" || layout === "holi" || layout === "compact")
+    return referenceScene(people, parents, layout).positions;
   const positions = new Map<string, { x: number; y: number }>();
   const children = new Map<string, StaffMember[]>();
   const roots: StaffMember[] = [];

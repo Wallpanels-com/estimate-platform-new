@@ -6,7 +6,7 @@ from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 from app.models.governance import AuditEvent
 
-TRACKED = {"hr_staff", "hr_vacancies", "hr_candidates", "estimates", "estimate_zones", "line_items", "estimate_images", "voice_files", "pricing_config", "users", "document_versions"}
+TRACKED = {"hr_staff_charts", "hr_staff", "hr_vacancies", "hr_candidates", "estimates", "estimate_zones", "line_items", "estimate_images", "voice_files", "pricing_config", "users", "document_versions"}
 REDACTED = {"password_hash", "token_version"}
 
 

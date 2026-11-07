@@ -21,6 +21,9 @@ import {
   ChevronRight,
   History,
   UsersRound,
+  Blocks,
+  Rows3,
+  Workflow,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
@@ -70,6 +73,7 @@ function Directory() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StaffStatus | "">("active");
   const [department, setDepartment] = useState("");
+  const [chartDirty, setChartDirty] = useState(false);
   const [view, setView] = useState<"table" | "chart">("table");
   const [layout, setLayout] = useState<StaffLayout>("tree");
   const [leadersOnly, setLeadersOnly] = useState(true);
@@ -117,6 +121,9 @@ function Directory() {
     ["orbit", "03", "Orbit", Orbit],
     ["departments", "04", "Departments", Columns3],
     ["terraces", "05", "Terraces", Layers3],
+    ["teams", "07", "Team spaces", Blocks],
+    ["holi", "08", "Holi tree", Workflow],
+    ["compact", "09", "Holi compact", Rows3],
   ];
   const labels: Record<StaffLayout, string> = {
     tree: L("Org tree", "Дерево"),
@@ -124,6 +131,9 @@ function Directory() {
     orbit: L("Orbit", "Орбиты"),
     departments: L("Departments", "Отделы"),
     terraces: L("Terraces", "Террасы"),
+    teams: L("Team spaces", "Команды"),
+    holi: L("Holi tree", "Holi · Дерево"),
+    compact: L("Holi compact", "Holi · Компакт"),
   };
   if (query.isLoading) return <Loading />;
   return (
@@ -150,7 +160,18 @@ function Directory() {
           <Button
             variant={view === "table" ? "primary" : "ghost"}
             aria-pressed={view === "table"}
-            onClick={() => setView("table")}
+            onClick={() => {
+              if (
+                !chartDirty ||
+                window.confirm(
+                  L(
+                    "Discard the unsaved chart draft?",
+                    "Закрыть схему без сохранения изменений?",
+                  ),
+                )
+              )
+                setView("table");
+            }}
           >
             <Table2 size={17} />
             {L("Table", "Таблица")}
@@ -240,7 +261,10 @@ function Directory() {
               <button
                 key={key}
                 className={`staff-style-option staff-style-${key} ${layout === key ? "selected" : ""}`}
-                onClick={() => setLayout(key)}
+                onClick={() => {
+                  setLayout(key);
+                  if (key === "teams") setLeadersOnly(false);
+                }}
                 aria-pressed={layout === key}
               >
                 <Icon size={25} />
@@ -283,26 +307,9 @@ function Directory() {
             "Загрузите лист Main для начала работы.",
           )}
         </EmptyState>
-      ) : !filtered.length ? (
+      ) : !filtered.length && view !== "chart" ? (
         <EmptyState title={L("No matching employees", "Сотрудники не найдены")}>
           {L("Try another search or filter.", "Измените поиск или фильтр.")}
-        </EmptyState>
-      ) : view === "chart" && !chartPeople.length ? (
-        <EmptyState
-          title={L(
-            "No managers in this selection",
-            "В выборке нет руководителей",
-          )}
-          action={
-            <Button onClick={() => setLeadersOnly(false)}>
-              {L("Show entire team", "Показать всю команду")}
-            </Button>
-          }
-        >
-          {L(
-            "Switch to the entire team to see all matching employees.",
-            "Переключитесь на всю команду, чтобы увидеть выбранных сотрудников.",
-          )}
         </EmptyState>
       ) : view === "chart" ? (
         <StaffGraph
@@ -311,6 +318,13 @@ function Directory() {
           layout={layout}
           open={open}
           ru={ru}
+          onDirtyChange={setChartDirty}
+          onEditStart={() => setLeadersOnly(false)}
+          department={department}
+          onDepartment={(value) => {
+            setDepartment(value);
+            setLeadersOnly(false);
+          }}
         />
       ) : (
         <section className="staff-table-wrap">
@@ -418,6 +432,7 @@ function Directory() {
           person={selected}
           directory={query.data}
           close={() => setSelected(null)}
+          drawer={view === "chart" && layout === "teams"}
           ru={ru}
         />
       )}
@@ -429,11 +444,13 @@ function StaffCard({
   directory,
   close,
   ru,
+  drawer = false,
 }: {
   person: StaffMember;
   directory: StaffDirectory;
   close: () => void;
   ru: boolean;
+  drawer?: boolean;
 }) {
   const L = (en: string, ruText: string) => (ru ? ruText : en);
   const client = useQueryClient();
@@ -533,7 +550,12 @@ function StaffCard({
     </Field>
   );
   return (
-    <Modal title={person.name} onClose={dismiss} wide className="staff-card">
+    <Modal
+      title={person.name}
+      onClose={dismiss}
+      wide
+      className={`staff-card ${drawer ? "staff-card-drawer" : ""}`}
+    >
       <form onSubmit={save}>
         <div className="modal-body">
           <div className="staff-card-toolbar">

@@ -4,4 +4,4 @@ from app.models.estimate import Estimate, EstimateZone, LineItem, EstimateImage,
 
 from app.models.hr import Vacancy, Candidate, ImportBatch, CandidateAIReview
 
-from app.models.staff import StaffMember
+from app.models.staff import StaffMember, StaffChart

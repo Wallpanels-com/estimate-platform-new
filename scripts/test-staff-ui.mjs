@@ -44,7 +44,7 @@ try {
   assert.equal(writes.length,1);assert.equal(writes[0].status,'paused');assert.equal(writes[0].fields.O,'Original additional information');assert.equal(writes[0].version,1);assert.equal(writes[0].links.M,'https://example.com/document');
   assert.equal(document.querySelector('dialog'),null);
   await click(ru?'24Все сотрудники':'24All employees');
-  await click(ru?'Структура':'Structure');assert.equal(document.querySelectorAll('.staff-style-option').length,5);
+  await click(ru?'Структура':'Structure');assert.equal(document.querySelectorAll('.staff-style-option').length,8);
   await click(ru?'Вся команда':'Entire team');
   for(const b of document.querySelectorAll('.staff-style-option')){await act(async()=>b.click());await settle();}
   assert.equal(document.querySelectorAll('[data-testid=graph] button').length,24);
@@ -55,5 +55,5 @@ try {
   assert.equal(reads,before);assert.equal(document.querySelector('.staff-page'),null);assert.ok(document.body.textContent.includes('HR home'));
   await act(async()=>deniedRoot.unmount());deniedClient.clear();document.getElementById('root').innerHTML='';
  }
- console.log('Staff UI: EN/RU table pagination, private contacts preview, complete card, preserved fields/links, status save, 5 styles and non-owner gate without staff fetch.');
+ console.log('Staff UI: EN/RU table pagination, private contacts preview, complete card, preserved fields/links, status save, 8 styles and non-owner gate without staff fetch.');
 } finally {await rm(dir,{recursive:true,force:true});}

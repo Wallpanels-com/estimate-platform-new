@@ -818,3 +818,504 @@
     opacity: 0.7;
   }
 }
+/* Reference views 07 / 08 / 09, with common editing geometry. */
+.staff-styles {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.staff-style-option {
+  min-height: 62px;
+  padding: 11px 16px;
+}
+.staff-canvas .staff-person {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.staff-person-identity {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.staff-person-identity > strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.staff-person-identity .staff-person-title {
+  display: block;
+}
+.staff-person-open > strong {
+  margin: 0;
+}
+.staff-person-details {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 28px;
+  border: 0;
+  border-top: 1px solid #e7ebe9;
+  background: transparent;
+  color: #7a8a80;
+  font-size: 10px;
+  cursor: pointer;
+  border-radius: 0 0 10px 10px;
+}
+.staff-person-editing .staff-person-open {
+  height: calc(100% - 28px);
+  cursor: grab;
+  user-select: none;
+}
+.staff-person-editing .staff-person-open:active {
+  cursor: grabbing;
+}
+.staff-canvas .react-flow__node.dragging {
+  z-index: 10 !important;
+  filter: drop-shadow(0 12px 16px #405d7b20);
+}
+.staff-canvas .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+  min-height: 10px;
+  border: 2px solid #fff;
+  background: #9682d8;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 5;
+}
+.staff-canvas-editing .react-flow__handle {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  background: #3977ea;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px #3376ed70;
+  pointer-events: all;
+  cursor: crosshair;
+}
+.staff-canvas-editing .react-flow__handle::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+}
+.staff-canvas-editing .react-flow__handle:hover,
+.staff-canvas-editing .react-flow__handle.valid {
+  background: #19a982;
+  box-shadow: 0 0 0 5px #5ac9ab29;
+}
+.staff-graph-shell {
+  min-width: 0;
+}
+.staff-graph-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 12px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #dfe5e0;
+  border-radius: 10px;
+}
+.staff-graph-toolbar .button {
+  font-size: 12px;
+  min-height: 36px;
+  padding: 8px 11px;
+}
+.staff-graph-readonly {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-right: auto;
+  color: #87938c;
+  font-size: 12px;
+}
+.staff-link-kind {
+  display: flex;
+  padding: 3px;
+  background: #eef0f5;
+  border-radius: 7px;
+  gap: 2px;
+}
+.staff-link-kind > button {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  padding: 8px 10px;
+  color: #8c90a0;
+  font-size: 12px;
+  cursor: pointer;
+}
+.staff-link-kind > button[aria-pressed="true"] {
+  background: #fff;
+  color: #596bc0;
+  box-shadow: 0 1px 4px #273e6817;
+}
+.staff-draft-state {
+  margin-left: auto;
+  font-size: 11px;
+  color: #9a8c60;
+  padding: 0 7px;
+}
+.staff-editor-help {
+  margin: 0 0 13px;
+  max-width: 1000px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #7c8695;
+}
+.staff-canvas-editing {
+  outline: 2px solid #8fa5d12b;
+  outline-offset: 3px;
+}
+.staff-edge-additional .react-flow__edge-path {
+  stroke: #4583bd !important;
+  stroke-dasharray: 6 6;
+}
+.staff-canvas .react-flow__edge.selected .react-flow__edge-path {
+  stroke: #396ce2 !important;
+  filter: drop-shadow(0 1px 2px #4989ed44);
+}
+.staff-edge-count {
+  pointer-events: none;
+}
+.staff-edge-count circle {
+  fill: #7551e8;
+  stroke: #fff;
+  stroke-width: 3;
+}
+.staff-edge-count text {
+  fill: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+.staff-chart-empty {
+  position: absolute;
+  z-index: 4;
+  top: 45%;
+  left: 25%;
+  width: 50%;
+  text-align: center;
+  padding: 20px;
+  color: #81908a;
+  font-size: 14px;
+  background: #ffffffdf;
+  border-radius: 12px;
+  pointer-events: none;
+}
+.staff-graph-expanded {
+  position: fixed;
+  inset: 14px;
+  z-index: 200;
+  padding: 14px;
+  border: 1px solid #dce3e3;
+  border-radius: 15px;
+  background: #f5f6f7;
+  box-shadow: 0 0 0 100vmax #14213166;
+  display: flex;
+  flex-direction: column;
+}
+.staff-graph-expanded .staff-graph-toolbar {
+  flex-shrink: 0;
+}
+.staff-graph-expanded .staff-canvas {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+.staff-graph-expanded .staff-editor-help {
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
+.staff-canvas-teams {
+  background:
+    radial-gradient(ellipse at 85% 8%, #fbe4e8, transparent 42%),
+    radial-gradient(ellipse at 12% 85%, #e6e2fa, transparent 45%),
+    radial-gradient(ellipse at 75% 80%, #e1eaff, transparent 50%), #fbfcff;
+  border-color: #e4e5eb;
+  border-radius: 14px;
+}
+.staff-canvas-teams .react-flow__background path {
+  stroke-dasharray: 2 7;
+  stroke: #bfc4d1;
+}
+.staff-canvas-teams .staff-person {
+  border: 1px solid #dee1e5;
+  border-radius: 12px;
+  background: #fdfefeef;
+  box-shadow: 0 2px 4px #4b547308;
+  color: #242a38;
+}
+.staff-canvas-teams .staff-person-open {
+  padding: 15px 18px 34px;
+  display: block;
+}
+.staff-canvas-teams .staff-person-top {
+  position: absolute;
+  top: 48px;
+  left: 17px;
+  height: 42px;
+  width: calc(100% - 34px);
+}
+.staff-canvas-teams .staff-avatar {
+  width: 42px;
+  height: 42px;
+  flex-basis: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e1e5f5, #c8d4ed);
+  color: #576b93;
+  font-size: 13px;
+  box-shadow: 0 0 0 3px #fff;
+}
+.staff-canvas-teams .staff-person-top > svg {
+  position: absolute;
+  right: 0;
+  top: -32px;
+  color: #9da6b6;
+}
+.staff-canvas-teams .staff-status-dot {
+  display: none;
+}
+.staff-canvas-teams .staff-person-identity {
+  position: absolute;
+  left: 74px;
+  top: 46px;
+  width: calc(100% - 91px);
+}
+.staff-canvas-teams .staff-person-identity > strong {
+  color: #252d39;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 550;
+}
+.staff-canvas-teams .staff-person-title {
+  font-size: 12px;
+  color: #737d8e;
+  line-height: 19px;
+}
+.staff-canvas-teams .staff-person-open > .staff-status {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  background: #eff5ff;
+  border: 1px solid #9ab6ed;
+  border-radius: 15px;
+  color: #3d71c1;
+  font-size: 10px;
+  padding: 2px 9px;
+}
+.staff-canvas-teams .staff-status-inactive {
+  background: #fbf0fc !important;
+  border-color: #d8ade0 !important;
+  color: #a56daf !important;
+}
+.staff-canvas-teams .staff-status-paused {
+  background: #fff8e8 !important;
+  border-color: #e4ce9b !important;
+  color: #a9863f !important;
+}
+.staff-canvas-teams .staff-person-details {
+  height: 29px;
+  color: #7188b6;
+  border-color: #e8ebf2;
+  font-size: 10px;
+}
+.staff-canvas-teams .react-flow__edge-path {
+  stroke: #3576e9;
+}
+.staff-canvas-teams .react-flow__handle {
+  background: #3778ed;
+}
+.staff-department-frame {
+  width: 100%;
+  height: 100%;
+  border: 2px dashed #2972f4;
+  border-radius: 9px;
+  background: #ffffff24;
+  position: relative;
+  pointer-events: none;
+}
+.staff-department-frame > strong {
+  position: absolute;
+  top: -22px;
+  left: 20px;
+  padding: 10px 15px;
+  border-radius: 8px;
+  background: #efedff;
+  color: #30314f;
+  font-size: 16px;
+  font-weight: 550;
+}
+.staff-scene-departments {
+  position: absolute;
+  left: 18px;
+  top: 88px;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 154px;
+  max-height: calc(100% - 200px);
+  overflow: auto;
+  padding: 3px;
+}
+.staff-scene-departments button {
+  appearance: none;
+  border: 1px solid #dedfe7;
+  background: #ffffffed;
+  border-radius: 4px;
+  padding: 7px 9px;
+  color: #626b7d;
+  font-size: 11px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px #737e9d12;
+}
+.staff-scene-departments button[aria-pressed="true"] {
+  background: #286bed;
+  color: #fff;
+  border-color: #286bed;
+}
+.staff-canvas-holi,
+.staff-canvas-compact {
+  background: #fafcff;
+  border-color: #e0e5ee;
+  border-radius: 17px;
+}
+.staff-canvas-holi .staff-person,
+.staff-canvas-compact .staff-person {
+  border: 1px solid #dfe1e8;
+  border-radius: 18px;
+  background: linear-gradient(150deg, #fffffffa, #ffffffd9);
+  box-shadow: 0 2px 5px #77749a0c;
+}
+.staff-canvas-holi .staff-person:hover,
+.staff-canvas-compact .staff-person:hover,
+.staff-canvas-holi .selected .staff-person,
+.staff-canvas-compact .selected .staff-person {
+  border-color: #9a7de8;
+  box-shadow:
+    0 0 0 2px #ad91ef12,
+    0 7px 16px #8b7cb11a;
+}
+.staff-canvas-holi .staff-person-open,
+.staff-canvas-compact .staff-person-open {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 13px;
+  padding: 16px 18px 44px;
+}
+.staff-canvas-holi .staff-person-top,
+.staff-canvas-compact .staff-person-top {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+}
+.staff-canvas-holi .staff-avatar,
+.staff-canvas-compact .staff-avatar {
+  width: 40px;
+  height: 40px;
+  flex-basis: 40px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, #e4e3f6, #cfd1ef);
+  color: #7768a7;
+  box-shadow: 0 0 0 4px #f3f0fc;
+  font-size: 12px;
+}
+.staff-canvas-holi .staff-status-dot,
+.staff-canvas-compact .staff-status-dot,
+.staff-canvas-holi .staff-person-top > svg,
+.staff-canvas-compact .staff-person-top > svg {
+  display: none;
+}
+.staff-canvas-holi .staff-person-identity > strong,
+.staff-canvas-compact .staff-person-identity > strong {
+  color: #252d3a;
+  font-size: 13px;
+  line-height: 20px;
+}
+.staff-canvas-holi .staff-person-title,
+.staff-canvas-compact .staff-person-title {
+  color: #727587;
+  font-size: 11px;
+  line-height: 17px;
+}
+.staff-canvas-holi .staff-person-details,
+.staff-canvas-compact .staff-person-details {
+  height: 34px;
+  border-color: #eeedf2;
+  color: #9171dc;
+  font-size: 11px;
+  border-radius: 0 0 18px 18px;
+}
+.staff-canvas-holi .react-flow__edge-path,
+.staff-canvas-compact .react-flow__edge-path {
+  stroke: #8b69d8;
+}
+.staff-canvas-holi .react-flow__handle,
+.staff-canvas-compact .react-flow__handle {
+  background: #8b64e2;
+}
+.staff-canvas-compact .staff-person {
+  box-shadow: 0 5px 16px #a39cc813;
+}
+.staff-canvas-holi .staff-person-editing .staff-person-open,
+.staff-canvas-compact .staff-person-editing .staff-person-open {
+  height: 100%;
+}
+.staff-card-drawer {
+  position: fixed;
+  inset: 18px 18px 18px auto;
+  margin: 0 !important;
+  width: min(660px, calc(100vw - 70px)) !important;
+  max-width: 660px !important;
+  height: calc(100vh - 36px);
+  max-height: calc(100vh - 36px) !important;
+  border-radius: 18px;
+  box-shadow: -20px 12px 65px #33415b35;
+  animation: staff-drawer-in 0.22s ease-out;
+}
+.staff-card-drawer::backdrop {
+  background: #1f2c411f;
+}
+.staff-card-drawer .modal-header {
+  padding: 24px;
+}
+.staff-card-drawer .modal-body {
+  padding: 18px 24px;
+}
+.staff-card-drawer .modal-footer {
+  padding: 16px 24px;
+}
+@keyframes staff-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .staff-graph-shell * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

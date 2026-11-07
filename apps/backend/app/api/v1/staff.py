@@ -29,6 +29,10 @@ def output(r):
     return {k: getattr(r, k) for k in ('id', 'name', 'status', 'title', 'department', 'fields', 'links', 'manager_id', 'version', 'updated_by', 'created_at', 'updated_at')} | {'source_row': r.source.get('row'), 'source_sheet': 'Main'}
 
 
+from app.api.v1.staff_chart import router as chart_router
+router.include_router(chart_router)
+
+
 @router.get('')
 async def staff(db: AsyncSession = Depends(get_db)):
     rows = (await db.execute(select(StaffMember).order_by(StaffMember.name, StaffMember.id))).scalars().all()
