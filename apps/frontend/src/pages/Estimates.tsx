@@ -24,6 +24,7 @@ import {
 } from "../lib/api";
 import type { Estimate, EstimateSummary } from "../lib/types";
 import {
+  ModalPresence,
   Button,
   Field,
   Confirm,
@@ -437,42 +438,46 @@ export default function Estimates({ trash = false }: { trash?: boolean }) {
           </span>
         </footer>
       </section>
-      {create ? (
-        <EstimateForm
-          initialType={create}
-          onClose={() => setCreate(null)}
-          onSave={async (body) => {
-            const e = await post<Estimate>("/estimates", body);
-            client.invalidateQueries({ queryKey: ["estimates"] });
-            navigate(`/estimates/${e.id}`);
-          }}
-        />
-      ) : null}
-      {deleting ? (
-        <Confirm
-          title={
-            trash
-              ? t("Permanently delete estimate?")
-              : t("Move estimate to Trash?")
-          }
-          action={trash ? t("Permanently delete") : t("Move to Trash")}
-          onClose={() => setDeleting(null)}
-          busy={action.isPending}
-          onConfirm={() =>
-            action.mutate({
-              id: deleting.id,
-              operation: trash ? "permanent" : "delete",
-            })
-          }
-        >
-          “{deleting.title || t("Untitled estimate")}”{" "}
-          {trash
-            ? t(
-                "will be permanently deleted with its zones and line items. This cannot be restored.",
-              )
-            : t("can be restored from Trash.")}
-        </Confirm>
-      ) : null}
+      <ModalPresence>
+        {create ? (
+          <EstimateForm
+            initialType={create}
+            onClose={() => setCreate(null)}
+            onSave={async (body) => {
+              const e = await post<Estimate>("/estimates", body);
+              client.invalidateQueries({ queryKey: ["estimates"] });
+              navigate(`/estimates/${e.id}`);
+            }}
+          />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {deleting ? (
+          <Confirm
+            title={
+              trash
+                ? t("Permanently delete estimate?")
+                : t("Move estimate to Trash?")
+            }
+            action={trash ? t("Permanently delete") : t("Move to Trash")}
+            onClose={() => setDeleting(null)}
+            busy={action.isPending}
+            onConfirm={() =>
+              action.mutate({
+                id: deleting.id,
+                operation: trash ? "permanent" : "delete",
+              })
+            }
+          >
+            “{deleting.title || t("Untitled estimate")}”{" "}
+            {trash
+              ? t(
+                  "will be permanently deleted with its zones and line items. This cannot be restored.",
+                )
+              : t("can be restored from Trash.")}
+          </Confirm>
+        ) : null}
+      </ModalPresence>
     </>
   );
 }

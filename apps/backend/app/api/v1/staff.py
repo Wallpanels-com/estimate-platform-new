@@ -1,4 +1,4 @@
-"""Owner-only employee workspace. HR page access alone never grants access."""
+"""Shared employee workspace for users with the HR page grant."""
 import uuid
 from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
@@ -10,19 +10,18 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.staff import StaffMember
 from app.models.governance import AuditEvent
-from app.services.page_access import is_access_manager
+from app.services.page_access import require_any
 from app.services.staff_import import parse_main, initial_reporting, safe_link, COLUMNS
 from app.services.hr_import import MAX_BYTES
 
 
-async def owner(response: Response, user=Depends(get_current_user)):
+async def staff_access(response: Response, user=Depends(get_current_user)):
     response.headers["Cache-Control"] = "no-store"
-    if not is_access_manager(user):
-        raise HTTPException(403, 'The staff directory is currently available only to the platform owner.')
+    require_any(user, 'hr')
     return user
 
 
-router = APIRouter(prefix='/staff', tags=['Staff'], dependencies=[Depends(owner)])
+router = APIRouter(prefix='/staff', tags=['Staff'], dependencies=[Depends(staff_access)])
 
 
 def output(r):
@@ -40,7 +39,7 @@ async def staff(db: AsyncSession = Depends(get_db)):
 
 
 @router.post('/import', status_code=201)
-async def import_main(file: UploadFile = File(...), db: AsyncSession = Depends(get_db), user=Depends(owner)):
+async def import_main(file: UploadFile = File(...), db: AsyncSession = Depends(get_db), user=Depends(staff_access)):
     if not (file.filename or '').lower().endswith('.xlsx'):
         raise HTTPException(422, 'Upload an .xlsx workbook with a Main worksheet.')
     try:
@@ -93,7 +92,7 @@ class StaffInput(BaseModel):
 
 
 @router.patch('/{ident}')
-async def edit_staff(ident: uuid.UUID, body: StaffInput, db: AsyncSession = Depends(get_db), user=Depends(owner)):
+async def edit_staff(ident: uuid.UUID, body: StaffInput, db: AsyncSession = Depends(get_db), user=Depends(staff_access)):
     await db.execute(text('SELECT pg_advisory_xact_lock(73110911)'))
     rows = {r.id: r for r in (await db.execute(select(StaffMember))).scalars()}
     member = rows.get(ident)

@@ -25,6 +25,7 @@ import {
 } from "../lib/pricebook";
 import { useI18n } from "../lib/i18n";
 import {
+  ModalPresence,
   Button,
   Confirm,
   ErrorNotice,
@@ -446,105 +447,117 @@ export default function PriceBook() {
           </div>
         </div>
       )}
-      {rateGroup && config ? (
-        <RateEntryForm
-          group={rateGroup}
-          config={config}
-          onChange={change}
-          onClose={() => setRateGroup(null)}
-        />
-      ) : null}
-      {categoryForm ? (
-        <CategoryForm
-          category={categoryForm === "new" ? undefined : categoryForm}
-          onClose={() => setCategoryForm(null)}
-          onSaved={async (c) => {
-            await refreshCatalogue();
-            select(c);
-            notify("Category saved");
-          }}
-        />
-      ) : null}
-      {itemForm && category ? (
-        <ItemForm
-          item={itemForm === "new" ? undefined : itemForm}
-          categories={categories}
-          categoryId={category.id}
-          onClose={() => setItemForm(null)}
-          onSaved={async () => {
-            await refreshCatalogue();
-            notify("Catalogue item saved");
-          }}
-        />
-      ) : null}
-      {archiveTarget ? (
-        <Confirm
-          title={t(
-            archiveTarget.restore
-              ? "Restore this entry?"
-              : archiveTarget.kind === "category"
-                ? "Archive this category?"
-                : "Archive this item?",
-          )}
-          action={t(archiveTarget.restore ? "Restore" : "Archive")}
-          variant={archiveTarget.restore ? "primary" : "danger"}
-          error={actionError}
-          busy={busy}
-          onClose={() => setArchiveTarget(null)}
-          onConfirm={() =>
-            archive(
-              archiveTarget.kind,
-              archiveTarget.entry,
-              !archiveTarget.restore,
-            )
-          }
-        >
-          <strong className="book-confirm-name">
-            {localized(archiveTarget.entry, language, t)}
-          </strong>
-          {t(
-            archiveTarget.restore
-              ? "This entry will be available in new estimates again."
-              : archiveTarget.kind === "category"
-                ? "This category and its items will be hidden from new estimates. Existing estimates are unchanged. You can restore the category later."
-                : "Archived entries are hidden from new estimates. Existing estimates are unchanged, and you can restore this entry later.",
-          )}
-        </Confirm>
-      ) : null}
-      {deleteTarget ? (
-        <Confirm
-          title={t("Permanently delete this entry?")}
-          action={t("Delete permanently")}
-          busy={busy}
-          error={actionError}
-          onClose={() => setDeleteTarget(null)}
-          onConfirm={permanentlyDelete}
-        >
-          <strong className="book-confirm-name">
-            {localized(deleteTarget.entry, language, t)}
-          </strong>
-          {t(
-            deleteTarget.kind === "category"
-              ? "This category and all its catalogue items will be permanently deleted. This cannot be undone. Saved estimates are unchanged."
-              : "This catalogue item will be permanently deleted. This cannot be undone. Saved estimates are unchanged.",
-          )}
-        </Confirm>
-      ) : null}
-      {confirmRates ? (
-        <Confirm
-          title={t("Save pricing changes?")}
-          action={t("Confirm save")}
-          variant="primary"
-          busy={busy}
-          error={actionError}
-          onClose={() => setConfirmRates(false)}
-          onConfirm={persistRates}
-        >
-          {t(
-            "Save all changed rates and parameters to the shared Price Book? All employees will use these values for new calculations. Saved estimates will not be repriced.",
-          )}
-        </Confirm>
-      ) : null}
+      <ModalPresence>
+        {rateGroup && config ? (
+          <RateEntryForm
+            group={rateGroup}
+            config={config}
+            onChange={change}
+            onClose={() => setRateGroup(null)}
+          />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {categoryForm ? (
+          <CategoryForm
+            category={categoryForm === "new" ? undefined : categoryForm}
+            onClose={() => setCategoryForm(null)}
+            onSaved={async (c) => {
+              await refreshCatalogue();
+              select(c);
+              notify("Category saved");
+            }}
+          />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {itemForm && category ? (
+          <ItemForm
+            item={itemForm === "new" ? undefined : itemForm}
+            categories={categories}
+            categoryId={category.id}
+            onClose={() => setItemForm(null)}
+            onSaved={async () => {
+              await refreshCatalogue();
+              notify("Catalogue item saved");
+            }}
+          />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {archiveTarget ? (
+          <Confirm
+            title={t(
+              archiveTarget.restore
+                ? "Restore this entry?"
+                : archiveTarget.kind === "category"
+                  ? "Archive this category?"
+                  : "Archive this item?",
+            )}
+            action={t(archiveTarget.restore ? "Restore" : "Archive")}
+            variant={archiveTarget.restore ? "primary" : "danger"}
+            error={actionError}
+            busy={busy}
+            onClose={() => setArchiveTarget(null)}
+            onConfirm={() =>
+              archive(
+                archiveTarget.kind,
+                archiveTarget.entry,
+                !archiveTarget.restore,
+              )
+            }
+          >
+            <strong className="book-confirm-name">
+              {localized(archiveTarget.entry, language, t)}
+            </strong>
+            {t(
+              archiveTarget.restore
+                ? "This entry will be available in new estimates again."
+                : archiveTarget.kind === "category"
+                  ? "This category and its items will be hidden from new estimates. Existing estimates are unchanged. You can restore the category later."
+                  : "Archived entries are hidden from new estimates. Existing estimates are unchanged, and you can restore this entry later.",
+            )}
+          </Confirm>
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {deleteTarget ? (
+          <Confirm
+            title={t("Permanently delete this entry?")}
+            action={t("Delete permanently")}
+            busy={busy}
+            error={actionError}
+            onClose={() => setDeleteTarget(null)}
+            onConfirm={permanentlyDelete}
+          >
+            <strong className="book-confirm-name">
+              {localized(deleteTarget.entry, language, t)}
+            </strong>
+            {t(
+              deleteTarget.kind === "category"
+                ? "This category and all its catalogue items will be permanently deleted. This cannot be undone. Saved estimates are unchanged."
+                : "This catalogue item will be permanently deleted. This cannot be undone. Saved estimates are unchanged.",
+            )}
+          </Confirm>
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {confirmRates ? (
+          <Confirm
+            title={t("Save pricing changes?")}
+            action={t("Confirm save")}
+            variant="primary"
+            busy={busy}
+            error={actionError}
+            onClose={() => setConfirmRates(false)}
+            onConfirm={persistRates}
+          >
+            {t(
+              "Save all changed rates and parameters to the shared Price Book? All employees will use these values for new calculations. Saved estimates will not be repriced.",
+            )}
+          </Confirm>
+        ) : null}
+      </ModalPresence>
     </>
   );
 }

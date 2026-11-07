@@ -43,6 +43,7 @@ import {
 import type { Estimate, Zone, LineItem, CalculatedItem } from "../lib/types";
 import { Brand } from "../components/Shell";
 import {
+  ModalPresence,
   Button,
   Confirm,
   EmptyState,
@@ -444,9 +445,11 @@ export default function Builder() {
           ) : null}
         </div>
       </header>
-      {records ? (
-        <EstimateRecords id={estimate.id} onClose={() => setRecords(false)} />
-      ) : null}
+      <ModalPresence>
+        {records ? (
+          <EstimateRecords id={estimate.id} onClose={() => setRecords(false)} />
+        ) : null}
+      </ModalPresence>
       {query.isError ? (
         <ErrorNotice retry={() => query.refetch()}>
           {t("Unable to refresh. Showing the last loaded version.")}
@@ -883,96 +886,110 @@ export default function Builder() {
           </section>
         </aside>
       </div>
-      {proposal ? (
-        <EstimatePdfPreview
-          key={`${estimate.id}:${pdfMode}:${pdfRevision}`}
-          mode={pdfMode}
-          filename={pdfFilename}
-          loadPdf={loadPdf}
-          checks={pdfMode === "final" ? finalChecks.data : undefined}
-          onClose={() => setProposal(false)}
-        />
-      ) : null}
-      {details ? (
-        <EstimateForm
-          estimate={estimate}
-          onClose={() => setDetails(false)}
-          onSave={async (data) => {
-            await patch(`/estimates/${id}`, data);
-            await refresh();
-            notify("Estimate details saved");
-          }}
-        />
-      ) : null}
-      {zoneForm ? (
-        <ZoneForm
-          zone={zoneForm === "edit" ? zone : undefined}
-          count={zones.length}
-          onClose={() => setZoneForm(null)}
-          onSave={async (data) => {
-            const saved =
-              zoneForm === "edit" && zone
-                ? await patch<Zone>(`/estimates/${id}/zones/${zone.id}`, data)
-                : await post<Zone>(`/estimates/${id}/zones`, data);
-            await refresh();
-            selectZone(saved.id);
-            setPanel("estimate");
-            notify("Zone saved");
-          }}
-        />
-      ) : null}
-      {adding && zone ? (
-        <AddItems
-          canEditPriceBook={canAccess(me, "price_book")}
-          zone={zone}
-          initial={adding}
-          onClose={() => setAdding(null)}
-          onAdd={addItems}
-        />
-      ) : null}
-      {ai && zone ? (
-        <AiInput
-          estimateId={estimate.id}
-          zoneId={zone.id}
-          onClose={() => setAi(false)}
-          onApplied={refresh}
-        />
-      ) : null}
-      {deletingZone ? (
-        <Confirm
-          title={t("Delete this zone?")}
-          action={t("Delete zone")}
-          busy={busy}
-          onClose={() => setDeletingZone(null)}
-          onConfirm={() =>
-            mutate(async () => {
-              await remove(`/estimates/${id}/zones/${deletingZone.id}`);
-              setDeletingZone(null);
-            }, "Zone deleted")
-          }
-        >
-          {t(
-            "“{0}” and its line items will be permanently removed. This cannot be restored from Trash.",
-            deletingZone.label,
-          )}
-        </Confirm>
-      ) : null}
-      {deletingItem ? (
-        <Confirm
-          title={t("Remove this line item?")}
-          action={t("Remove item")}
-          busy={busy}
-          onClose={() => setDeletingItem(null)}
-          onConfirm={() =>
-            mutate(async () => {
-              await remove(`/estimates/${id}/line-items/${deletingItem.id}`);
-              setDeletingItem(null);
-            }, "Line item removed")
-          }
-        >
-          {t("“{0}” will be removed from this zone.", deletingItem.name)}
-        </Confirm>
-      ) : null}
+      <ModalPresence>
+        {proposal ? (
+          <EstimatePdfPreview
+            key={`${estimate.id}:${pdfMode}:${pdfRevision}`}
+            mode={pdfMode}
+            filename={pdfFilename}
+            loadPdf={loadPdf}
+            checks={pdfMode === "final" ? finalChecks.data : undefined}
+            onClose={() => setProposal(false)}
+          />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {details ? (
+          <EstimateForm
+            estimate={estimate}
+            onClose={() => setDetails(false)}
+            onSave={async (data) => {
+              await patch(`/estimates/${id}`, data);
+              await refresh();
+              notify("Estimate details saved");
+            }}
+          />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {zoneForm ? (
+          <ZoneForm
+            zone={zoneForm === "edit" ? zone : undefined}
+            count={zones.length}
+            onClose={() => setZoneForm(null)}
+            onSave={async (data) => {
+              const saved =
+                zoneForm === "edit" && zone
+                  ? await patch<Zone>(`/estimates/${id}/zones/${zone.id}`, data)
+                  : await post<Zone>(`/estimates/${id}/zones`, data);
+              await refresh();
+              selectZone(saved.id);
+              setPanel("estimate");
+              notify("Zone saved");
+            }}
+          />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {adding && zone ? (
+          <AddItems
+            canEditPriceBook={canAccess(me, "price_book")}
+            zone={zone}
+            initial={adding}
+            onClose={() => setAdding(null)}
+            onAdd={addItems}
+          />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {ai && zone ? (
+          <AiInput
+            estimateId={estimate.id}
+            zoneId={zone.id}
+            onClose={() => setAi(false)}
+            onApplied={refresh}
+          />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {deletingZone ? (
+          <Confirm
+            title={t("Delete this zone?")}
+            action={t("Delete zone")}
+            busy={busy}
+            onClose={() => setDeletingZone(null)}
+            onConfirm={() =>
+              mutate(async () => {
+                await remove(`/estimates/${id}/zones/${deletingZone.id}`);
+                setDeletingZone(null);
+              }, "Zone deleted")
+            }
+          >
+            {t(
+              "“{0}” and its line items will be permanently removed. This cannot be restored from Trash.",
+              deletingZone.label,
+            )}
+          </Confirm>
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {deletingItem ? (
+          <Confirm
+            title={t("Remove this line item?")}
+            action={t("Remove item")}
+            busy={busy}
+            onClose={() => setDeletingItem(null)}
+            onConfirm={() =>
+              mutate(async () => {
+                await remove(`/estimates/${id}/line-items/${deletingItem.id}`);
+                setDeletingItem(null);
+              }, "Line item removed")
+            }
+          >
+            {t("“{0}” will be removed from this zone.", deletingItem.name)}
+          </Confirm>
+        ) : null}
+      </ModalPresence>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useI18n } from "../lib/i18n";
 import { useRef, useState } from "react";
 import { ImagePlus, Expand, Trash2, Upload, Star } from "lucide-react";
 import type { Zone } from "../lib/types";
-import { Button, Confirm, Modal, useNotice } from "./ui";
+import { ModalPresence, Button, Confirm, Modal, useNotice } from "./ui";
 import ActionMenu from "./ActionMenu";
 import ProtectedImage from "./ProtectedImage";
 export default function Photos({
@@ -189,33 +189,41 @@ export default function Photos({
             : "Included in this zone’s PDF.",
         )}
       </p>
-      {view !== null ? (
-        <Modal title={t("Photo {0}", view)} onClose={() => setView(null)} wide>
-          <div className="photo-view">
-            <ProtectedImage
-              imageId={zone.images.find((i) => i.slot === view)!.id}
-              alt={t("Full photograph {0}", view)}
-              width={1000}
-              height={750}
-            />
-          </div>
-        </Modal>
-      ) : null}
-      {deleting !== null ? (
-        <Confirm
-          title={t("Remove this photo?")}
-          action={t("Remove photo")}
-          onClose={() => setDeleting(null)}
-          onConfirm={() => {
-            onDelete(deleting);
-            setDeleting(null);
-          }}
-        >
-          {t(
-            "The image will be removed from this zone. You can upload it again later.",
-          )}
-        </Confirm>
-      ) : null}
+      <ModalPresence>
+        {view !== null ? (
+          <Modal
+            title={t("Photo {0}", view)}
+            onClose={() => setView(null)}
+            wide
+          >
+            <div className="photo-view">
+              <ProtectedImage
+                imageId={zone.images.find((i) => i.slot === view)!.id}
+                alt={t("Full photograph {0}", view)}
+                width={1000}
+                height={750}
+              />
+            </div>
+          </Modal>
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {deleting !== null ? (
+          <Confirm
+            title={t("Remove this photo?")}
+            action={t("Remove photo")}
+            onClose={() => setDeleting(null)}
+            onConfirm={() => {
+              onDelete(deleting);
+              setDeleting(null);
+            }}
+          >
+            {t(
+              "The image will be removed from this zone. You can upload it again later.",
+            )}
+          </Confirm>
+        ) : null}
+      </ModalPresence>
     </section>
   );
 }

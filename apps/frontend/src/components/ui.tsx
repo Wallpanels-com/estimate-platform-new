@@ -85,6 +85,37 @@ export function Field({
     </div>
   );
 }
+const ModalExitContext = createContext(false);
+export const MODAL_EXIT_MS = 150;
+
+/** Keep a dismissed dialog mounted just long enough to finish its exit.
+ * The parent still owns the open state and all save/dirty-close decisions.
+ */
+export function ModalPresence({ children }: { children: ReactNode }) {
+  const parentClosing = useContext(ModalExitContext);
+  const [previous, setPrevious] = useState(children);
+  const [retained, setRetained] = useState(children);
+  if (children !== previous) {
+    setPrevious(children);
+    if (children) setRetained(children);
+  }
+  const closing = !children && !!retained;
+  useEffect(() => {
+    if (!closing) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setRetained(null);
+      return;
+    }
+    const timer = window.setTimeout(() => setRetained(null), MODAL_EXIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [closing]);
+  return (
+    <ModalExitContext.Provider value={parentClosing || closing}>
+      {children || retained}
+    </ModalExitContext.Provider>
+  );
+}
+
 export function Modal({
   title,
   children,
@@ -104,6 +135,7 @@ export function Modal({
 }) {
   const { t } = useI18n();
 
+  const closing = useContext(ModalExitContext);
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const close = useRef(onClose);
@@ -122,12 +154,31 @@ export function Modal({
       ref={ref}
       className={`modal ${wide ? "wide" : ""} ${className}`}
       aria-labelledby={titleId}
+      data-closing={closing || undefined}
+      onClickCapture={(event) => {
+        if (closing) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }}
+      onKeyDownCapture={(event) => {
+        if (closing) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }}
+      onSubmitCapture={(event) => {
+        if (closing) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }}
       onCancel={(event) => {
         event.preventDefault();
-        close.current();
+        if (!closing) close.current();
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) {
+        if (!closing && e.target === e.currentTarget) {
           const r = e.currentTarget.getBoundingClientRect();
           if (
             e.clientX < r.left ||
@@ -155,6 +206,7 @@ export function Modal({
           variant="ghost"
           aria-label={t("Close dialog")}
           onClick={onClose}
+          disabled={closing}
         >
           <X size={18} />
         </Button>

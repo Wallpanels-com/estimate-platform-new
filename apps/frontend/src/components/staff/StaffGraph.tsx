@@ -1,4 +1,12 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ReactFlow,
@@ -12,6 +20,7 @@ import {
   Position,
   MarkerType,
   applyNodeChanges,
+  type ReactFlowInstance,
   type EdgeProps,
   type NodeProps,
   type Node,
@@ -255,6 +264,31 @@ export default function StaffGraph({
     [all, config.data],
   );
   const [expanded, setExpanded] = useState(false);
+  const canvasRef = useRef<HTMLElement>(null);
+  const [flow, setFlow] = useState<ReactFlowInstance<ChartNode> | null>(null);
+  const [viewportReady, setViewportReady] = useState(false);
+  const previousScene = useRef("");
+  const cameraGeneration = useRef(0);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setCanvasSize((old) =>
+        old.width === width && old.height === height ? old : { width, height },
+      );
+    });
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     if (!expanded) return;
     const previous = document.body.style.overflow;
@@ -388,7 +422,7 @@ export default function StaffGraph({
   nodesRef.current = nodes;
   const dragging = useRef(false);
   const animation = useRef<number>();
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (animation.current) cancelAnimationFrame(animation.current);
     if (dragging.current) return;
     const reduced = window.matchMedia?.(
@@ -396,7 +430,17 @@ export default function StaffGraph({
     ).matches;
     const from = new Map(nodesRef.current.map((n) => [n.id, n.position]));
     const start = performance.now();
-    if (reduced || !nodesRef.current.length) {
+    const oldIds = nodesRef.current
+      .map((n) => n.id)
+      .sort()
+      .join();
+    const newIds = targetNodes
+      .map((n) => n.id)
+      .sort()
+      .join();
+    // Filtering updates the mounted canvas in one paint. Only reorders of the
+    // same cards interpolate their positions; filters use the camera transition.
+    if (reduced || oldIds !== newIds || !nodesRef.current.length) {
       setNodes(targetNodes);
       return;
     }
@@ -629,6 +673,76 @@ export default function StaffGraph({
     .map((p) => p.id)
     .sort()
     .join();
+  const sceneKey = `${layout}:${personIds}:${expanded}:${canvasSize.width}:${canvasSize.height}`;
+  useLayoutEffect(() => {
+    if (!flow || !targetNodes.length || previousScene.current === sceneKey)
+      return;
+    const initialFit = !previousScene.current;
+    previousScene.current = sceneKey;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    const height = rect?.height || 600;
+    const width = rect?.width || 1100;
+    const reduced = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    let camera;
+    if (people.length <= 12) {
+      const minX = Math.min(...targetNodes.map((n) => n.position.x));
+      const minY = Math.min(...targetNodes.map((n) => n.position.y));
+      const maxX = Math.max(
+        ...targetNodes.map(
+          (n) => n.position.x + Number(n.style?.width || geometry.width),
+        ),
+      );
+      const maxY = Math.max(
+        ...targetNodes.map(
+          (n) => n.position.y + Number(n.style?.height || geometry.height),
+        ),
+      );
+      const left = layout === "teams" ? 210 : 45;
+      const top = 90;
+      const availableW = Math.max(100, width - left - 45);
+      const availableH = Math.max(100, height - top - 70);
+      const zoom = Math.max(
+        0.06,
+        Math.min(
+          1,
+          availableW / Math.max(1, maxX - minX),
+          availableH / Math.max(1, maxY - minY),
+        ),
+      );
+      camera = {
+        x: left + (availableW - (maxX - minX) * zoom) / 2 - minX * zoom,
+        y: top + (availableH - (maxY - minY) * zoom) / 2 - minY * zoom,
+        zoom,
+      };
+    } else {
+      const root = arranged.find((p) => !parents.get(p.id));
+      const point = (root && positions.get(root.id)) || targetNodes[0].position;
+      const zoom = 0.8;
+      camera = {
+        x: width / 2 - (point.x + geometry.width / 2) * zoom,
+        y: 150 - point.y * zoom,
+        zoom,
+      };
+    }
+    const generation = ++cameraGeneration.current;
+    void flow
+      .setViewport(camera, { duration: initialFit || reduced ? 0 : 240 })
+      .then(() => {
+        if (mounted.current && generation === cameraGeneration.current)
+          setViewportReady(true);
+      });
+  }, [
+    flow,
+    sceneKey,
+    targetNodes,
+    people.length,
+    arranged,
+    parents,
+    positions,
+    geometry.width,
+  ]);
   return (
     <div
       className={`staff-graph-shell ${expanded ? "staff-graph-expanded" : ""}`}
@@ -761,6 +875,7 @@ export default function StaffGraph({
         </p>
       )}
       <section
+        ref={canvasRef}
         className={`staff-canvas staff-canvas-${layout} ${editing ? "staff-canvas-editing" : ""}`}
         aria-label={L("Organization chart", "Организационная структура")}
         tabIndex={editing ? 0 : undefined}
@@ -781,7 +896,7 @@ export default function StaffGraph({
       >
         <div className="staff-canvas-caption">
           <span className="staff-live-dot" />
-          {L("TEAM STRUCTURE", "СХЕМА КОМАНДЫ")}
+          {L("Team structure", "Структура команды")}
           <span>
             {people.length} {L("people", "сотрудников")}
           </span>
@@ -814,7 +929,6 @@ export default function StaffGraph({
           </div>
         )}
         <ReactFlow<ChartNode>
-          key={`${layout}-${personIds}-${expanded}`}
           nodes={nodes}
           edges={edgeData}
           nodeTypes={nodeTypes}
@@ -825,71 +939,9 @@ export default function StaffGraph({
           edgesReconnectable={false}
           elementsSelectable={editing}
           deleteKeyCode={null}
-          onInit={(instance) => {
-            // Fit the target scene rather than stale nodes during a filter transition.
-            requestAnimationFrame(() =>
-              requestAnimationFrame(() => {
-                const canvas = document
-                  .querySelector(".staff-canvas")
-                  ?.getBoundingClientRect();
-                const height = canvas?.height || 600;
-                const width = canvas?.width || 1100;
-                if (people.length <= 12 && targetNodes.length) {
-                  const minX = Math.min(
-                    ...targetNodes.map((n) => n.position.x),
-                  );
-                  const minY = Math.min(
-                    ...targetNodes.map((n) => n.position.y),
-                  );
-                  const maxX = Math.max(
-                    ...targetNodes.map(
-                      (n) =>
-                        n.position.x + Number(n.style?.width || geometry.width),
-                    ),
-                  );
-                  const maxY = Math.max(
-                    ...targetNodes.map(
-                      (n) =>
-                        n.position.y +
-                        Number(n.style?.height || geometry.height),
-                    ),
-                  );
-                  const left = layout === "teams" ? 210 : 45;
-                  const top = 90;
-                  const availableW = Math.max(100, width - left - 45);
-                  const availableH = Math.max(100, height - top - 70);
-                  const zoom = Math.max(
-                    0.06,
-                    Math.min(
-                      1,
-                      availableW / Math.max(1, maxX - minX),
-                      availableH / Math.max(1, maxY - minY),
-                    ),
-                  );
-                  void instance.setViewport({
-                    x:
-                      left +
-                      (availableW - (maxX - minX) * zoom) / 2 -
-                      minX * zoom,
-                    y:
-                      top +
-                      (availableH - (maxY - minY) * zoom) / 2 -
-                      minY * zoom,
-                    zoom,
-                  });
-                  return;
-                }
-                const root = arranged.find((p) => !parents.get(p.id));
-                const point = root && positions.get(root.id);
-                const zoom = 0.8;
-                if (point)
-                  void instance.setCenter(
-                    point.x + geometry.width / 2,
-                    point.y + height / (2 * zoom) - 150 / zoom,
-                    { zoom },
-                  );
-              }),
-            );
+          onInit={setFlow}
+          style={{
+            visibility: viewportReady || !people.length ? "visible" : "hidden",
           }}
           minZoom={0.06}
           maxZoom={1.5}

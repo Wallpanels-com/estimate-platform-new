@@ -13,7 +13,14 @@ import {
 import { useI18n } from "../lib/i18n";
 import { useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Field, Modal, ErrorNotice, Loading } from "./ui";
+import {
+  ModalPresence,
+  Button,
+  Field,
+  Modal,
+  ErrorNotice,
+  Loading,
+} from "./ui";
 import { request, post, money, errorMessage } from "../lib/api";
 import type { CalculatedItem, PricingSchema, Zone } from "../lib/types";
 export default function AddItems({
@@ -624,33 +631,37 @@ export default function AddItems({
           </>
         )}
       </Modal>
-      {creatingCabinet ? (
-        <CabinetTypeForm
-          onClose={() => setCreatingCabinet(false)}
-          onSaved={async (key) => {
-            await client.invalidateQueries({ queryKey: ["pricing-config"] });
-            await client.invalidateQueries({ queryKey: ["quick-pricing"] });
-            const updated = await schema.refetch();
-            if (updated.error) throw updated.error;
-            setCabinetType(key);
-            setResult(null);
-          }}
-        />
-      ) : null}
-      {createItem && catalog.data ? (
-        <ItemForm
-          categoryId={
-            categories.some((c) => c.id === createItem.category)
-              ? createItem.category
-              : categories[0]?.id || "wall"
-          }
-          categories={categories}
-          initialName={createItem.name}
-          addToZone
-          onClose={() => setCreateItem(null)}
-          onSaved={savedItem}
-        />
-      ) : null}
+      <ModalPresence>
+        {creatingCabinet ? (
+          <CabinetTypeForm
+            onClose={() => setCreatingCabinet(false)}
+            onSaved={async (key) => {
+              await client.invalidateQueries({ queryKey: ["pricing-config"] });
+              await client.invalidateQueries({ queryKey: ["quick-pricing"] });
+              const updated = await schema.refetch();
+              if (updated.error) throw updated.error;
+              setCabinetType(key);
+              setResult(null);
+            }}
+          />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {createItem && catalog.data ? (
+          <ItemForm
+            categoryId={
+              categories.some((c) => c.id === createItem.category)
+                ? createItem.category
+                : categories[0]?.id || "wall"
+            }
+            categories={categories}
+            initialName={createItem.name}
+            addToZone
+            onClose={() => setCreateItem(null)}
+            onSaved={savedItem}
+          />
+        ) : null}
+      </ModalPresence>
     </>
   );
 }

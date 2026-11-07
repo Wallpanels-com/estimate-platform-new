@@ -48,3 +48,9 @@ QA for current work: desktop 1512 and 1280px, EN/RU, empty/loading/error states,
   markup/discount opens from the Summary heading. Every visible field/action control is 40px.
 - Native popovers use the top layer so scroll regions cannot clip their actions. Keyboard
   Tab/Escape and light dismiss work without hover-only controls.
+
+## Restraint and interaction motion
+
+Owner direction: avoid generic AI-shaped dashboards. Use WallPanels content, Montserrat hierarchy and the established workspace grid. Do not add decorative KPI cards, repeated icon tiles, marketing subtitles, invented metrics, gratuitous gradients or looping effects to utility pages. HR Staff status counts are compact filters, aligned to the table and toolbar. Team spaces retains the owner's selected reference style. Review against [anti-slop](https://github.com/miqdadbadjuber/anti-slop) as a supplementary checklist, not as a detector or runtime dependency.
+
+Native scrolling stays in charge; CSS smooth scroll applies to anchors and programmatic in-page movement. Route changes reset instantly to avoid sweeping through the previous page. No wheel interception or perpetual scroll animation loop is installed. Dialogs enter in 180 ms and reverse the movement on dismissal in 150 ms, using transform/opacity. Wrap conditional modal components in `ModalPresence`; parent state still owns dirty-close decisions and persistence. Presence retains the dialog only for the exit, blocks duplicate interactions, then releases native focus. Reopening cancels the pending exit. Reduced motion removes the delay and nonessential effects. Menus and control colors use short transitions; chart filtering preserves the canvas instance.

@@ -12,11 +12,11 @@ globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 HTMLDialogElement.prototype.showModal=function(){this.open=true;};HTMLDialogElement.prototype.close=function(){this.open=false;};
 const dir=await mkdtemp(resolve('.local/staff-ui-'));
 try {
- const bundle=await build({stdin:{contents:`export{default as Staff}from'./apps/frontend/src/pages/Staff';export{LanguageProvider}from'./apps/frontend/src/lib/i18n';export{NoticeProvider}from'./apps/frontend/src/components/ui';export{QueryClient,QueryClientProvider}from'@tanstack/react-query';export{MemoryRouter,Routes,Route}from'react-router-dom';export{createElement,act}from'react';export{createRoot}from'react-dom/client';`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,packages:'external',format:'esm',platform:'node',jsx:'automatic',write:false,loader:{'.css':'empty'},define:{'import.meta.env.VITE_API_ORIGIN':'""'},plugins:[{name:'synthetic-auth-and-canvas',setup(build){build.onLoad({filter:/\/lib\/auth.tsx$/},()=>({contents:'export const useAuth=()=>({user:{can_manage_access:globalThis.staffOwner}});',loader:'tsx'}));build.onLoad({filter:/StaffGraph.tsx$/},()=>({contents:'export default function Graph({people,open}){return <div data-testid="graph">{people.map(p=><button key={p.id} onClick={()=>open(p)}>{p.name}</button>)}</div>}',loader:'tsx'}));}}]});
+ const bundle=await build({stdin:{contents:`export{default as Staff}from'./apps/frontend/src/pages/Staff';export{LanguageProvider}from'./apps/frontend/src/lib/i18n';export{NoticeProvider}from'./apps/frontend/src/components/ui';export{QueryClient,QueryClientProvider}from'@tanstack/react-query';export{MemoryRouter,Routes,Route}from'react-router-dom';export{createElement,act}from'react';export{createRoot}from'react-dom/client';`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,packages:'external',format:'esm',platform:'node',jsx:'automatic',write:false,loader:{'.css':'empty'},define:{'import.meta.env.VITE_API_ORIGIN':'""'},plugins:[{name:'synthetic-auth-and-canvas',setup(build){build.onLoad({filter:/\/lib\/auth.tsx$/},()=>({contents:'export const useAuth=()=>({user:{can_manage_access:globalThis.staffOwner,page_access:globalThis.staffPages}});',loader:'tsx'}));build.onLoad({filter:/StaffGraph.tsx$/},()=>({contents:'export default function Graph({people,open}){return <div data-testid="graph">{people.map(p=><button key={p.id} onClick={()=>open(p)}>{p.name}</button>)}</div>}',loader:'tsx'}));}}]});
  await writeFile(resolve(dir,'app.mjs'),bundle.outputFiles[0].contents);
  const {Staff,LanguageProvider,NoticeProvider,QueryClient,QueryClientProvider,MemoryRouter,Routes,Route,createElement:h,act,createRoot}=await import(pathToFileURL(resolve(dir,'app.mjs')));
  for(const language of ['en','ru']) {
-  localStorage.setItem('wallpanels.ui-language',language);globalThis.staffOwner=true;
+  localStorage.setItem('wallpanels.ui-language',language);globalThis.staffOwner=false;globalThis.staffPages=['hr'];window.matchMedia=()=>({matches:true});
   const ru=language==='ru';let reads=0,writes=[],failSave=false;
   let rows=Array.from({length:24},(_,i)=>({id:'person-'+i,name:'Person '+String(i).padStart(2,'0'),title:'Role',department:'Sales',status:i<22?'active':'paused',manager_id:i?'person-0':null,fields:{F:'+15550100000',K:'payroll person@example.com\nPRIVATE IBAN',M:'Document label',O:'Original additional information'},links:{M:'https://example.com/document'},source_row:i+2,source_sheet:'Main',version:1,updated_by:'Owner',updated_at:'2026-11-06T12:00:00Z'}));
   globalThis.fetch=async(path,opts={})=>{
@@ -69,17 +69,17 @@ try {
   window.confirm=()=>true;
   await click(ru?'Закрыть':'Close');
   assert.equal(document.querySelector('dialog'),null);
-  await click(ru?'24Все сотрудники':'24All employees');
-  await click(ru?'Структура':'Structure');assert.equal(document.querySelectorAll('.staff-style-option').length,8);
+  await click(ru?'Все сотрудники24':'All employees24');
+  await click(ru?'Структура':'Structure');assert.equal(document.querySelectorAll('.staff-style-option').length,0);
   await click(ru?'Вся команда':'Entire team');
   for(const b of document.querySelectorAll('.staff-style-option')){await act(async()=>b.click());await settle();}
   assert.equal(document.querySelectorAll('[data-testid=graph] button').length,24);
   await act(async()=>root.unmount());client.clear();document.getElementById('root').innerHTML='';
-  globalThis.staffOwner=false;
+  globalThis.staffOwner=false;globalThis.staffPages=[];
   const deniedClient=new QueryClient({defaultOptions:{queries:{retry:false,gcTime:0}}});const deniedRoot=createRoot(document.getElementById('root'));const before=reads;
   await act(async()=>deniedRoot.render(h(LanguageProvider,null,h(QueryClientProvider,{client:deniedClient},h(MemoryRouter,{initialEntries:['/hr/staff']},h(Routes,null,h(Route,{path:'/hr/staff',element:h(Staff)}),h(Route,{path:'/hr',element:h('p',null,'HR home')})))))));await settle();
   assert.equal(reads,before);assert.equal(document.querySelector('.staff-page'),null);assert.ok(document.body.textContent.includes('HR home'));
   await act(async()=>deniedRoot.unmount());deniedClient.clear();document.getElementById('root').innerHTML='';
  }
- console.log('Staff UI: EN/RU table pagination, private contacts preview, centered tabbed profile, multiline fields/links, status save, conflict/dirty draft retention, 8 styles and non-owner gate without staff fetch.');
+ console.log('Staff UI: EN/RU table pagination, private contacts preview, centered tabbed profile, multiline fields/links, status save, conflict/dirty draft retention, single Team spaces view, HR staff access and no-HR gate without staff fetch.');
 } finally {await rm(dir,{recursive:true,force:true});}

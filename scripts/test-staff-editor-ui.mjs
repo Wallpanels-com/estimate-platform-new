@@ -13,7 +13,7 @@ globalThis.requestAnimationFrame=fn=>setTimeout(()=>fn(performance.now()),1);glo
 window.matchMedia=()=>({matches:true});
 const dir=await mkdtemp(resolve('.local/staff-editor-ui-'));
 try{
- const bundle=await build({stdin:{contents:`export{default as Graph}from'./apps/frontend/src/components/staff/StaffGraph';export{NoticeProvider}from'./apps/frontend/src/components/ui';export{QueryClient,QueryClientProvider}from'@tanstack/react-query';export{createElement,act}from'react';export{createRoot}from'react-dom/client';`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,packages:'external',format:'esm',platform:'node',jsx:'automatic',write:false,loader:{'.css':'empty'},define:{'import.meta.env.VITE_API_ORIGIN':'""'},plugins:[{name:'canvas-events',setup(b){b.onResolve({filter:/\.css$/},()=>({path:'css',namespace:'blank'}));b.onLoad({filter:/.*/,namespace:'blank'},()=>({contents:'',loader:'js'}));b.onResolve({filter:/^@xyflow\/react$/},()=>({path:'canvas',namespace:'stub'}));b.onLoad({filter:/.*/,namespace:'stub'},()=>({resolveDir:process.cwd(),loader:'tsx',contents:`export function ReactFlow(p){globalThis.editorCanvas=p;return <div>{p.children}</div>};export function BaseEdge(){return null};export function Handle(){return null};export function Background(){return null};export function Controls(){return null};export function MiniMap(){return null};export const Position={Bottom:'bottom',Top:'top'};export const MarkerType={ArrowClosed:'arrow'};export const BackgroundVariant={Lines:'lines',Dots:'dots'};export const getSmoothStepPath=()=>['M0,0'];export const applyNodeChanges=(_,ns)=>ns;`}));}}]});
+ const bundle=await build({stdin:{contents:`export{default as Graph}from'./apps/frontend/src/components/staff/StaffGraph';export{NoticeProvider}from'./apps/frontend/src/components/ui';export{QueryClient,QueryClientProvider}from'@tanstack/react-query';export{createElement,act}from'react';export{createRoot}from'react-dom/client';`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,packages:'external',format:'esm',platform:'node',jsx:'automatic',write:false,loader:{'.css':'empty'},define:{'import.meta.env.VITE_API_ORIGIN':'""'},plugins:[{name:'canvas-events',setup(b){b.onResolve({filter:/\.css$/},()=>({path:'css',namespace:'blank'}));b.onLoad({filter:/.*/,namespace:'blank'},()=>({contents:'',loader:'js'}));b.onResolve({filter:/^@xyflow\/react$/},()=>({path:'canvas',namespace:'stub'}));b.onLoad({filter:/.*/,namespace:'stub'},()=>({resolveDir:process.cwd(),loader:'tsx',contents:`import{useEffect}from'react';export function ReactFlow(p){globalThis.editorCanvas=p;useEffect(()=>{globalThis.canvasMounts=(globalThis.canvasMounts||0)+1;p.onInit?.({setViewport:async(v,o)=>{globalThis.cameraOptions=o;return true}})},[]);return <div>{p.children}</div>};export function BaseEdge(){return null};export function Handle(){return null};export function Background(){return null};export function Controls(){return null};export function MiniMap(){return null};export const Position={Bottom:'bottom',Top:'top'};export const MarkerType={ArrowClosed:'arrow'};export const BackgroundVariant={Lines:'lines',Dots:'dots'};export const getSmoothStepPath=()=>['M0,0'];export const applyNodeChanges=(_,ns)=>ns;`}));}}]});
  await writeFile(resolve(dir,'editor.mjs'),bundle.outputFiles[0].contents);
  const {Graph,NoticeProvider,QueryClient,QueryClientProvider,createElement:h,act,createRoot}=await import(pathToFileURL(resolve(dir,'editor.mjs')));
  for(const ru of [false,true]){
@@ -24,7 +24,7 @@ try{
   const settle=async()=>{for(let i=0;i<4;i++)await act(async()=>new Promise(r=>setTimeout(r,10)));};
   const button=(en,r)=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===(ru?r:en)||b.getAttribute('aria-label')===(ru?r:en));
   const click=async(en,r)=>{const b=button(en,r);assert.ok(b,en);await act(async()=>b.click());await settle();};
-  await act(async()=>root.render(h(QueryClientProvider,{client},h(NoticeProvider,null,h(Graph,{all:rows,people:rows,layout:'holi',ru,open:()=>{}})))));await settle();
+  await act(async()=>root.render(h(QueryClientProvider,{client},h(NoticeProvider,null,h(Graph,{all:rows,people:rows,layout:'teams',ru,open:()=>{}})))));await settle();
   await click('Edit chart','Редактировать схему');await click('Additional','Доп. связь');
   await act(async()=>editorCanvas.onConnect({source:'c',target:'a'}));await settle();assert.equal(editorCanvas.edges.filter(e=>e.data.kind==='additional').length,1);
   await click('Undo chart change','Отменить действие');assert.equal(editorCanvas.edges.filter(e=>e.data.kind==='additional').length,0);
@@ -36,7 +36,14 @@ try{
   await click('Cancel','Отмена');conflict=false;
   await click('Edit chart','Редактировать схему');
   const extra=editorCanvas.edges.find(e=>e.data.kind==='additional');await act(async()=>editorCanvas.onEdgeClick({stopPropagation(){}},extra));await settle();await click('Delete connection','Удалить связь');await click('Save chart','Сохранить схему');assert.deepEqual(config.extra_edges,[]);assert.equal(rows.length,3);
+  const mounts=globalThis.canvasMounts;
+  window.matchMedia=()=>({matches:false});
+  await act(async()=>root.render(h(QueryClientProvider,{client},h(NoticeProvider,null,h(Graph,{all:rows,people:rows.slice(1),layout:'teams',ru,open:()=>{},department:'Team',onDepartment:()=>{}})))));await settle();
+  assert.equal(globalThis.canvasMounts,mounts,'Department filters must not remount ReactFlow');
+  assert.equal(editorCanvas.nodes.filter(n=>n.type==='person').length,2);
+  assert.equal(cameraOptions.duration,240,'Filter movement uses a smooth camera transition');
+  window.matchMedia=()=>({matches:true});
   await act(async()=>root.unmount());client.clear();document.getElementById('root').innerHTML='';
  }
- console.log('Staff editor UI: EN/RU edit, extra/reporting links, cycles, undo/redo, atomic payload, 409 draft retention, cancel and connection deletion without employee deletion.');
+ console.log('Staff editor UI: EN/RU edit, extra/reporting links, cycles, undo/redo, atomic payload, 409 draft retention, cancel, connection deletion without employee deletion, stable canvas and smooth department transitions.');
 }finally{await rm(dir,{recursive:true,force:true});}

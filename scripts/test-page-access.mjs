@@ -26,6 +26,7 @@ Object.defineProperty(globalThis, "navigator", {
   configurable: true,
 });
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+window.matchMedia = () => ({ matches: true });
 HTMLDialogElement.prototype.showModal = function () {
   this.open = true;
 };

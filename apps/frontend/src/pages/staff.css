@@ -26,20 +26,6 @@
 .staff-back:hover {
   color: var(--staff-ink);
 }
-.staff-private {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 9px;
-  background: #eaf0ec;
-  color: #5e766b;
-  border: 1px solid #d9e3dc;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
-  letter-spacing: 0.02em;
-}
 .staff-view-switch {
   display: flex;
   padding: 4px;
@@ -52,64 +38,52 @@
   min-height: 38px;
   border-radius: 7px;
 }
+/* Status filters form one quiet navigation row, not dashboard KPI cards. */
 .staff-overview {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.5fr) repeat(4, minmax(110px, 1fr));
-  border: 1px solid var(--staff-line);
-  border-radius: 12px;
-  background: #fff;
-  overflow: hidden;
-  margin: 28px 0 22px;
-  box-shadow: 0 3px 12px #223e3019;
-}
-.staff-overview-title {
   display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 20px 24px;
-  color: #33544a;
-}
-.staff-overview-title > span {
-  font-size: 15px;
-  font-weight: 600;
-}
-.staff-overview-title small {
-  display: block;
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--staff-muted);
-  margin-top: 5px;
+  align-items: stretch;
+  gap: 24px;
+  border-bottom: 1px solid var(--border);
+  margin: 24px 0 20px;
 }
 .staff-overview > button {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 0 2px 12px;
   border: 0;
-  border-left: 1px solid #e7ece8;
-  padding: 17px 20px;
-  text-align: left;
-  background: transparent;
+  border-bottom: 2px solid transparent;
+  background: none;
   cursor: pointer;
-  color: #6b7873;
-  transition: background 0.18s ease;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  transition:
+    color var(--motion-fast, 140ms) ease,
+    border-color var(--motion-fast, 140ms) ease;
 }
 .staff-overview > button:hover {
-  background: #f5f8f5;
+  color: var(--ink);
 }
 .staff-overview > button.selected {
-  background: #eaf1ec;
-  box-shadow: inset 0 -3px #607e6d;
+  color: var(--ink);
+  border-bottom-color: var(--ink);
 }
-.staff-overview strong {
-  display: block;
-  font-size: 27px;
-  line-height: 1.2;
-  color: #304b40;
-  font-weight: var(--weight-semibold);
+.staff-filter-count {
+  font-size: 11px;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
+  color: #767b70;
+  background: #e9ebe4;
+  border-radius: 4px;
+  padding: 4px 6px;
 }
-.staff-overview > button > span {
-  display: block;
-  margin-top: 5px;
-  font-size: 12px;
+.staff-overview > button.selected .staff-filter-count {
+  background: #dfe3d7;
+  color: #3f4937;
 }
 .staff-toolbar {
   display: flex;
@@ -297,66 +271,6 @@
 .staff-pagination .button {
   padding: 7px 10px;
   min-height: 34px;
-}
-.staff-styles {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 13px;
-}
-.staff-style-option {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 17px;
-  min-height: 77px;
-  border: 1px solid #dfe5e1;
-  border-radius: 10px;
-  background: #fff;
-  color: #72877b;
-  cursor: pointer;
-  transition:
-    border-color 0.18s,
-    background 0.18s,
-    transform 0.18s;
-  text-align: left;
-}
-.staff-style-option:hover {
-  transform: translateY(-2px);
-  border-color: #92ad9c;
-}
-.staff-style-option.selected {
-  border-color: #6f9483;
-  background: #edf4ee;
-  box-shadow: 0 2px 8px #3e614218;
-}
-.staff-style-option > span {
-  min-width: 0;
-}
-.staff-style-option small {
-  display: block;
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  color: #8d9e92;
-  margin-bottom: 4px;
-}
-.staff-style-option strong {
-  display: block;
-  font-size: 13px;
-  font-weight: var(--weight-semibold);
-  color: #3e594b;
-}
-.staff-style-option > svg:last-child:not(:first-child) {
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.staff-structure-note {
-  font-size: 12px;
-  line-height: 1.65;
-  color: #7b8981;
-  margin: 0 0 16px;
-  max-width: 1000px;
 }
 .staff-canvas {
   position: relative;
@@ -720,14 +634,6 @@
   }
 }
 /* Reference views 07 / 08 / 09, with common editing geometry. */
-.staff-styles {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-.staff-style-option {
-  min-height: 62px;
-  padding: 11px 16px;
-}
 .staff-canvas .staff-person {
   position: relative;
   width: 100%;

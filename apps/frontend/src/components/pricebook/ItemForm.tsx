@@ -8,7 +8,14 @@ import {
 } from "../../lib/pricebook";
 import { post, request, errorMessage } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
-import { Button, ErrorNotice, Field, Modal, Confirm } from "../ui";
+import {
+  ModalPresence,
+  Button,
+  ErrorNotice,
+  Field,
+  Modal,
+  Confirm,
+} from "../ui";
 import Select from "../Select";
 import ItemNameFields from "./ItemNameFields";
 
@@ -219,21 +226,23 @@ export default function ItemForm({
           </footer>
         </form>
       </Modal>
-      {pending ? (
-        <Confirm
-          title={t(item ? "Save item changes?" : "Create this item?")}
-          action={t("Confirm save")}
-          variant="primary"
-          busy={busy}
-          onClose={() => setPending(null)}
-          onConfirm={() => persist()}
-        >
-          {t(
-            "Save “{0}” to the shared Price Book? Existing estimates will not change.",
-            String(pending.name),
-          )}
-        </Confirm>
-      ) : null}
+      <ModalPresence>
+        {pending ? (
+          <Confirm
+            title={t(item ? "Save item changes?" : "Create this item?")}
+            action={t("Confirm save")}
+            variant="primary"
+            busy={busy}
+            onClose={() => setPending(null)}
+            onConfirm={() => persist()}
+          >
+            {t(
+              "Save “{0}” to the shared Price Book? Existing estimates will not change.",
+              String(pending.name),
+            )}
+          </Confirm>
+        ) : null}
+      </ModalPresence>
     </>
   );
 }

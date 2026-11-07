@@ -2,7 +2,14 @@ import { useRef, useState, type FormEvent } from "react";
 import { request, errorMessage } from "../../lib/api";
 import type { PricingConfig } from "../../lib/types";
 import { useI18n } from "../../lib/i18n";
-import { Button, Confirm, ErrorNotice, Field, Modal } from "../ui";
+import {
+  ModalPresence,
+  Button,
+  Confirm,
+  ErrorNotice,
+  Field,
+  Modal,
+} from "../ui";
 import ItemNameFields from "./ItemNameFields";
 
 type Entry = { label: string; label_ru: string; base_rate: number };
@@ -114,21 +121,23 @@ export default function CabinetTypeForm({
           </footer>
         </form>
       </Modal>
-      {pending ? (
-        <Confirm
-          title={t("Save cabinet type?")}
-          action={t("Confirm save")}
-          variant="primary"
-          busy={busy}
-          onClose={() => setPending(null)}
-          onConfirm={save}
-        >
-          {t(
-            "Save “{0}” to the shared Price Book? Existing estimates will not change.",
-            pending.label,
-          )}
-        </Confirm>
-      ) : null}
+      <ModalPresence>
+        {pending ? (
+          <Confirm
+            title={t("Save cabinet type?")}
+            action={t("Confirm save")}
+            variant="primary"
+            busy={busy}
+            onClose={() => setPending(null)}
+            onConfirm={save}
+          >
+            {t(
+              "Save “{0}” to the shared Price Book? Existing estimates will not change.",
+              pending.label,
+            )}
+          </Confirm>
+        ) : null}
+      </ModalPresence>
     </>
   );
 }

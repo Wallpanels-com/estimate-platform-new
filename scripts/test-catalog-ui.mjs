@@ -30,6 +30,8 @@ Object.defineProperty(globalThis, "navigator", {
   configurable: true,
 });
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+// Workflow assertions use reduced motion; enter/exit timing has its own regression test.
+window.matchMedia = () => ({ matches: true });
 const nativeMatches = HTMLElement.prototype.matches;
 HTMLElement.prototype.matches = function (selector) {
   return selector === ":popover-open"

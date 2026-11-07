@@ -5,7 +5,14 @@ import { request, post, patch, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
 import type { User } from "../lib/types";
-import { Button, Field, Modal, Loading, ErrorNotice } from "../components/ui";
+import {
+  ModalPresence,
+  Button,
+  Field,
+  Modal,
+  Loading,
+  ErrorNotice,
+} from "../components/ui";
 import UserAccess from "../components/UserAccess";
 import Select from "../components/Select";
 import PageAccessOptions from "../components/PageAccessOptions";
@@ -148,121 +155,125 @@ export default function Users() {
           </table>
         </div>
       )}
-      {accessUser ? (
-        <UserAccess user={accessUser} onClose={() => setAccessUser(null)} />
-      ) : null}
-      {editing || passwordUser ? (
-        <Modal
-          title={t(
-            passwordUser
-              ? "Reset password"
-              : editing === "new"
-                ? "Add employee"
-                : "Edit employee",
-          )}
-          onClose={close}
-        >
-          <form onSubmit={submit}>
-            <div className="modal-body form-grid">
-              {error ? (
-                <div className="span-2">
-                  <ErrorNotice>{error}</ErrorNotice>
-                </div>
-              ) : null}
-              {!passwordUser ? (
-                <>
-                  <Field label="Name">
-                    <input
-                      name="name"
-                      defaultValue={
-                        editing && editing !== "new" ? editing.name || "" : ""
+      <ModalPresence>
+        {accessUser ? (
+          <UserAccess user={accessUser} onClose={() => setAccessUser(null)} />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {editing || passwordUser ? (
+          <Modal
+            title={t(
+              passwordUser
+                ? "Reset password"
+                : editing === "new"
+                  ? "Add employee"
+                  : "Edit employee",
+            )}
+            onClose={close}
+          >
+            <form onSubmit={submit}>
+              <div className="modal-body form-grid">
+                {error ? (
+                  <div className="span-2">
+                    <ErrorNotice>{error}</ErrorNotice>
+                  </div>
+                ) : null}
+                {!passwordUser ? (
+                  <>
+                    <Field label="Name">
+                      <input
+                        name="name"
+                        defaultValue={
+                          editing && editing !== "new" ? editing.name || "" : ""
+                        }
+                        required
+                        maxLength={120}
+                      />
+                    </Field>
+                    <Field
+                      label="Login"
+                      hint={
+                        editing !== "new"
+                          ? "Changing a login signs this employee out. Their estimates and history are kept."
+                          : undefined
                       }
-                      required
-                      maxLength={120}
-                    />
-                  </Field>
+                    >
+                      <input
+                        name="email"
+                        type="text"
+                        autoComplete="off"
+                        defaultValue={
+                          editing && editing !== "new" ? editing.email : ""
+                        }
+                        required
+                        minLength={3}
+                        maxLength={254}
+                      />
+                    </Field>
+                    {editing !== "new" ? (
+                      <Field label="Status">
+                        <Select
+                          name="is_active"
+                          defaultValue={String(editing?.is_active)}
+                          disabled={editing?.id === me?.id}
+                        >
+                          <option value="true">{t("Active")}</option>
+                          <option value="false">{t("Disabled")}</option>
+                        </Select>
+                      </Field>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="span-2">
+                    {passwordUser.name} · {passwordUser.email}
+                  </p>
+                )}
+                {editing === "new" || passwordUser ? (
                   <Field
-                    label="Login"
-                    hint={
-                      editing !== "new"
-                        ? "Changing a login signs this employee out. Their estimates and history are kept."
-                        : undefined
-                    }
+                    label="Temporary password"
+                    hint="At least 12 characters. Send it to this employee privately."
                   >
                     <input
-                      name="email"
-                      type="text"
-                      autoComplete="off"
-                      defaultValue={
-                        editing && editing !== "new" ? editing.email : ""
-                      }
+                      name="password"
+                      type="password"
+                      autoComplete="new-password"
                       required
-                      minLength={3}
-                      maxLength={254}
+                      minLength={12}
+                      maxLength={72}
                     />
                   </Field>
-                  {editing !== "new" ? (
-                    <Field label="Status">
-                      <Select
-                        name="is_active"
-                        defaultValue={String(editing?.is_active)}
-                        disabled={editing?.id === me?.id}
-                      >
-                        <option value="true">{t("Active")}</option>
-                        <option value="false">{t("Disabled")}</option>
-                      </Select>
-                    </Field>
-                  ) : null}
-                </>
-              ) : (
-                <p className="span-2">
-                  {passwordUser.name} · {passwordUser.email}
-                </p>
-              )}
-              {editing === "new" || passwordUser ? (
-                <Field
-                  label="Temporary password"
-                  hint="At least 12 characters. Send it to this employee privately."
-                >
-                  <input
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    minLength={12}
-                    maxLength={72}
-                  />
-                </Field>
-              ) : null}
-              {editing === "new" && !passwordUser ? (
-                <section className="span-all access-create">
-                  <h3>{t("Page access")}</h3>
-                  <PageAccessOptions
-                    pages={newPages}
-                    onChange={setNewPages}
-                    disabled={busy}
-                  />
-                  {!newPages.length && (
-                    <p className="form-hint">
-                      {t(
-                        "No pages selected. This employee will see an access request screen after signing in.",
-                      )}
-                    </p>
-                  )}
-                </section>
-              ) : null}
-            </div>
-            <footer className="modal-footer">
-              <Button onClick={close} disabled={busy}>
-                {t("Cancel")}
-              </Button>
-              <Button type="submit" variant="primary" busy={busy}>
-                {t("Save")}
-              </Button>
-            </footer>
-          </form>
-        </Modal>
-      ) : null}
+                ) : null}
+                {editing === "new" && !passwordUser ? (
+                  <section className="span-all access-create">
+                    <h3>{t("Page access")}</h3>
+                    <PageAccessOptions
+                      pages={newPages}
+                      onChange={setNewPages}
+                      disabled={busy}
+                    />
+                    {!newPages.length && (
+                      <p className="form-hint">
+                        {t(
+                          "No pages selected. This employee will see an access request screen after signing in.",
+                        )}
+                      </p>
+                    )}
+                  </section>
+                ) : null}
+              </div>
+              <footer className="modal-footer">
+                <Button onClick={close} disabled={busy}>
+                  {t("Cancel")}
+                </Button>
+                <Button type="submit" variant="primary" busy={busy}>
+                  {t("Save")}
+                </Button>
+              </footer>
+            </form>
+          </Modal>
+        ) : null}
+      </ModalPresence>
     </div>
   );
 }

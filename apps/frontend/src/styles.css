@@ -3845,16 +3845,52 @@ input[aria-invalid="true"] {
   border-color: #8f302a;
 }
 .modal[open] {
-  animation: modal-enter 140ms ease-out;
+  animation: modal-enter 180ms var(--ease-enter);
 }
 @keyframes modal-enter {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(12px) scale(0.985);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+  }
+}
+.modal[open]::backdrop {
+  animation: backdrop-enter 180ms ease-out;
+}
+.modal[open][data-closing="true"] {
+  animation: modal-leave 150ms ease-in both;
+  pointer-events: none;
+}
+.modal[open][data-closing="true"]::backdrop {
+  animation: backdrop-leave 150ms ease-in both;
+}
+@keyframes modal-leave {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+}
+@keyframes backdrop-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes backdrop-leave {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 
@@ -4517,4 +4553,55 @@ input[aria-invalid="true"] {
 }
 .hr-message-preview strong {
   font-weight: 700;
+}
+
+/* Interaction motion: native scroll, no animation loop or scroll interception. */
+:root {
+  --motion-fast: 140ms;
+  --motion-ui: 180ms;
+  --ease-enter: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+html {
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+.modal-body,
+.builder-editor,
+.zones-list {
+  scroll-behavior: smooth;
+}
+.button,
+.staff-view-switch .button,
+.choice > button,
+.choice > input {
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+.choice-menu:popover-open {
+  animation: menu-enter var(--motion-fast) var(--ease-enter);
+  transform-origin: top;
+}
+@keyframes menu-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html,
+  .modal-body,
+  .builder-editor,
+  .zones-list {
+    scroll-behavior: auto;
+  }
 }

@@ -2,7 +2,14 @@ import { useState, type FormEvent } from "react";
 import { type BookCategory, type CategoryIcon } from "../../lib/pricebook";
 import { post, request, errorMessage } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
-import { Button, ErrorNotice, Field, Modal, Confirm } from "../ui";
+import {
+  ModalPresence,
+  Button,
+  ErrorNotice,
+  Field,
+  Modal,
+  Confirm,
+} from "../ui";
 import CategoryIconPicker from "./CategoryIconPicker";
 
 export default function CategoryForm({
@@ -102,23 +109,25 @@ export default function CategoryForm({
           </footer>
         </form>
       </Modal>
-      {pending ? (
-        <Confirm
-          title={t(
-            category ? "Save category changes?" : "Create this category?",
-          )}
-          action={t("Confirm save")}
-          variant="primary"
-          busy={busy}
-          onClose={() => setPending(null)}
-          onConfirm={persist}
-        >
-          {t(
-            "Save “{0}” to the shared Price Book? Existing estimates will not change.",
-            String(pending.name),
-          )}
-        </Confirm>
-      ) : null}
+      <ModalPresence>
+        {pending ? (
+          <Confirm
+            title={t(
+              category ? "Save category changes?" : "Create this category?",
+            )}
+            action={t("Confirm save")}
+            variant="primary"
+            busy={busy}
+            onClose={() => setPending(null)}
+            onConfirm={persist}
+          >
+            {t(
+              "Save “{0}” to the shared Price Book? Existing estimates will not change.",
+              String(pending.name),
+            )}
+          </Confirm>
+        ) : null}
+      </ModalPresence>
     </>
   );
 }

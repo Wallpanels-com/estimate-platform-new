@@ -3,7 +3,7 @@ import AutosaveNumber from "./AutosaveNumber";
 import { useI18n } from "../lib/i18n";
 import { useId, useState } from "react";
 import { ArrowDown, ArrowUp, Pencil, Trash2 } from "lucide-react";
-import { Button, Field, Modal } from "./ui";
+import { ModalPresence, Button, Field, Modal } from "./ui";
 import ActionMenu from "./ActionMenu";
 import { money } from "../lib/api";
 import type { LineItem } from "../lib/types";
@@ -411,14 +411,16 @@ export default function LineItems({
           </section>
         );
       })}
-      {editing ? (
-        <ItemEditor
-          item={editing}
-          busy={busy}
-          onSave={onUpdate}
-          onClose={() => setEditing(null)}
-        />
-      ) : null}
+      <ModalPresence>
+        {editing ? (
+          <ItemEditor
+            item={editing}
+            busy={busy}
+            onSave={onUpdate}
+            onClose={() => setEditing(null)}
+          />
+        ) : null}
+      </ModalPresence>
     </div>
   );
 }

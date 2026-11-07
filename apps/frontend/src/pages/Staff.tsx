@@ -4,44 +4,32 @@ import { Navigate, Link } from "react-router-dom";
 import {
   ArrowLeft,
   Search,
-  Check,
   Table2,
   Network,
-  GitBranch,
-  Orbit,
-  Columns3,
-  Layers3,
-  LockKeyhole,
   ChevronLeft,
   ChevronRight,
-  UsersRound,
-  Blocks,
-  Rows3,
-  Workflow,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
+import { canAccess } from "../lib/access";
 import { useI18n } from "../lib/i18n";
 import { request, errorMessage } from "../lib/api";
-import { Button, Loading, ErrorNotice, EmptyState } from "../components/ui";
+import {
+  ModalPresence,
+  Button,
+  Loading,
+  ErrorNotice,
+  EmptyState,
+} from "../components/ui";
 import Select from "../components/Select";
 import { pageNumbers } from "../components/HRPagination";
 import StaffCard from "../components/staff/StaffCard";
 import StaffGraph from "../components/staff/StaffGraph";
-import type {
-  StaffMember,
-  StaffDirectory,
-  StaffLayout,
-  StaffStatus,
-} from "../lib/staff";
+import type { StaffMember, StaffDirectory, StaffStatus } from "../lib/staff";
 import "./staff.css";
 
 export default function Staff() {
   const { user } = useAuth();
-  return user?.can_manage_access ? (
-    <Directory />
-  ) : (
-    <Navigate to="/hr" replace />
-  );
+  return canAccess(user, "hr") ? <Directory /> : <Navigate to="/hr" replace />;
 }
 const contactPreview = (value: string | undefined) => {
   const first = (value || "").split(/\r?\n/)[0].replace(/^(\d+)\.0$/, "$1");
@@ -62,8 +50,8 @@ function Directory() {
   const [department, setDepartment] = useState("");
   const [chartDirty, setChartDirty] = useState(false);
   const [view, setView] = useState<"table" | "chart">("table");
-  const [layout, setLayout] = useState<StaffLayout>("tree");
-  const [leadersOnly, setLeadersOnly] = useState(true);
+  const layout = "teams" as const;
+  const [leadersOnly, setLeadersOnly] = useState(false);
   const [selected, setSelected] = useState<StaffMember | null>(null);
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(20);
@@ -102,26 +90,6 @@ function Directory() {
       : s === "paused"
         ? L("Paused", "На паузе")
         : L("Inactive", "Не работает");
-  const styles: [StaffLayout, string, string, typeof Network][] = [
-    ["tree", "01", "Org tree", Network],
-    ["horizontal", "02", "Flow", GitBranch],
-    ["orbit", "03", "Orbit", Orbit],
-    ["departments", "04", "Departments", Columns3],
-    ["terraces", "05", "Terraces", Layers3],
-    ["teams", "07", "Team spaces", Blocks],
-    ["holi", "08", "Holi tree", Workflow],
-    ["compact", "09", "Holi compact", Rows3],
-  ];
-  const labels: Record<StaffLayout, string> = {
-    tree: L("Org tree", "Дерево"),
-    horizontal: L("Flow", "Горизонталь"),
-    orbit: L("Orbit", "Орбиты"),
-    departments: L("Departments", "Отделы"),
-    terraces: L("Terraces", "Террасы"),
-    teams: L("Team spaces", "Команды"),
-    holi: L("Holi tree", "Holi · Дерево"),
-    compact: L("Holi compact", "Holi · Компакт"),
-  };
   if (query.isLoading) return <Loading />;
   return (
     <div className="staff-page">
@@ -131,13 +99,7 @@ function Directory() {
             <ArrowLeft size={16} />
             {L("HR department", "HR-отдел")}
           </Link>
-          <h1>
-            {L("Staff", "Сотрудники")}{" "}
-            <span className="staff-private">
-              <LockKeyhole size={13} />
-              {L("Only you", "Только вы")}
-            </span>
-          </h1>
+          <h1>{L("Staff", "Сотрудники")}</h1>
         </div>
         <div
           className="staff-view-switch"
@@ -178,15 +140,6 @@ function Directory() {
         className="staff-overview"
         aria-label={L("Staff overview", "Состав команды")}
       >
-        <div className="staff-overview-title">
-          <UsersRound size={23} />
-          <span>
-            {L("WallPanels team", "Команда WallPanels")}
-            <small>
-              {L("Directory & reporting lines", "Справочник и подчинённость")}
-            </small>
-          </span>
-        </div>
         {(["", "active", "paused", "inactive"] as const).map((s) => (
           <button
             key={s}
@@ -197,9 +150,11 @@ function Directory() {
             }}
             aria-pressed={status === s}
           >
-            <strong>{all.filter((p) => !s || p.status === s).length}</strong>
             <span>
               {s ? statusName(s) : L("All employees", "Все сотрудники")}
+            </span>
+            <span className="staff-filter-count">
+              {all.filter((p) => !s || p.status === s).length}
             </span>
           </button>
         ))}
@@ -239,30 +194,6 @@ function Directory() {
       </div>
       {view === "chart" && (
         <>
-          <div
-            className="staff-styles"
-            role="group"
-            aria-label={L("Chart style", "Стиль структуры")}
-          >
-            {styles.map(([key, num, , Icon]) => (
-              <button
-                key={key}
-                className={`staff-style-option staff-style-${key} ${layout === key ? "selected" : ""}`}
-                onClick={() => {
-                  setLayout(key);
-                  if (key === "teams") setLeadersOnly(false);
-                }}
-                aria-pressed={layout === key}
-              >
-                <Icon size={25} />
-                <span>
-                  <small>{num}</small>
-                  <strong>{labels[key]}</strong>
-                </span>
-                {layout === key && <Check size={16} />}
-              </button>
-            ))}
-          </div>
           <div className="staff-chart-scope">
             <button
               aria-pressed={!leadersOnly}
@@ -277,12 +208,6 @@ function Directory() {
               {L("Managers", "Руководители")}
             </button>
           </div>
-          <p className="staff-structure-note">
-            {L(
-              "Initial structure: Igor Kravchenko → administration → department leads → team. Change a manager in the employee card. Dotted lines skip managers excluded by the filter.",
-              "Начальная схема: Igor Kravchenko → администрация → руководители отделов → команда. Руководителя можно изменить в карточке. Пунктир пропускает руководителей, скрытых фильтром.",
-            )}
-          </p>
         </>
       )}
       {!query.error && !all.length ? (
@@ -413,15 +338,17 @@ function Directory() {
           </footer>
         </section>
       )}
-      {selected && query.data && (
-        <StaffCard
-          key={selected.id}
-          person={selected}
-          directory={query.data}
-          close={() => setSelected(null)}
-          ru={ru}
-        />
-      )}
+      <ModalPresence>
+        {selected && query.data && (
+          <StaffCard
+            key={selected.id}
+            person={selected}
+            directory={query.data}
+            close={() => setSelected(null)}
+            ru={ru}
+          />
+        )}
+      </ModalPresence>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { canAccess } from "../lib/access";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -16,6 +17,7 @@ import {
 import { request, post, patch, errorMessage } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 import {
+  ModalPresence,
   Button,
   Field,
   Modal,
@@ -247,7 +249,7 @@ export default function HR() {
           <h1>{t("HR department")}</h1>
         </div>
         <div className="page-actions">
-          {user?.can_manage_access && (
+          {canAccess(user, "hr") && (
             <Link className="button" to="/hr/staff">
               <UsersRound size={17} />
               {language === "ru" ? "Сотрудники" : "Staff"}
@@ -615,88 +617,94 @@ export default function HR() {
           )}
         </>
       )}
-      {edit && (
-        <Modal
-          title={edit === "new" ? "Add vacancy" : "Edit vacancy"}
-          onClose={() => {
-            if (!busy) setEdit(null);
-          }}
-        >
-          <form onSubmit={saveVacancy}>
-            <div className="modal-body form-grid">
-              <Field label="Vacancy name" className="span-all">
-                <input
-                  name="name"
-                  required
-                  maxLength={160}
-                  defaultValue={edit === "new" ? "" : edit.name}
-                />
-              </Field>
-              <Field label="Job requirements" className="span-all">
-                <textarea
-                  name="description"
-                  rows={4}
-                  maxLength={4000}
-                  defaultValue={edit === "new" ? "" : edit.description}
-                />
-              </Field>
-              {edit !== "new" && (
-                <label className="hr-checkbox span-all">
+      <ModalPresence>
+        {edit && (
+          <Modal
+            title={edit === "new" ? "Add vacancy" : "Edit vacancy"}
+            onClose={() => {
+              if (!busy) setEdit(null);
+            }}
+          >
+            <form onSubmit={saveVacancy}>
+              <div className="modal-body form-grid">
+                <Field label="Vacancy name" className="span-all">
                   <input
-                    name="archived"
-                    type="checkbox"
-                    defaultChecked={edit.archived}
+                    name="name"
+                    required
+                    maxLength={160}
+                    defaultValue={edit === "new" ? "" : edit.name}
                   />
-                  {t("Archive vacancy")}
-                </label>
-              )}
-              {error && (
-                <p role="alert" className="error-message span-all">
-                  {error}
-                </p>
-              )}
-            </div>
-            <footer className="modal-footer">
-              <Button disabled={busy} onClick={() => setEdit(null)}>
-                {t("Cancel")}
-              </Button>
-              <Button type="submit" variant="primary" busy={busy}>
-                {t("Save vacancy")}
-              </Button>
-            </footer>
-          </form>
-        </Modal>
-      )}
-      {candidate && (
-        <CandidateCard
-          initial={candidate}
-          focusNotes={notesFocus}
-          onClose={() => setCandidate(null)}
-          onSaved={(c) => {
-            setCandidate(c);
-            refresh();
-          }}
-        />
-      )}
-      {importing && current && (
-        <ImportDialog
-          vacancy={current}
-          onClose={() => setImporting(false)}
-          onDone={(r) => {
-            setHiddenView(false);
-            setPage(1);
-            refresh();
-            setImporting(false);
-            notify(
-              t(
-                "Imported: {0}. Duplicates skipped: {1}.",
-                r.added,
-                r.duplicates,
-              ),
-            );
-          }}
-        />
-      )}
+                </Field>
+                <Field label="Job requirements" className="span-all">
+                  <textarea
+                    name="description"
+                    rows={4}
+                    maxLength={4000}
+                    defaultValue={edit === "new" ? "" : edit.description}
+                  />
+                </Field>
+                {edit !== "new" && (
+                  <label className="hr-checkbox span-all">
+                    <input
+                      name="archived"
+                      type="checkbox"
+                      defaultChecked={edit.archived}
+                    />
+                    {t("Archive vacancy")}
+                  </label>
+                )}
+                {error && (
+                  <p role="alert" className="error-message span-all">
+                    {error}
+                  </p>
+                )}
+              </div>
+              <footer className="modal-footer">
+                <Button disabled={busy} onClick={() => setEdit(null)}>
+                  {t("Cancel")}
+                </Button>
+                <Button type="submit" variant="primary" busy={busy}>
+                  {t("Save vacancy")}
+                </Button>
+              </footer>
+            </form>
+          </Modal>
+        )}
+      </ModalPresence>
+      <ModalPresence>
+        {candidate && (
+          <CandidateCard
+            initial={candidate}
+            focusNotes={notesFocus}
+            onClose={() => setCandidate(null)}
+            onSaved={(c) => {
+              setCandidate(c);
+              refresh();
+            }}
+          />
+        )}
+      </ModalPresence>
+      <ModalPresence>
+        {importing && current && (
+          <ImportDialog
+            vacancy={current}
+            onClose={() => setImporting(false)}
+            onDone={(r) => {
+              setHiddenView(false);
+              setPage(1);
+              refresh();
+              setImporting(false);
+              notify(
+                t(
+                  "Imported: {0}. Duplicates skipped: {1}.",
+                  r.added,
+                  r.duplicates,
+                ),
+              );
+            }}
+          />
+        )}
+      </ModalPresence>
     </div>
   );
 }

@@ -1,15 +1,15 @@
-"""Atomic owner-only chart edits. Reporting is distinct from collaboration."""
+"""Atomic HR-authorized chart edits. Reporting is distinct from collaboration."""
 import uuid
 from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.api.v1.staff import owner
+from app.api.v1.staff import staff_access
 from app.core.database import get_db
 from app.models.staff import StaffMember, StaffChart
 
-router = APIRouter(prefix='/chart', tags=['Staff chart'], dependencies=[Depends(owner)])
+router = APIRouter(prefix='/chart', tags=['Staff chart'], dependencies=[Depends(staff_access)])
 Layout = Literal['tree','horizontal','orbit','departments','terraces','teams','holi','compact']
 
 
@@ -49,7 +49,7 @@ async def read_chart(db: AsyncSession = Depends(get_db)):
 
 
 @router.put('')
-async def save_chart(body: ChartInput, db: AsyncSession = Depends(get_db), user=Depends(owner)):
+async def save_chart(body: ChartInput, db: AsyncSession = Depends(get_db), user=Depends(staff_access)):
     await db.execute(text('SELECT pg_advisory_xact_lock(73110911)'))
     chart = (await db.execute(select(StaffChart).where(StaffChart.name == 'main'))).scalar_one_or_none()
     if body.version != (chart.version if chart else 0):
