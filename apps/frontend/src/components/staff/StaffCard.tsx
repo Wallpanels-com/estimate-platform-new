@@ -81,11 +81,12 @@ export default function StaffCard({
   const client = useQueryClient();
   const notify = useNotice();
   const [form, setForm] = useState(person);
+  const [saved, setSaved] = useState(person);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<Tab>("overview");
-  const dirty = JSON.stringify(form) !== JSON.stringify(person);
+  const dirty = JSON.stringify(form) !== JSON.stringify(saved);
   function dismiss() {
     if (
       !busy &&
@@ -114,8 +115,8 @@ export default function StaffCard({
     setError("");
     setBusy(true);
     try {
-      await patch(`/hr/staff/${person.id}`, {
-        version: person.version,
+      const updated = await patch<StaffMember>(`/hr/staff/${person.id}`, {
+        version: saved.version,
         name: form.name,
         title: form.title,
         department: form.department,
@@ -125,8 +126,14 @@ export default function StaffCard({
         links: form.links,
       });
       await client.invalidateQueries({ queryKey: ["hr-staff"] });
-      notify(L("Employee saved", "Сотрудник сохранён"));
-      close();
+      if (!editing && tab === "notes") {
+        setForm(updated);
+        setSaved(updated);
+        notify(L("Notes saved", "Заметки сохранены"));
+      } else {
+        notify(L("Employee saved", "Сотрудник сохранён"));
+        close();
+      }
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -155,7 +162,7 @@ export default function StaffCard({
   ].filter((k) => !new Set("ABCDEFGHIJKLMO".split("")).has(k));
   const visibleNotes = editing
     ? notes
-    : notes.filter((k) => form.fields[k]?.trim() || form.links[k]);
+    : notes.filter((k) => k === "N" || form.fields[k]?.trim() || form.links[k]);
   const caption = (key: string) =>
     key === "F"
       ? L("Telegram & phone", "Telegram и телефон")
@@ -185,15 +192,15 @@ export default function StaffCard({
       )}
     </Field>
   );
-  const sourceField = (k: string) => (
+  const sourceField = (k: string, editable = editing) => (
     <Field key={k} label={caption(k)} className="staff-source-field">
-      {editing ? (
+      {editable ? (
         <div className="staff-edit-field">
           {notes.includes(k) ||
           ["F", "K", "O"].includes(k) ||
           (form.fields[k] || "").includes("\n") ? (
             <textarea
-              rows={3}
+              rows={k === "N" ? 6 : 3}
               value={form.fields[k] || ""}
               maxLength={20000}
               onChange={(e) => field(k, e.target.value)}
@@ -463,7 +470,7 @@ export default function StaffCard({
                           />
                         )}
                       </Field>
-                      {["C", "D", "I", "J"].map(sourceField)}
+                      {["C", "D", "I", "J"].map((k) => sourceField(k))}
                     </>,
                     "staff-profile-employment",
                   )}
@@ -471,7 +478,7 @@ export default function StaffCard({
                     L("Contact information", "Контактная информация"),
                     <UserRound size={17} />,
                     editing ? (
-                      ["F", "K"].map(sourceField)
+                      ["F", "K"].map((k) => sourceField(k))
                     ) : (
                       <StaffContacts
                         contact={form.fields.F || ""}
@@ -485,7 +492,7 @@ export default function StaffCard({
                     L("Personal information", "Личные сведения"),
                     <UserRound size={17} />,
                     <>
-                      {["H", "L"].map(sourceField)}
+                      {["H", "L"].map((k) => sourceField(k))}
                       {documents}
                     </>,
                     "staff-profile-personal",
@@ -507,13 +514,7 @@ export default function StaffCard({
               panel(
                 L("Notes", "Заметки"),
                 <FileText size={17} />,
-                visibleNotes.length ? (
-                  visibleNotes.map(sourceField)
-                ) : (
-                  <p className="staff-profile-empty">
-                    {L("No notes yet.", "Заметок пока нет.")}
-                  </p>
-                ),
+                visibleNotes.map((k) => sourceField(k, true)),
                 "staff-profile-notes",
               )}
           </fieldset>
@@ -525,9 +526,9 @@ export default function StaffCard({
             ) : (
               <>
                 {L("Last edited by", "Последнее изменение")}:{" "}
-                {person.updated_by || "—"}
+                {saved.updated_by || "—"}
                 <span>
-                  {new Date(person.updated_at).toLocaleDateString(
+                  {new Date(saved.updated_at).toLocaleDateString(
                     ru ? "ru-RU" : "en-US",
                   )}
                 </span>
@@ -537,7 +538,7 @@ export default function StaffCard({
           <Button onClick={dismiss} disabled={busy}>
             {L("Close", "Закрыть")}
           </Button>
-          {editing ? (
+          {editing || tab === "notes" ? (
             <Button
               type="submit"
               variant="primary"
@@ -545,7 +546,9 @@ export default function StaffCard({
               disabled={!dirty}
             >
               <Save size={16} />
-              {L("Save changes", "Сохранить изменения")}
+              {editing
+                ? L("Save changes", "Сохранить изменения")
+                : L("Save notes", "Сохранить заметки")}
             </Button>
           ) : (
             <Button

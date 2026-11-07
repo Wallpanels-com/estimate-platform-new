@@ -57,6 +57,29 @@ try {
   assert.ok(document.querySelector('dialog').textContent.includes('Unknown source column'));
   assert.ok(!document.querySelector('dialog').textContent.includes('Mother Anna'));
   assert.equal(document.querySelector('.staff-document'),null,'Documents are on Overview only');
+  const noteField=()=>document.querySelector('dialog textarea[aria-label="Заметка"], dialog textarea[aria-label="Note"]');
+  const setNote=async(value)=>act(async()=>{const input=noteField();Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));});
+  assert.equal(noteField().value,'Original note','Notes are editable without Edit profile');
+  assert.equal([...document.querySelectorAll('button')].find(b=>b.textContent.includes(ru?'Сохранить заметки':'Save notes')).disabled,true);
+  await setNote('Quick note');
+  failSave=true;
+  await act(async()=>document.querySelector('dialog form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));await settle();
+  assert.equal(noteField().value,'Quick note','Network/conflict failure retains note draft');
+  failSave=false;
+  await act(async()=>document.querySelector('dialog form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));await settle();
+  assert.equal(writes[0].fields.N,'Quick note');assert.equal(writes[0].status,'active');assert.equal(writes[0].version,1);
+  assert.ok(document.querySelector('dialog'),'Note save keeps the card open');assert.equal(noteField().value,'Quick note');
+  await setNote('Revised note');
+  await act(async()=>document.querySelector('dialog form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));await settle();
+  assert.equal(writes[1].version,2,'Repeated saves use the returned version');assert.equal(writes[1].fields.N,'Revised note');
+  await click(ru?'Закрыть':'Close');
+  await act(async()=>document.querySelector('.staff-name-button').click());await settle();
+  await click(ru?'Заметки':'Notes');assert.equal(noteField().value,'Revised note','Saved note remains after reopen');
+  await setNote('Original note');
+  await act(async()=>document.querySelector('dialog form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));await settle();
+  assert.equal(writes[2].version,3);writes=[];
+  const expectedVersion=rows[0].version;
+  await click(ru?'Обзор':'Overview');
   await click(ru?'Редактировать':'Edit profile');
   await click(ru?'На паузе':'Paused');
   await click(ru?'Заметки':'Notes');
@@ -69,7 +92,7 @@ try {
     assert.equal(docInput.value,value,'URL drafts must remain editable before valid');
   }
   await act(async()=>document.querySelector('dialog form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));await settle();
-  assert.equal(writes.length,1);assert.equal(writes[0].status,'paused');assert.equal(writes[0].fields.O,'+15550101111 Mother Anna\n+15550102222 Brother Max');assert.equal(writes[0].fields.M,'Link');assert.equal(writes[0].fields.AA,'Unknown source column');assert.equal(writes[0].links.K,'mailto:person@example.com');assert.equal(writes[0].version,1);assert.equal(writes[0].links.M,'https://example.com/document');
+  assert.equal(writes.length,1);assert.equal(writes[0].status,'paused');assert.equal(writes[0].fields.O,'+15550101111 Mother Anna\n+15550102222 Brother Max');assert.equal(writes[0].fields.M,'Link');assert.equal(writes[0].fields.AA,'Unknown source column');assert.equal(writes[0].links.K,'mailto:person@example.com');assert.equal(writes[0].version,expectedVersion);assert.equal(writes[0].links.M,'https://example.com/document');
   assert.equal(document.querySelector('dialog'),null);
   await act(async()=>document.querySelector('.staff-name-button').click());await settle();
   await click(ru?'Редактировать':'Edit profile');
@@ -97,5 +120,5 @@ try {
   assert.equal(reads,before);assert.equal(document.querySelector('.staff-page'),null);assert.ok(document.body.textContent.includes('HR home'));
   await act(async()=>deniedRoot.unmount());deniedClient.clear();document.getElementById('root').innerHTML='';
  }
- console.log('Staff UI: EN/RU table pagination, private contacts preview, two-tab profile, one-click contacts, separate PayPal, documents in Overview, aligned source sections, raw fields/links, no history requests, status save, conflict/dirty draft retention, single Team spaces view, HR staff access and no-HR gate without staff fetch.');
+ console.log('Staff UI: EN/RU table pagination, private contacts preview, two-tab profile, direct note editing/repeated save/reopen/conflict retention, one-click contacts, separate PayPal, documents in Overview, aligned source sections, raw fields/links, no history requests, status save, conflict/dirty draft retention, single Team spaces view, HR staff access and no-HR gate without staff fetch.');
 } finally {await rm(dir,{recursive:true,force:true});}
