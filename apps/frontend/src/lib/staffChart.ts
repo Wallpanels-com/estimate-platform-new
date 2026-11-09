@@ -13,6 +13,17 @@ export type ChartDraft = {
   orders: Partial<Record<StaffLayout, string[]>>;
 };
 export type LinkKind = "reporting" | "additional";
+export type NewStaff = {
+  id: string;
+  name: string;
+  status: "active" | "inactive" | "paused";
+  title: string;
+  department: string;
+  manager_id: string | null;
+  contact: string;
+  email: string;
+  notes: string;
+};
 export type Point = { x: number; y: number };
 export function chartDraft(
   people: StaffMember[],
@@ -89,6 +100,20 @@ export function removeConnection(
           (e) => !(e.source === source && e.target === target),
         ),
       };
+}
+/** Reconnection is atomic in the draft; an invalid endpoint keeps the old line. */
+export function reconnectDraft(
+  draft: ChartDraft,
+  source: string,
+  target: string,
+  nextSource: string,
+  nextTarget: string,
+  kind: LinkKind,
+) {
+  const without = removeConnection(draft, source, target, kind);
+  return canConnect(without, nextSource, nextTarget, kind)
+    ? connectDraft(without, nextSource, nextTarget, kind)
+    : draft;
 }
 export function orderedStaff(people: StaffMember[], order: string[] = []) {
   const ranks = new Map(order.map((id, i) => [id, i]));

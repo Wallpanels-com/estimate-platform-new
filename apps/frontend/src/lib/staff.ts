@@ -13,7 +13,7 @@ export type StaffMember = {
   version: number;
   updated_by: string;
   updated_at: string;
-  source_row: number;
+  source_row: number | null;
   source_sheet: string;
 };
 export type StaffDirectory = {

@@ -30,7 +30,7 @@ router = APIRouter(prefix='/staff', tags=['Staff'], dependencies=[Depends(staff_
 
 def output(r):
     avatar = avatar_entry(r, settings.STORAGE_PATH)
-    return {k: getattr(r, k) for k in ('id', 'name', 'status', 'title', 'department', 'fields', 'links', 'manager_id', 'version', 'updated_by', 'created_at', 'updated_at')} | {'source_row': r.source.get('row'), 'source_sheet': 'Main', 'avatar_url': f"/api/v1/hr/staff/{r.id}/avatar?v={avatar[0]['sha256']}" if avatar else None}
+    return {k: getattr(r, k) for k in ('id', 'name', 'status', 'title', 'department', 'fields', 'links', 'manager_id', 'version', 'updated_by', 'created_at', 'updated_at')} | {'source_row': r.source.get('row'), 'source_sheet': r.source.get('sheet','Main'), 'avatar_url': f"/api/v1/hr/staff/{r.id}/avatar?v={avatar[0]['sha256']}" if avatar else None}
 
 
 from app.api.v1.staff_chart import router as chart_router

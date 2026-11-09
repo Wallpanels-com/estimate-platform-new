@@ -15,6 +15,9 @@ const extra=m.connectDraft(baseline,'c','a','additional');assert.equal(extra.ext
 assert.equal(m.canConnect(extra,'c','a','additional'),false);
 assert.equal(m.removeConnection(extra,'c','a','additional').extra_edges.length,0);
 assert.equal(m.removeConnection(baseline,'b','c','reporting').managers.c,null);
+const reconnected=m.reconnectDraft(baseline,'b','c','a','c','reporting');assert.equal(reconnected.managers.c,'a');
+assert.equal(m.reconnectDraft(baseline,'a','b','c','b','reporting'),baseline,'Invalid reconnection must keep the old link');
+assert.equal(m.reconnectDraft(extra,'c','a','d','a','additional').extra_edges[0].source,'d');
 const positions=new Map([['c',{x:0,y:200}],['d',{x:350,y:200}]]);
 const reordered=m.reorderAfterDrop(baseline,people,people,positions,'c',{x:450,y:200},'holi');assert.equal(reordered.orders.holi.indexOf('c'),reordered.orders.holi.indexOf('d')+1);assert.deepEqual(reordered.managers,baseline.managers);
 assert.equal(m.reorderAfterDrop(baseline,people,people,positions,'a',{x:900,y:900},'holi'),baseline);

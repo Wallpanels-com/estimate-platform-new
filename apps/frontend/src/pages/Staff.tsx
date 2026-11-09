@@ -230,6 +230,12 @@ function Directory() {
           ru={ru}
           onDirtyChange={setChartDirty}
           onEditStart={() => setLeadersOnly(false)}
+          onCreated={(person) => {
+            setSearch("");
+            setStatus(person.status);
+            setDepartment("");
+            setLeadersOnly(false);
+          }}
           department={department}
           onDepartment={(value) => {
             setDepartment(value);

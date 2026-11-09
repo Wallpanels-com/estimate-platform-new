@@ -1,8 +1,8 @@
 """Atomic HR-authorized chart edits. Reporting is distinct from collaboration."""
 import uuid
 from typing import Literal
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field, ConfigDict
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.staff import staff_access
@@ -26,12 +26,33 @@ class ExtraEdge(BaseModel):
     target: uuid.UUID
 
 
+class NewStaff(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    id: uuid.UUID
+    name: str = Field(min_length=1, max_length=240)
+    status: Literal['active', 'inactive', 'paused'] = 'active'
+    title: str = Field(default='', max_length=240)
+    department: str = Field(default='', max_length=160)
+    manager_id: uuid.UUID | None = None
+    contact: str = Field(default='', max_length=500)
+    email: str = Field(default='', max_length=320)
+    notes: str = Field(default='', max_length=20000)
+
+    @field_validator('email')
+    @classmethod
+    def valid_email(cls, value):
+        if not value.strip(): return ''
+        from email_validator import validate_email
+        return validate_email(value.strip(), check_deliverability=False).normalized
+
+
 class ChartInput(BaseModel):
     model_config = ConfigDict(extra='forbid')
     version: int = Field(ge=0)
     changes: list[ManagerChange] = Field(default_factory=list, max_length=1000)
     extra_edges: list[ExtraEdge] = Field(default_factory=list, max_length=2000)
     orders: dict[Layout, list[uuid.UUID]] = Field(default_factory=dict, max_length=8)
+    new_staff: list[NewStaff] = Field(default_factory=list, max_length=20)
 
 
 def output(chart):
@@ -49,12 +70,24 @@ async def read_chart(db: AsyncSession = Depends(get_db)):
 
 
 @router.put('')
-async def save_chart(body: ChartInput, db: AsyncSession = Depends(get_db), user=Depends(staff_access)):
+async def save_chart(body: ChartInput, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db), user=Depends(staff_access)):
     await db.execute(text('SELECT pg_advisory_xact_lock(73110911)'))
     chart = (await db.execute(select(StaffChart).where(StaffChart.name == 'main'))).scalar_one_or_none()
     if body.version != (chart.version if chart else 0):
         raise HTTPException(409, 'The organization chart has changed. Cancel this draft and reload before saving.')
     rows = {r.id: r for r in (await db.execute(select(StaffMember))).scalars()}
+    created = []
+    for person in body.new_staff:
+        if person.id in rows or not person.name.strip():
+            raise HTTPException(422, 'Enter a new employee name and a unique employee ID.')
+        member = StaffMember(id=person.id, source_key='manual:'+person.id.hex,
+            source={'type':'manual','sheet':'Manual'}, name=person.name.strip(), status=person.status,
+            title=person.title.strip(), department=person.department.strip(), manager_id=person.manager_id,
+            fields={'A':person.name.strip(),'B':person.status.title(),'E':person.title.strip(),
+                    'F':person.contact.strip(),'G':person.department.strip(),'K':person.email,'N':person.notes.strip()},
+            links={}, version=1, updated_by=user.name or user.email)
+        rows[member.id] = member
+        created.append(member)
     ids = set(rows)
     parents = {r.id: r.manager_id for r in rows.values()}
     changed_ids = [c.id for c in body.changes]
@@ -66,6 +99,8 @@ async def save_chart(body: ChartInput, db: AsyncSession = Depends(get_db), user=
         if rows[change.id].version != change.version:
             raise HTTPException(409, 'An employee in this chart has changed. Cancel this draft and reload before saving.')
         parents[change.id] = change.manager_id
+    if any(parent is not None and parent not in ids for parent in parents.values()):
+        raise HTTPException(422, 'The selected manager does not exist.')
     for ident in ids:
         seen = set()
         parent = ident
@@ -81,6 +116,16 @@ async def save_chart(body: ChartInput, db: AsyncSession = Depends(get_db), user=
         if len(order) > 1000 or len(order) != len(set(order)) or not set(order).issubset(ids):
             raise HTTPException(422, 'Invalid card order.')
     # Validate everything before mutating either employees or chart settings.
+    # Insert new managers before pointing existing employees at them. The ORM
+    # cannot order a self-referencing FK from manager_id scalar values alone.
+    pending = {r.id:r for r in created}
+    while pending:
+        ready = [r for r in pending.values() if parents[r.id] not in pending]
+        for member in ready:
+            member.manager_id = parents[member.id]
+            db.add(member)
+            await db.flush([member])
+            pending.pop(member.id)
     for change in body.changes:
         row = rows[change.id]
         if row.manager_id != change.manager_id:
@@ -96,4 +141,6 @@ async def save_chart(body: ChartInput, db: AsyncSession = Depends(get_db), user=
     chart.updated_by = user.name or user.email
     await db.flush()
     await db.refresh(chart)
-    return output(chart)
+    from app.api.v1.staff import output as staff_output, schedule_avatars
+    schedule_avatars(background_tasks, created)
+    return output(chart) | ({'created_staff':[staff_output(r) for r in created]} if created else {})

@@ -25,6 +25,10 @@ Table and **Team spaces** share search, department and Active/Paused/Inactive/Al
 
 The React Flow instance stays mounted when department, status, search or full screen changes. Filters update cards before paint and move the existing camera for 240 ms; reduced motion moves it instantly. Only peer reordering interpolates card positions. The department navigation, zoom, fit, minimap and full screen controls remain available. Wheel scrolling continues to scroll the page. No employee records or links are removed when filtering.
 
+Chart editing is available immediately to HR users. The outer toolbar is removed; full screen replaces the attribution in the lower-right corner. The floating canvas dock selects reporting or additional connections, undo/redo, deletion, alignment and Save. Drag between the top/bottom card handles to connect employees, or drag an existing line endpoint to reconnect it. Select a line and press Delete (or the dock's trash icon) to remove only that connection. Dragging cards changes sibling order and settles them back into the automatic layout. Changes remain a draft until Save; Cancel discards them. Cyclic reporting is rejected; additional links support cross-team relationships.
+
+Dragging a handle onto blank canvas or a department frame opens a centered Add employee form. Recruiters choose the department, status, manager and contact details. **Create employee & save chart** saves the new directory record and the current chart draft in one database transaction, with the same HR authorization and optimistic conflict checks as ordinary chart edits. Cancelling or a validation/conflict error creates no orphan employee. Manual records do not create platform login accounts. Active employees with a Telegram handle use the existing background avatar sync.
+
 ## Verification
 
 - `python -m unittest discover -s tests -p test_staff.py -v`: Main-only parsing, source retention, hyperlinks, initial hierarchy and invalid workbook handling.

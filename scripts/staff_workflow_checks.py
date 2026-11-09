@@ -1,5 +1,6 @@
 """Shared HR staff API checks in the audit's disposable local schema."""
 from io import BytesIO
+import uuid
 from unittest.mock import patch
 from PIL import Image
 from openpyxl import Workbook
@@ -94,6 +95,35 @@ async def check_staff(call, client, tokens):
     removed=(await call('PUT','/hr/staff/chart',json={'version':1,'changes':[{'id':employee['id'],'version':employee['version'],'manager_id':None}],'extra_edges':[],'orders':saved['orders']})).json()
     assert removed['version']==2 and removed['extra_edges']==[]
     employee=next(p for p in (await call('GET','/hr/staff')).json()['items'] if p['id']==emp['id']);assert employee['manager_id'] is None
+
+    # Blank-canvas creation saves employee and chart together, with HR-selected placement.
+    before=(await call('GET','/hr/staff')).json()['items']
+    new_id=str(uuid.uuid4())
+    person={'id':new_id,'name':'Synthetic new colleague','status':'paused','title':'Designer',
+            'department':'Design','manager_id':ceo['id'],'email':'new@example.com','notes':'Keep this note','contact':'+15555550101'}
+    create={'version':2,'new_staff':[person],'extra_edges':[{'source':emp['id'],'target':new_id}]}
+    created=(await call('PUT','/hr/staff/chart',json=create)).json()
+    assert created['version']==3 and len(created['created_staff'])==1
+    member=next(p for p in (await call('GET','/hr/staff')).json()['items'] if p['id']==new_id)
+    assert member['status']=='paused' and member['department']=='Design' and member['manager_id']==ceo['id']
+    assert member['fields']['K']=='new@example.com' and member['fields']['N']=='Keep this note' and member['source_sheet']=='Manual'
+    await call('PUT','/hr/staff/chart',409,json=create)
+    await call('PUT','/hr/staff/chart',422,json={**create,'version':3})
+    await call('PUT','/hr/staff/chart',422,json={'version':3,'new_staff':[{**person,'id':str(uuid.uuid4()),'manager_id':str(uuid.uuid4())}]})
+    assert len((await call('GET','/hr/staff')).json()['items'])==len(before)+1
+    # A line pulled from an incoming circle creates a new manager above that employee.
+    manager_id=str(uuid.uuid4())
+    parent={'id':manager_id,'name':'Synthetic new manager','department':'Operations','manager_id':ceo['id']}
+    parent_chart=(await call('PUT','/hr/staff/chart',json={'version':3,'new_staff':[parent],
+        'changes':[{'id':emp['id'],'version':employee['version'],'manager_id':manager_id}]})).json()
+    assert parent_chart['version']==4
+    stable=(await call('GET','/hr/staff')).json()['items'];employee=next(p for p in stable if p['id']==emp['id'])
+    assert employee['manager_id']==manager_id
+    cycle_id=str(uuid.uuid4())
+    await call('PUT','/hr/staff/chart',422,json={'version':4,'new_staff':[{'id':cycle_id,'name':'Invalid cycle','manager_id':emp['id']}],
+        'changes':[{'id':emp['id'],'version':employee['version'],'manager_id':cycle_id}]})
+    assert (await call('GET','/hr/staff')).json()['items']==stable
+    assert (await call('GET','/hr/staff/chart')).json()['version']==4
 
     # Revocation applies to every staff endpoint without changing any directory data.
     client.headers['Authorization']='Bearer '+tokens[0]

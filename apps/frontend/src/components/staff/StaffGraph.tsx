@@ -11,6 +11,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ReactFlow,
+  Panel,
   BaseEdge,
   getSmoothStepPath,
   Background,
@@ -28,11 +29,11 @@ import {
   type Edge,
   type NodeChange,
   type Connection,
+  type OnConnectEnd,
 } from "@xyflow/react";
 import {
   ArrowUpRight,
   GripVertical,
-  Pencil,
   Save,
   Undo2,
   Redo2,
@@ -42,12 +43,12 @@ import {
   Link2,
   GitBranch,
   X,
-  LockKeyhole,
   Maximize2,
   Minimize2,
 } from "lucide-react";
 import { request, errorMessage, ApiError } from "../../lib/api";
-import { Button, ErrorNotice, useNotice } from "../ui";
+import { Button, ErrorNotice, ModalPresence, useNotice } from "../ui";
+import StaffCreate from "./StaffCreate";
 import {
   reportingParents,
   staffPositions,
@@ -64,6 +65,7 @@ import {
   canConnect,
   connectDraft,
   removeConnection,
+  reconnectDraft,
   orderedStaff,
   reorderAfterDrop,
   chartChanges,
@@ -71,6 +73,7 @@ import {
   type StaffChartConfig,
   type LinkKind,
   type Point,
+  type NewStaff,
 } from "../../lib/staffChart";
 import "@xyflow/react/dist/style.css";
 
@@ -235,6 +238,7 @@ export default function StaffGraph({
   onEditStart,
   onDepartment,
   department = "",
+  onCreated,
 }: {
   people: StaffMember[];
   all: StaffMember[];
@@ -245,6 +249,7 @@ export default function StaffGraph({
   onEditStart?: () => void;
   onDepartment?: (value: string) => void;
   department?: string;
+  onCreated?: (person: StaffMember) => void;
 }) {
   const L = (en: string, r: string) => (ru ? r : en);
 
@@ -289,7 +294,8 @@ export default function StaffGraph({
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const exit = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setExpanded(false);
+      if (event.key === "Escape" && !document.querySelector("dialog[open]"))
+        setExpanded(false);
     };
     window.addEventListener("keydown", exit);
     return () => {
@@ -297,7 +303,8 @@ export default function StaffGraph({
       window.removeEventListener("keydown", exit);
     };
   }, [expanded]);
-  const [editing, setEditing] = useState(false);
+  const editing = !!config.data && !config.error;
+  const [editorRevision, setEditorRevision] = useState(0);
   const [draft, setDraft] = useState<ChartDraft | null>(null);
   const [past, setPast] = useState<ChartDraft[]>([]);
   const [future, setFuture] = useState<ChartDraft[]>([]);
@@ -306,12 +313,37 @@ export default function StaffGraph({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [alignment, setAlignment] = useState(0);
+  const [creating, setCreating] = useState<{
+    anchor: string;
+    outgoing: boolean;
+    kind: LinkKind;
+    department: string;
+  } | null>(null);
+  const reconnecting = useRef<Edge | null>(null);
+  const connectionStart = useRef<Point | null>(null);
   const initial = useRef<{
     staff: StaffMember[];
     config: StaffChartConfig;
     draft: ChartDraft;
   } | null>(null);
   const current = editing && draft ? draft : baseline;
+  useEffect(() => {
+    // Refresh a clean editor when another recruiter saves; preserve dirty drafts.
+    if (
+      config.data &&
+      (!initial.current ||
+        !draft ||
+        JSON.stringify(draft) === JSON.stringify(initial.current.draft))
+    ) {
+      const next = chartDraft(all, config.data);
+      initial.current = {
+        staff: all.map((p) => ({ ...p })),
+        config: config.data,
+        draft: next,
+      };
+      setDraft(next);
+    }
+  }, [all, config.data, editorRevision]);
   const dirty =
     editing &&
     !!initial.current &&
@@ -498,6 +530,7 @@ export default function StaffGraph({
           targetHandle: "in",
           type: "staffReporting",
           selectable: editing && !indirect,
+          reconnectable: !indirect,
           zIndex: 1,
           data: {
             kind: "reporting",
@@ -526,6 +559,7 @@ export default function StaffGraph({
           targetHandle: "in",
           type: "default",
           selectable: editing,
+          reconnectable: true,
           zIndex: 1,
           data: { kind: "additional" },
           className: "staff-edge-additional",
@@ -551,23 +585,9 @@ export default function StaffGraph({
     visibleIds,
     selected,
   ]);
-  function startEditing() {
-    if (!config.data) return;
-    const next = chartDraft(all, config.data);
-    initial.current = {
-      staff: all.map((p) => ({ ...p })),
-      config: config.data,
-      draft: next,
-    };
-    setDraft(next);
-    setPast([]);
-    setFuture([]);
-    setEditing(true);
-    setError("");
-    onEditStart?.();
-  }
   function cancel() {
-    setEditing(false);
+    initial.current = null;
+    setEditorRevision((v) => v + 1);
     setDraft(null);
     setPast([]);
     setFuture([]);
@@ -576,36 +596,46 @@ export default function StaffGraph({
     void client.invalidateQueries({ queryKey: ["hr-staff"] });
     void config.refetch();
   }
-  async function save() {
-    if (!initial.current || !dirty || busy) return;
+  async function save(next = current, newStaff: NewStaff[] = []) {
+    if (!initial.current || (!dirty && !newStaff.length) || busy) return;
     setBusy(true);
     setError("");
     try {
-      await request("/hr/staff/chart", {
+      const result = await request<
+        StaffChartConfig & { created_staff?: StaffMember[] }
+      >("/hr/staff/chart", {
         method: "PUT",
         body: JSON.stringify({
           version: initial.current.config.version,
-          changes: chartChanges(current, initial.current.staff),
-          extra_edges: current.extra_edges,
-          orders: current.orders,
+          changes: chartChanges(next, initial.current.staff),
+          extra_edges: next.extra_edges,
+          orders: next.orders,
+          ...(newStaff.length ? { new_staff: newStaff } : {}),
         }),
       });
       await Promise.all([
         client.invalidateQueries({ queryKey: ["hr-staff"] }),
         client.invalidateQueries({ queryKey: ["hr-staff-chart"] }),
       ]);
-      setEditing(false);
+      initial.current = null;
+      setEditorRevision((v) => v + 1);
       setDraft(null);
       setPast([]);
       setFuture([]);
       setSelected(null);
-      notify(L("Organization chart saved", "Схема сохранена"));
+      setCreating(null);
+      if (result.created_staff?.[0]) onCreated?.(result.created_staff[0]);
+      notify(
+        newStaff.length
+          ? L("Employee and chart saved", "Сотрудник и схема сохранены")
+          : L("Organization chart saved", "Схема сохранена"),
+      );
     } catch (e) {
       setError(
         e instanceof ApiError && e.status === 409
           ? L(
-              "The saved data has changed. Your draft is preserved. Cancel and reopen editing to load the current version.",
-              "Сохранённые данные изменились. Черновик оставлен на экране. Отмените его и заново откройте редактор, чтобы загрузить актуальную версию.",
+              "The saved data has changed. Your draft is preserved. Cancel the draft to load the current version.",
+              "Сохранённые данные изменились. Черновик оставлен на экране. Отмените его, чтобы загрузить актуальную версию.",
             )
           : errorMessage(e),
       );
@@ -643,10 +673,27 @@ export default function StaffGraph({
     );
   }
   const valid = useCallback(
-    (connection: Connection | Edge) =>
-      !!connection.source &&
-      !!connection.target &&
-      canConnect(current, connection.source, connection.target, kind),
+    (connection: Connection | Edge) => {
+      const edge = reconnecting.current;
+      const next = edge
+        ? removeConnection(
+            current,
+            edge.source,
+            edge.target,
+            edge.data?.kind as LinkKind,
+          )
+        : current;
+      return (
+        !!connection.source &&
+        !!connection.target &&
+        canConnect(
+          next,
+          connection.source,
+          connection.target,
+          edge ? (edge.data?.kind as LinkKind) : kind,
+        )
+      );
+    },
     [current, kind],
   );
   const color = useCallback(
@@ -738,120 +785,58 @@ export default function StaffGraph({
     positions,
     geometry.width,
   ]);
+  function beginConnection(event: MouseEvent | TouchEvent) {
+    const point = "changedTouches" in event ? event.changedTouches[0] : event;
+    connectionStart.current = { x: point.clientX, y: point.clientY };
+    onEditStart?.();
+  }
+  function finishConnection(
+    event: Parameters<OnConnectEnd>[0],
+    state: Parameters<OnConnectEnd>[1],
+  ) {
+    if (busy || creating || reconnecting.current) return;
+    const point = "changedTouches" in event ? event.changedTouches[0] : event;
+    const start = connectionStart.current;
+    connectionStart.current = null;
+    if (
+      !start ||
+      Math.hypot(point.clientX - start.x, point.clientY - start.y) <= 18
+    )
+      return;
+    if (state.toNode && state.toNode.type !== "department" && !state.isValid) {
+      setError(
+        L(
+          "This reporting link would form a cycle or duplicate a connection. Choose Additional for cross-team links.",
+          "Такая связь создаёт цикл подчинения или уже существует. Для связей между коллегами выберите «Доп. связь».",
+        ),
+      );
+      return;
+    }
+    const target = event.target instanceof Element ? event.target : null;
+    if (
+      !state.isValid &&
+      state.fromNode?.type === "person" &&
+      (!state.toNode || state.toNode.type === "department") &&
+      target?.closest(".react-flow__pane, .react-flow__node-department")
+    ) {
+      setError("");
+      setCreating({
+        anchor: state.fromNode.id,
+        outgoing: state.fromHandle?.type === "source",
+        kind,
+        department:
+          state.toNode?.type === "department"
+            ? String(state.toNode.data.label)
+            : department ||
+              all.find((p) => p.id === state.fromNode?.id)?.department ||
+              "",
+      });
+    }
+  }
   return (
     <div
       className={`staff-graph-shell ${expanded ? "staff-graph-expanded" : ""}`}
     >
-      <div className="staff-graph-toolbar">
-        <Button
-          variant="ghost"
-          aria-label={
-            expanded
-              ? L("Close full screen", "Закрыть полный экран")
-              : L("Open full screen", "Открыть на весь экран")
-          }
-          onClick={() => setExpanded((v) => !v)}
-        >
-          {expanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-        </Button>
-        {!editing ? (
-          <>
-            <span className="staff-graph-readonly">
-              <LockKeyhole size={14} />
-              {L("Saved organization chart", "Сохранённая схема")}
-            </span>
-            <Button
-              onClick={startEditing}
-              disabled={!config.data || !!config.error}
-            >
-              <Pencil size={16} />
-              {L("Edit chart", "Редактировать схему")}
-            </Button>
-          </>
-        ) : (
-          <>
-            <div
-              className="staff-link-kind"
-              role="group"
-              aria-label={L("Connection type", "Тип связи")}
-            >
-              <button
-                disabled={busy}
-                aria-pressed={kind === "reporting"}
-                onClick={() => setKind("reporting")}
-              >
-                <GitBranch size={15} />
-                {L("Reporting", "Подчинение")}
-              </button>
-              <button
-                disabled={busy}
-                aria-pressed={kind === "additional"}
-                onClick={() => setKind("additional")}
-              >
-                <Link2 size={15} />
-                {L("Additional", "Доп. связь")}
-              </button>
-            </div>
-            <Button
-              variant="ghost"
-              aria-label={L("Undo chart change", "Отменить действие")}
-              disabled={!past.length || busy}
-              onClick={undo}
-            >
-              <Undo2 size={17} />
-            </Button>
-            <Button
-              variant="ghost"
-              aria-label={L("Redo chart change", "Повторить действие")}
-              disabled={!future.length || busy}
-              onClick={redo}
-            >
-              <Redo2 size={17} />
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={!selectedEdge || busy}
-              onClick={deleteSelected}
-            >
-              <Trash2 size={16} />
-              {L("Delete connection", "Удалить связь")}
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={busy}
-              onClick={() => {
-                const orders = { ...current.orders };
-                delete orders[layout];
-                commit({ ...current, orders });
-                setAlignment((v) => v + 1);
-              }}
-            >
-              <RotateCcw size={15} />
-              {L("Auto arrange", "Выровнять")}
-            </Button>
-            <span className="staff-draft-state">
-              {dirty
-                ? L("Unsaved changes", "Есть изменения")
-                : L(
-                    "Drag cards or connect the circles",
-                    "Двигайте карточки или соединяйте точки",
-                  )}
-            </span>
-            <Button disabled={busy} onClick={cancel}>
-              {L("Cancel", "Отмена")}
-            </Button>
-            <Button
-              variant="primary"
-              busy={busy}
-              disabled={!dirty}
-              onClick={() => void save()}
-            >
-              <Save size={16} />
-              {L("Save chart", "Сохранить схему")}
-            </Button>
-          </>
-        )}
-      </div>
       {config.error && (
         <ErrorNotice retry={() => void config.refetch()}>
           {L(
@@ -861,14 +846,6 @@ export default function StaffGraph({
         </ErrorNotice>
       )}
       {error && <ErrorNotice>{error}</ErrorNotice>}
-      {editing && (
-        <p className="staff-editor-help">
-          {L(
-            "Drag from a bottom circle to a top circle. Solid lines set the manager; dashed lines add a separate connection. Drag cards to reorder peers; they align automatically.",
-            "Тяните линию от нижнего кружка к верхнему. Сплошная — подчинение, пунктир — дополнительная связь. Перетаскивайте карточки, чтобы менять порядок на уровне: сетка выровняется автоматически.",
-          )}
-        </p>
-      )}
       <section
         ref={canvasRef}
         className={`staff-canvas staff-canvas-${layout} ${editing ? "staff-canvas-editing" : ""}`}
@@ -931,7 +908,7 @@ export default function StaffGraph({
           onNodesChange={onChanges}
           nodesDraggable={editing && !busy}
           nodesConnectable={editing && !busy}
-          edgesReconnectable={false}
+          edgesReconnectable={!busy && !!config.data}
           elementsSelectable={editing}
           deleteKeyCode={null}
           onInit={setFlow}
@@ -943,12 +920,17 @@ export default function StaffGraph({
           preventScrolling={false}
           zoomOnScroll={false}
           zoomOnDoubleClick={false}
-          attributionPosition="top-right"
+          proOptions={{ hideAttribution: true }}
           snapToGrid
           snapGrid={[20, 20]}
-          onNodeClick={(_, node) => {
+          onNodeClick={(event, node) => {
+            if (
+              event.target instanceof Element &&
+              event.target.closest(".react-flow__handle")
+            )
+              return;
             setSelected(null);
-            if (!editing && node.type === "person") open(node.data.person);
+            if (!busy && node.type === "person") open(node.data.person);
           }}
           onPaneClick={() => setSelected(null)}
           onEdgeClick={(event, edge) => {
@@ -969,17 +951,38 @@ export default function StaffGraph({
                 ),
               );
           }}
-          onConnectEnd={(_, state) => {
-            if (state.toNode && !state.isValid)
-              setError(
-                L(
-                  "This reporting link would form a cycle or duplicate a connection. Choose Additional for cross-team links.",
-                  "Такая связь создаёт цикл подчинения или уже существует. Для связей между коллегами выберите «Доп. связь».",
-                ),
+          onConnectStart={beginConnection}
+          onConnectEnd={finishConnection}
+          onReconnectStart={(_, edge) => {
+            reconnecting.current = edge;
+          }}
+          onReconnect={(edge, connection) => {
+            if (!busy && connection.source && connection.target) {
+              const next = reconnectDraft(
+                current,
+                edge.source,
+                edge.target,
+                connection.source,
+                connection.target,
+                edge.data?.kind as LinkKind,
               );
+              if (next === current)
+                setError(
+                  L(
+                    "This connection is invalid. The original connection was kept.",
+                    "Недопустимая связь. Исходная связь сохранена.",
+                  ),
+                );
+              else commit(next);
+            }
+          }}
+          onReconnectEnd={() => {
+            reconnecting.current = null;
+            connectionStart.current = null;
           }}
           onNodeDragStart={() => {
             dragging.current = true;
+            onEditStart?.();
             if (animation.current) cancelAnimationFrame(animation.current);
             setSelected(null);
           }}
@@ -999,6 +1002,104 @@ export default function StaffGraph({
             setAlignment((v) => v + 1);
           }}
         >
+          <Panel position="bottom-right" className="staff-canvas-fullscreen">
+            <Button
+              variant="ghost"
+              aria-label={
+                expanded
+                  ? L("Close full screen", "Закрыть полный экран")
+                  : L("Open full screen", "Открыть на весь экран")
+              }
+              onClick={() => setExpanded((v) => !v)}
+            >
+              {expanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            </Button>
+          </Panel>
+          <Panel
+            position="bottom-center"
+            className="staff-chart-dock"
+            aria-label={L("Chart actions", "Действия со схемой")}
+          >
+            <div
+              className="staff-link-kind"
+              role="group"
+              aria-label={L("Connection type", "Тип связи")}
+            >
+              <button
+                disabled={busy}
+                aria-pressed={kind === "reporting"}
+                onClick={() => setKind("reporting")}
+              >
+                <GitBranch size={15} />
+                {L("Reporting", "Подчинение")}
+              </button>
+              <button
+                disabled={busy}
+                aria-pressed={kind === "additional"}
+                onClick={() => setKind("additional")}
+              >
+                <Link2 size={15} />
+                {L("Additional", "Доп. связь")}
+              </button>
+            </div>
+            <Button
+              variant="ghost"
+              aria-label={L("Undo chart change", "Отменить действие")}
+              disabled={!past.length || busy}
+              onClick={undo}
+            >
+              <Undo2 size={17} />
+            </Button>
+            <Button
+              variant="ghost"
+              aria-label={L("Redo chart change", "Повторить действие")}
+              disabled={!future.length || busy}
+              onClick={redo}
+            >
+              <Redo2 size={17} />
+            </Button>
+            <Button
+              variant="ghost"
+              aria-label={L("Delete connection", "Удалить связь")}
+              disabled={!selectedEdge || busy}
+              onClick={deleteSelected}
+            >
+              <Trash2 size={17} />
+            </Button>
+            <Button
+              variant="ghost"
+              aria-label={L("Auto arrange", "Выровнять")}
+              disabled={busy}
+              onClick={() => {
+                const orders = { ...current.orders };
+                delete orders[layout];
+                commit({ ...current, orders });
+                setAlignment((v) => v + 1);
+              }}
+            >
+              <RotateCcw size={17} />
+            </Button>
+            {dirty && (
+              <Button
+                variant="ghost"
+                disabled={busy}
+                onClick={cancel}
+                aria-label={L("Cancel", "Отмена")}
+              >
+                <X size={17} />
+              </Button>
+            )}
+            <Button
+              variant={dirty ? "primary" : "ghost"}
+              aria-label={L("Save chart", "Сохранить схему")}
+              busy={busy}
+              disabled={!dirty || !config.data}
+              onClick={() => void save()}
+            >
+              {dirty ? <Save size={16} /> : <Check size={16} />}
+              {dirty ? L("Save", "Сохранить") : L("Saved", "Сохранено")}
+            </Button>
+          </Panel>
           <Background
             variant={
               layout === "teams"
@@ -1026,18 +1127,56 @@ export default function StaffGraph({
             }
           />
         </ReactFlow>
-        <span className="staff-canvas-tip">
-          {editing
-            ? L(
-                "Bottom → top · Click a line → Delete · Save to apply changes",
-                "Снизу → вверх · Выберите линию → Удалить · Сохраните изменения",
-              )
-            : L(
-                "Drag the background to pan · Use + / − to zoom · Click a person for details",
-                "Перетаскивайте фон · Масштаб + / − · Карточка сотрудника — по клику",
-              )}
-        </span>
       </section>
+      <ModalPresence>
+        {creating && (
+          <StaffCreate
+            people={all}
+            department={creating.department}
+            manager={
+              creating.kind === "reporting" && creating.outgoing
+                ? creating.anchor
+                : creating.outgoing
+                  ? null
+                  : current.managers[creating.anchor] || null
+            }
+            ru={ru}
+            busy={busy}
+            error={error}
+            close={() => {
+              if (!busy) {
+                setCreating(null);
+                setError("");
+              }
+            }}
+            submit={async (person) => {
+              const next: ChartDraft = {
+                ...current,
+                managers: {
+                  ...current.managers,
+                  [person.id]: person.manager_id,
+                },
+              };
+              let linked = next;
+              if (creating.kind === "additional" || !creating.outgoing) {
+                const source = creating.outgoing ? creating.anchor : person.id;
+                const target = creating.outgoing ? person.id : creating.anchor;
+                if (!canConnect(next, source, target, creating.kind)) {
+                  setError(
+                    L(
+                      "This reporting link would create a cycle. Choose another manager.",
+                      "Эта связь создаёт цикл подчинения. Выберите другого руководителя.",
+                    ),
+                  );
+                  return;
+                }
+                linked = connectDraft(next, source, target, creating.kind);
+              }
+              await save(linked, [person]);
+            }}
+          />
+        )}
+      </ModalPresence>
     </div>
   );
 }
