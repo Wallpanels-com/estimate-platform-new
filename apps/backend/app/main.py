@@ -50,7 +50,7 @@ app = FastAPI(title="Estimate Platform API", version="1.0.0", lifespan=lifespan)
 @app.middleware('http')
 async def frame_policy(request: Request, call_next):
     response = await call_next(request)
-    if settings.PORTAL_AUTH_ENABLED:
+    if settings.PORTAL_AUTH_ENABLED or settings.PORTAL_EMBED_ENABLED:
         from urllib.parse import urlsplit
         parsed = urlsplit(settings.PORTAL_BASE_URL)
         origin = f'{parsed.scheme}://{parsed.netloc}'

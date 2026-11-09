@@ -17,7 +17,7 @@ _client = httpx.AsyncClient(timeout=12, follow_redirects=False)
 
 
 async def portal_request(action, data):
-    if not settings.PORTAL_AUTH_ENABLED or len(settings.PORTAL_BRIDGE_SECRET) < 32:
+    if not (settings.PORTAL_AUTH_ENABLED or settings.PORTAL_EMBED_ENABLED) or len(settings.PORTAL_BRIDGE_SECRET) < 32:
         raise HTTPException(503, 'Unified sign-in is not configured.')
     path = '/integrations/estimate/' + action
     body = json.dumps(data, separators=(',', ':')).encode()

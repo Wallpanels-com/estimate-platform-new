@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "*"
     ALLOW_SELF_REGISTRATION: bool = False
     PORTAL_AUTH_ENABLED: bool = False
+    PORTAL_EMBED_ENABLED: bool = False
     PORTAL_BASE_URL: str = "https://edu.wallpanels.com"
     PORTAL_BRIDGE_SECRET: str = Field(default="", repr=False)
     AUTO_MIGRATE: bool = False

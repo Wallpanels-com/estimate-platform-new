@@ -47,3 +47,30 @@ class PortalIdentity(IsolatedAsyncioTestCase):
             self.assertEqual(check.call_args.args[1],{'sub':'55','version':'current','module':'hr'})
         with patch.object(portal,'portal_request',AsyncMock(side_effect=HTTPException(401,'archived'))):
             with self.assertRaises(HTTPException):await portal.verify_identity(db,token)
+
+    async def test_standalone_legacy_session_is_independent_of_embedded_portal_session(self):
+        from app.api import deps
+        ident=uuid.uuid4()
+        person=O(id=ident,is_active=True,token_version=4,name='Existing employee')
+        result=O(scalar_one_or_none=lambda:person)
+        db=O(execute=AsyncMock(return_value=result),info={})
+        credentials=O(credentials='signed-test-token')
+        native={'sub':str(ident),'ver':4}
+        with patch.object(portal.settings,'PORTAL_AUTH_ENABLED',False), patch.object(portal.settings,'PORTAL_EMBED_ENABLED',True), patch.object(portal,'verify_identity',AsyncMock(return_value=person)) as check:
+            with patch.object(deps,'decode_token',return_value=native):
+                self.assertIs(await deps.get_current_user(credentials,db),person)
+                check.assert_not_awaited()
+            with patch.object(deps,'decode_token',return_value={**native,'portal_sub':'55'}):
+                self.assertIs(await deps.get_current_user(credentials,db),person)
+                check.assert_awaited_once()
+
+    async def test_standalone_login_keeps_original_password_and_permissions(self):
+        from app.api.v1 import auth
+        from app.schemas.auth import LoginRequest
+        person=O(id=uuid.uuid4(),is_active=True,token_version=2,password_hash='original-hash')
+        db=O(execute=AsyncMock(return_value=O(scalar_one_or_none=lambda:person)))
+        with patch.object(portal.settings,'PORTAL_AUTH_ENABLED',False), patch.object(portal.settings,'PORTAL_EMBED_ENABLED',True), patch.object(auth,'verify_password',return_value=True) as verify, patch.object(portal,'portal_request',AsyncMock()) as check:
+            result=await auth.login(LoginRequest(email='existing.employee',password='Original-estimate-password'),db)
+            verify.assert_called_once_with('Original-estimate-password','original-hash')
+            check.assert_not_awaited()
+            self.assertTrue(result.access_token)
