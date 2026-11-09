@@ -60,7 +60,10 @@ class PortalIdentity(IsolatedAsyncioTestCase):
             with patch.object(deps,'decode_token',return_value=native):
                 self.assertIs(await deps.get_current_user(credentials,db),person)
                 check.assert_not_awaited()
-            with patch.object(deps,'decode_token',return_value={**native,'portal_sub':'55'}):
+            with patch.object(deps,'decode_token',return_value={**native,'portal_sub':'55','portal_module':None}):
+                self.assertIs(await deps.get_current_user(credentials,db),person)
+                check.assert_not_awaited()
+            with patch.object(deps,'decode_token',return_value={**native,'portal_sub':'55','portal_module':'hr'}):
                 self.assertIs(await deps.get_current_user(credentials,db),person)
                 check.assert_awaited_once()
 
