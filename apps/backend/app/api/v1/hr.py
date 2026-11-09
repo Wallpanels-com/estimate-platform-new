@@ -244,3 +244,6 @@ router.include_router(staff_router)
 
 from app.api.v1.hr_tools import router as tools_router
 router.include_router(tools_router)
+
+from app.api.v1.hr_localization import router as localization_router
+router.include_router(localization_router)

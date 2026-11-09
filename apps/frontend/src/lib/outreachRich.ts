@@ -1,6 +1,6 @@
 export function outreachLine(line: string) {
   const match = line.match(
-    /^(Вітаю!?|Про компанію|Про вакансію|Наступний крок|Умови|Сайт|Instagram|Інстаграм)([:!]?(?:\s|$).*)?$/u,
+    /^(Вітаю!?|Про компанію|Про вакансію|Наступний крок|Умови|Сайт|Instagram|Інстаграм|Hello!?|About the company|About the role|Next step|Working arrangements|Website)([:!]?(?:\s|$).*)?$/iu,
   );
   if (!match) return { heading: "", rest: line };
   const suffix = match[2] || "";

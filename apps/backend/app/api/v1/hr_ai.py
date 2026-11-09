@@ -1,6 +1,7 @@
 """HR-only review endpoints; generation never edits candidate status or ranking."""
 import asyncio
 import uuid
+from typing import Literal
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, ConfigDict
@@ -22,6 +23,7 @@ class DraftInput(BaseModel):
     model_config=ConfigDict(extra='forbid')
     message: str=Field(min_length=1,max_length=6000)
     expected_updated_at: datetime
+    language: Literal['original', 'en'] = 'original'
 
 def output(review, source):
     if not review:return None
@@ -29,7 +31,8 @@ def output(review, source):
     original=content.get('message_uk','')
     content['message_uk']=format_outreach(original,source['vacancy'],review.created_by)
     draft=content['message_uk'] if review.message_draft==original else review.message_draft
-    return {'content':content,'message_draft':draft,'model':review.model,'created_by':review.created_by,'created_at':review.created_at,'updated_at':review.updated_at,'stale':review.source_hash!=hr_ai.fingerprint(source)}
+    english_draft=content.pop('message_draft_en',None)
+    return {'content':content,'message_draft':draft,'message_draft_en':english_draft,'model':review.model,'created_by':review.created_by,'created_at':review.created_at,'updated_at':review.updated_at,'stale':review.source_hash!=hr_ai.fingerprint(source)}
 
 async def records(db, ident):
     c=await db.get(Candidate,ident)
@@ -69,6 +72,8 @@ async def generate(ident:uuid.UUID,body:GenerateInput,db:AsyncSession=Depends(ge
     content['message_uk']=message
     now=datetime.now(timezone.utc)
     if review:
+        if review.content.get('message_draft_en'):
+            content['message_draft_en']=review.content['message_draft_en']
         edited=review.message_draft!=review.content.get('message_uk')
         if not edited:review.message_draft=message
         review.content=content;review.source_hash=source_hash;review.model=settings.HR_AI_MODEL
@@ -87,5 +92,11 @@ async def save_draft(ident:uuid.UUID,body:DraftInput,db:AsyncSession=Depends(get
     if not review:raise HTTPException(404,'Generate an AI review first.')
     if review.updated_at!=body.expected_updated_at:raise HTTPException(409,'The message changed. Reopen the card before saving; your draft has not been overwritten.')
     if not body.message.strip():raise HTTPException(422,'Enter a message.')
-    review.message_draft=body.message.strip();review.updated_at=datetime.now(timezone.utc)
+    if body.language=='en':
+        review.content={**review.content,'message_draft_en':body.message.strip()}
+    else:
+        review.message_draft=body.message.strip()
+        # An updated original must not keep a stale translated draft.
+        review.content={k:v for k,v in review.content.items() if k!='message_draft_en'}
+    review.updated_at=datetime.now(timezone.utc)
     await db.flush();return {'enabled':bool(settings.GROQ_API_KEY),'review':output(review,hr_ai.source_data(c,v))}

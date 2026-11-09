@@ -1,5 +1,13 @@
 /** Labels/structured questionnaire choices only; original application data is never rewritten. */
 const answers: Record<string, string> = {
+  конструктор: "Furniture Designer",
+  "конструктор меблів": "Furniture Designer",
+  "конструктор мебели": "Furniture Designer",
+  "конструктори меблів": "Furniture Designers",
+  маркетолог: "Marketer",
+  маркетер: "Marketer",
+  "проджект менеджер": "Project Manager",
+  "проджект-менеджер": "Project Manager",
   "a1–a2 (начальный)": "A1–A2 (beginner)",
   "b1 (средний)": "B1 (intermediate)",
   "b2 (выше среднего)": "B2 (upper intermediate)",
@@ -50,7 +58,9 @@ export const criteria: Record<string, string> = {
   drawings: "Technical drawings",
 };
 export function hrText(value: string, language: string) {
-  const clean = value.replaceAll("_", " ");
+  const clean = /https?:\/\/|\S+@\S+/.test(value)
+    ? value
+    : value.replaceAll("_", " ");
   return language === "en"
     ? answers[clean.toLowerCase().trim()] || clean
     : clean;

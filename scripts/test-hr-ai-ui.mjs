@@ -20,16 +20,18 @@ try {
  assert.ok(outreachRtf('Вітаю!').includes('{\\b '));
  assert.ok(outreachRtf('a{b}\\c').includes('a\\{b\\}\\\\c'));
  const settle=async()=>{for(let i=0;i<5;i++)await act(async()=>new Promise(r=>setTimeout(r,10)));};
+ const englishSample='Hello!\n\nAbout the company\nWallpanels.com.\n\nAbout the role\nProject coordination.\n\nNext step\nPlease send your CV.\n\nWebsite: https://wallpanels.com\nInstagram: https://www.instagram.com/wallpanels_com';
  const sample='Вітаю!\n\nПро компанію\nWallpanels.com.\n\nПро вакансію\nКоординація проєктів.\n\nНаступний крок\nНадішліть резюме.\n\nСайт: https://wallpanels.com\nInstagram: https://www.instagram.com/wallpanels_com';
  for(const lang of ['en','ru']) {
   localStorage.setItem('wallpanels.ui-language',lang);
-  let review=null,writes=[],copied='',rich='';
+  let review=null,writes=[],copied='',rich='',translationCalls=0;
   globalThis.ClipboardItem=class {constructor(data){this.data=data;}};
   Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{copied=text;},write:async items=>{copied=await items[0].data['text/plain'].text();rich=await items[0].data['text/html'].text();}},configurable:true});
   globalThis.fetch=async(path,options={})=>{
    const method=options.method||'GET';
+   if(path.endsWith('/hr/localize')) {translationCalls++;const texts=JSON.parse(options.body).texts;const dictionary={'Професійний огляд':'Professional summary','5 років':'5 years','Досвід':'Experience','Які проєкти?':'Which projects?',[sample]:englishSample};return new Response(JSON.stringify({translations:Object.fromEntries(texts.map(text=>[text,dictionary[text]||text]))}));}
    if(method==='POST') {writes.push(method);review={content:{summary:'Професійний огляд',experience:'5 років',strengths:[{text:'Досвід',question:'Experience',answer:'5 years'}],gaps:[],interview_questions:['Які проєкти?'],message_uk:sample},message_draft:sample,created_by:'Example',created_at:'2026-11-05T12:00:00Z',updated_at:'v1',stale:false};}
-   if(method==='PATCH') {const body=JSON.parse(options.body);writes.push(body);assert.equal(body.expected_updated_at,'v1','Dirty draft retains original concurrency version');return new Response(JSON.stringify({detail:'Concurrent message edit'}),{status:409});}
+   if(method==='PATCH') {const body=JSON.parse(options.body);writes.push(body);assert.equal(body.expected_updated_at,'v1','Dirty draft retains original concurrency version');assert.equal(body.language,lang==='en'?'en':'original');return new Response(JSON.stringify({detail:'Concurrent message edit'}),{status:409});}
    return new Response(JSON.stringify({enabled:true,review}),{headers:{'Content-Type':'application/json'}});
   };
   let client,root;
@@ -39,16 +41,16 @@ try {
   }
   await mount();
   assert.equal(writes.length,1,'Opening an unsaved application automatically generates once');
-  assert.ok(document.body.textContent.includes('Професійний огляд'));
+  assert.ok(document.body.textContent.includes(lang==='en'?'Professional summary':'Професійний огляд'));if(lang==='en')assert.ok(!document.body.textContent.includes('Професійний огляд'));
   assert.equal(document.querySelector('.hr-ai-heading p'),null);
   assert.equal(document.querySelectorAll('.hr-ai-heading button').length,0);
   const bold=[...document.querySelectorAll('.hr-message-preview strong')].map(x=>x.textContent);
-  assert.deepEqual(bold,['Вітаю!','Про компанію','Про вакансію','Наступний крок','Сайт:','Instagram:']);
+  assert.deepEqual(bold,lang==='en'?['Hello!','About the company','About the role','Next step','Website:','Instagram:']:['Вітаю!','Про компанію','Про вакансію','Наступний крок','Сайт:','Instagram:']);
   await act(async()=>root.unmount());client.clear();await mount();
   assert.equal(writes.length,1,'Reopening in a fresh client reuses the review persisted on the server');
   const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===text);
   await act(async()=>button(lang==='ru'?'Скопировать сообщение':'Copy message').click());
-  assert.equal(copied,sample);assert.ok(rich.includes('<strong style="font-weight:700">Наступний крок</strong>'));assert.ok(rich.includes('<strong style="font-weight:700">Instagram:</strong>'));
+  assert.equal(copied,lang==='en'?englishSample:sample);assert.ok(rich.includes('<strong style="font-weight:700">'+(lang==='en'?'Next step':'Наступний крок')+'</strong>'));assert.ok(rich.includes('<strong style="font-weight:700">Instagram:</strong>'));
   await act(async()=>button(lang==='ru'?'Редактировать текст':'Edit message').click());
   const input=document.querySelector('textarea');
   await act(async()=>{Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'Відредагований чернетковий текст');input.dispatchEvent(new Event('input',{bubbles:true}));});
@@ -61,6 +63,7 @@ try {
   Object.defineProperty(navigator,'clipboard',{value:{write:async()=>{throw Error('unsupported');},writeText:async text=>{copied=text;}},configurable:true});
   assert.equal(await copyOutreach(sample),'plain');assert.equal(copied,sample);
  }
+ assert.ok(outreachHtml('Hello!\nAbout the company\nNext step\nWebsite: https://wallpanels.com').includes('<strong style="font-weight:700">Next step</strong>'));
  // RTF-capable clipboard clients receive native rich data; rejection retries HTML.
  ClipboardItem.supports = type => type === 'text/rtf';
  let nativeRtf='', htmlWrites=0;

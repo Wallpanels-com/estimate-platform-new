@@ -38,9 +38,10 @@ import HRStatusManager from "../components/HRStatusManager";
 import ManualCandidate from "../components/ManualCandidate";
 import CandidateFiles from "../components/CandidateFiles";
 import { defaultStatuses, statusLabel, useHRStatuses } from "../lib/hrStatuses";
-import { criteria, hrText } from "../lib/hrText";
+import { criteria } from "../lib/hrText";
 import CandidateAI from "../components/CandidateAI";
 import ImportDialog, { type ImportResult } from "../components/CandidateImport";
+import { useHRLocalization } from "../lib/hrLocalization";
 
 type Vacancy = {
   id: string;
@@ -106,6 +107,10 @@ export default function HR() {
     queryKey: ["hr-vacancies"],
     queryFn: () => request<Vacancy[]>("/hr/vacancies"),
   });
+  const vacancyText = useHRLocalization(
+    { scope: "vacancies" },
+    (vacancies.data || []).flatMap((v) => [v.name, v.description]),
+  );
   const [selected, setSelected] = useState("");
   const [showArchive, setShowArchive] = useState(false);
   const [q, setQ] = useState("");
@@ -201,6 +206,15 @@ export default function HR() {
     refetchInterval: 20000,
     refetchOnWindowFocus: true,
   });
+  const skillsText = useHRLocalization(
+    {
+      scope: "candidates",
+      candidate_ids: (query.data?.items || []).map((c) => c.id),
+    },
+    (query.data?.items || []).flatMap((c) =>
+      c.evidence.slice(0, 2).map((e) => e.answer),
+    ),
+  );
   useEffect(() => {
     if (query.data && query.data.page !== page) setPage(query.data.page);
   }, [query.data, page]);
@@ -323,7 +337,7 @@ export default function HR() {
                 >
                   <BriefcaseBusiness size={16} />
                   <span>
-                    {v.name}
+                    {vacancyText.display(v.name)}
                     {v.archived ? ` · ${t("Archived")}` : ""}
                   </span>
                   <small>{v.count}</small>
@@ -354,9 +368,13 @@ export default function HR() {
             <section className="hr-board" ref={board}>
               <div className="hr-board-heading">
                 <div className="min-zero">
-                  <h2>{current.name}</h2>
+                  <h2>{vacancyText.display(current.name)}</h2>
                   {current.description && (
-                    <p className="hr-description">{current.description}</p>
+                    <p className="hr-description">
+                      {vacancyText.translating
+                        ? t("Translating HR content…")
+                        : vacancyText.display(current.description)}
+                    </p>
                   )}
                 </div>
                 <Button
@@ -514,6 +532,11 @@ export default function HR() {
                   </div>
                 </div>
               )}
+              {language === "en" && skillsText.isError && (
+                <ErrorNotice retry={() => void skillsText.refetch()}>
+                  {t("Could not translate the HR content. Please try again.")}
+                </ErrorNotice>
+              )}
               {query.isPending ? (
                 <Loading />
               ) : query.isError ? (
@@ -590,7 +613,9 @@ export default function HR() {
                                 {c.evidence.slice(0, 2).map((e) => (
                                   <span key={e.criterion}>
                                     {t(criteria[e.criterion] || e.criterion)}:{" "}
-                                    {hrText(e.answer, language)}
+                                    {skillsText.translating
+                                      ? "…"
+                                      : skillsText.display(e.answer)}
                                   </span>
                                 ))}
                               </div>
@@ -804,7 +829,7 @@ export default function HR() {
       <ModalPresence>
         {importing && current && (
           <ImportDialog
-            vacancy={current}
+            vacancy={{ ...current, name: vacancyText.display(current.name) }}
             onClose={() => setImporting(false)}
             onDone={(r) => {
               setHiddenView(false);
@@ -849,6 +874,17 @@ function CandidateCard({
     if (focusNotes) notesInput.current?.focus();
   }, [focusNotes]);
   const { language } = useI18n();
+  const answersText = useHRLocalization(
+    { scope: "candidate", candidate_id: c.id },
+    [
+      ...professional(c.answers).flatMap(([question, answer]) => [
+        question,
+        answer,
+      ]),
+      ...c.evidence.flatMap((e) => [e.question, e.answer]),
+    ],
+    cardTab === "application",
+  );
   const [draft, setDraft] = useState({
     status: c.status,
     notes: c.notes,
@@ -1010,39 +1046,52 @@ function CandidateCard({
                 />
               </Field>
             </div>
-            <section className="hr-answers">
-              <h3>
-                {t("Professional match")}:{" "}
-                {c.score === null ? t("Not scored") : `${c.score}/100`}
-              </h3>
-              <p className="hr-muted">
-                {t(
-                  "Equal weight for available criteria: experience, English, US market and technical drawings. Self-reported answers; human review required.",
-                )}
-              </p>
-              <dl>
-                {c.evidence.map((e) => (
-                  <div key={e.criterion}>
-                    <dt>{hrText(e.question, language)}</dt>
-                    <dd>
-                      {hrText(e.answer, language) || "—"} · {e.points}/
-                      {e.maximum}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-            <section className="hr-answers">
-              <h3>{t("Application answers")}</h3>
-              <dl>
-                {professional(c.answers).map(([k, v]) => (
-                  <div key={k}>
-                    <dt>{hrText(k, language)}</dt>
-                    <dd>{hrText(v, language) || "—"}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
+            {answersText.translating && (
+              <p role="status">{t("Translating HR content…")}</p>
+            )}
+            {language === "en" && answersText.isError && (
+              <ErrorNotice retry={() => void answersText.refetch()}>
+                {t("Could not translate the HR content. Please try again.")}
+              </ErrorNotice>
+            )}
+            {!answersText.translating &&
+              !(language === "en" && answersText.isError) && (
+                <>
+                  <section className="hr-answers">
+                    <h3>
+                      {t("Professional match")}:{" "}
+                      {c.score === null ? t("Not scored") : `${c.score}/100`}
+                    </h3>
+                    <p className="hr-muted">
+                      {t(
+                        "Equal weight for available criteria: experience, English, US market and technical drawings. Self-reported answers; human review required.",
+                      )}
+                    </p>
+                    <dl>
+                      {c.evidence.map((e) => (
+                        <div key={e.criterion}>
+                          <dt>{answersText.display(e.question)}</dt>
+                          <dd>
+                            {answersText.display(e.answer) || "—"} · {e.points}/
+                            {e.maximum}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                  <section className="hr-answers">
+                    <h3>{t("Application answers")}</h3>
+                    <dl>
+                      {professional(c.answers).map(([k, v]) => (
+                        <div key={k}>
+                          <dt>{answersText.display(k)}</dt>
+                          <dd>{answersText.display(v) || "—"}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                </>
+              )}
           </div>
           <CandidateFiles id={c.id} />
           {error && <ErrorNotice>{t(error)}</ErrorNotice>}

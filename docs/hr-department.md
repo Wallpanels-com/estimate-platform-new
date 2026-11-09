@@ -16,6 +16,21 @@ Names, phone numbers and selected answers are retained; Meta contact prefixes ar
 
 ## Professional sorting
 
+### English display language
+
+The EN switch also localizes saved vacancy titles/descriptions, questionnaire answers,
+review text/evidence/interview questions and the recruiter message. Common role and
+structured-answer labels translate immediately; free text is translated by the existing
+server-only Groq integration and cached in `hr_translations` (migration `0014`). Only
+saved HR text accessible to the caller is accepted. Candidate names/contact fields,
+private HR notes and attachments are not submitted by this UI; links/contact tokens
+inside translated text are protected and restored unchanged. Translation does not
+regenerate a review, re-rank candidates or overwrite applications. Editing/saving the
+English recruiter message keeps a separate draft in the existing review JSON; the
+original Ukrainian draft stays intact. Updating an original message invalidates its
+old English draft. EN copying uses the English text and preserves the existing bold
+heading clipboard formats. Provider errors offer retry without discarding source data.
+
 HR's manual priority appears first, followed by the transparent professional match score, then newest import time. No AI is used. Only the four criteria explicitly chosen by the user are eligible; contact details, original Priority column, names, age, citizenship and location do not influence the score.
 
 Each available questionnaire criterion has equal weight, maximum 25 points, normalized to 100. Only questionnaire questions present in that candidate's source form enter the denominator. Missing/unsupported answers score zero and remain visible for human verification; a questionnaire without recognized professional questions is unscored. This is a review aid, not an automatic employment decision.

@@ -10,6 +10,7 @@ export type Review = {
     message_uk: string;
   };
   message_draft: string;
+  message_draft_en?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;

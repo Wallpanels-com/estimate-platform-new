@@ -78,3 +78,11 @@ class CandidateAttachment(Base):
     size: Mapped[int] = mapped_column(Integer)
     created_by: Mapped[str] = mapped_column(String(240))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class HRTranslation(Base):
+    """Display-only English translations; source applications are never rewritten."""
+    __tablename__ = 'hr_translations'
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    translated: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

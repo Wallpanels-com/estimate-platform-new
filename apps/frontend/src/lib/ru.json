@@ -1090,5 +1090,13 @@
   "Select each worksheet only once.": "Каждый лист можно выбрать только один раз.",
   "Use a different column for each contact field.": "Для каждого контактного поля выберите отдельный столбец.",
   "Choose valid application columns.": "Выберите существующие столбцы с ответами.",
-  "The worksheet contains too many empty rows. Remove unused rows and try again.": "В листе слишком много пустых строк. Удалите лишние строки и попробуйте снова."
+  "The worksheet contains too many empty rows. Remove unused rows and try again.": "В листе слишком много пустых строк. Удалите лишние строки и попробуйте снова.",
+  "Checking professional answers and preparing a message…": "Проверяем ответы и готовим сообщение…",
+  "Message to the candidate": "Сообщение кандидату",
+  "Translating HR content…": "Переводим содержимое…",
+  "Could not translate the HR content. Please try again.": "Не удалось перевести текст. Попробуйте снова.",
+  "English translation is unavailable. Contact Dmitry.": "Перевод на английский недоступен. Обратитесь к Дмитрию.",
+  "English translation is already being prepared. Please wait.": "Перевод уже готовится. Подождите.",
+  "HR content changed. Reopen the card and try again.": "Анкета изменилась. Откройте карточку заново и повторите попытку.",
+  "Choose a smaller batch of HR text.": "Выберите меньший объём текста для перевода."
 }

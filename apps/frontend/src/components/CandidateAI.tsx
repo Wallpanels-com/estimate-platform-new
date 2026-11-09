@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScanText, Copy, Check, MessageSquare, Pencil } from "lucide-react";
 import { patch, errorMessage } from "../lib/api";
@@ -11,6 +11,7 @@ import {
   type Evidence,
 } from "../lib/hrReview";
 import { outreachLine, copyOutreach } from "../lib/outreachRich";
+import { useHRLocalization } from "../lib/hrLocalization";
 export default function CandidateAI({
   id,
   active = true,
@@ -38,11 +39,38 @@ export default function CandidateAI({
   const [edited, setEdited] = useState<{
     text: string;
     version: string;
+    language: string;
   } | null>(null);
   const review = query.data?.review;
   const busy = query.isFetching && (!review || review.stale);
-  const message = edited?.text ?? review?.message_draft ?? "";
-  const dirty = !!review && message !== review.message_draft;
+  const localization = useHRLocalization(
+    { scope: "candidate", candidate_id: id },
+    review
+      ? [
+          review.content.summary,
+          review.content.experience,
+          ...[...review.content.strengths, ...review.content.gaps].flatMap(
+            (p) => [p.text, p.question, p.answer],
+          ),
+          ...review.content.interview_questions,
+          ...(review.message_draft_en ? [] : [review.message_draft]),
+        ]
+      : [],
+    active && !!review && !busy,
+  );
+  const tr = localization.display;
+  const savedMessage = review
+    ? language === "en"
+      ? review.message_draft_en || tr(review.message_draft)
+      : review.message_draft
+    : "";
+  const currentEdit = edited?.language === language ? edited : null;
+  const message = currentEdit?.text ?? savedMessage;
+  const dirty = !!review && message !== savedMessage;
+  const translating = language === "en" && localization.translating;
+  useEffect(() => {
+    setEditingMessage(false);
+  }, [language]);
   async function saveMessage() {
     if (!review || saving || busy || !dirty) return;
     setSaving(true);
@@ -50,7 +78,8 @@ export default function CandidateAI({
     try {
       const result = await patch<Result>(`/hr/candidates/${id}/ai/message`, {
         message,
-        expected_updated_at: edited?.version ?? review.updated_at,
+        expected_updated_at: currentEdit?.version ?? review.updated_at,
+        language: language === "en" ? "en" : "original",
       });
       client.setQueryData(key, result);
       setEdited(null);
@@ -87,157 +116,168 @@ export default function CandidateAI({
       ) : null}
       {busy && !query.isPending && (
         <p role="status" className="hr-muted">
-          {t(
-            "Checking professional answers and preparing a Ukrainian message…",
-          )}
+          {t("Checking professional answers and preparing a message…")}
         </p>
       )}
       {error && <ErrorNotice>{t(error)}</ErrorNotice>}
-      {review && (
-        <>
-          {review.stale && (
-            <p className="hr-ai-stale" role="status">
-              {t(
-                "Updating the review for changed application or job requirements…",
-              )}
-            </p>
-          )}
-          <div className="hr-ai-overview">
-            <p>{review.content.summary}</p>
-            <h4>{t("Experience from the application")}</h4>
-            <p>{review.content.experience}</p>
-          </div>
-          <div className="hr-ai-evidence-grid">
-            {(
-              [
-                ["Supported strengths", review.content.strengths],
-                ["Limitations stated by the candidate", review.content.gaps],
-              ] as [string, Evidence[]][]
-            ).map(([title, points]) => (
-              <section key={title}>
-                <h4>{t(title)}</h4>
-                {points.length ? (
-                  <ul>
-                    {points.map((point, i) => (
-                      <li key={i}>
-                        <p>{point.text}</p>
-                        <details>
-                          <summary>{t("Application evidence")}</summary>
-                          <p className="hr-muted">{point.question}</p>
-                          <blockquote>{point.answer}</blockquote>
-                        </details>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="hr-muted">
-                    {t("Not established by the available answers.")}
-                  </p>
+      {translating && (
+        <p role="status" className="hr-muted">
+          {t("Translating HR content…")}
+        </p>
+      )}
+      {language === "en" && localization.isError && (
+        <ErrorNotice retry={() => void localization.refetch()}>
+          {t("Could not translate the HR content. Please try again.")}
+        </ErrorNotice>
+      )}
+      {review &&
+        !translating &&
+        !(language === "en" && localization.isError) && (
+          <>
+            {review.stale && (
+              <p className="hr-ai-stale" role="status">
+                {t(
+                  "Updating the review for changed application or job requirements…",
                 )}
-              </section>
-            ))}
-          </div>
-          <section className="hr-ai-questions">
-            <h4>{t("Questions for the interview")}</h4>
-            <ol>
-              {review.content.interview_questions.map((q, i) => (
-                <li key={i}>{q}</li>
-              ))}
-            </ol>
-          </section>
-          <section className="hr-ai-message">
-            <h4>
-              <MessageSquare size={17} />
-              {t("First contact · Ukrainian")}
-            </h4>
-            {editingMessage ? (
-              <textarea
-                aria-label={t("Recruiter message")}
-                value={message}
-                onChange={(e) =>
-                  setEdited({
-                    text: e.target.value,
-                    version: edited?.version ?? review.updated_at,
-                  })
-                }
-                maxLength={6000}
-                rows={9}
-                disabled={saving || busy}
-              />
-            ) : (
-              <div
-                className="hr-message-preview"
-                role="document"
-                aria-label={t("Recruiter message preview")}
-                tabIndex={0}
-              >
-                {message.split("\n").map((line, i) => {
-                  const { heading, rest } = outreachLine(line);
-                  return (
-                    <div key={i}>
-                      {heading && <strong>{heading}</strong>}
-                      {rest || (!heading ? "\u00a0" : "")}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <div className="hr-ai-message-actions">
-              <div className="button-row">
-                {!editingMessage && (
-                  <Button
-                    onClick={() => setEditingMessage(true)}
-                    disabled={busy}
-                  >
-                    <Pencil size={16} />
-                    {t("Edit message")}
-                  </Button>
-                )}
-                {editingMessage && (
-                  <Button
-                    onClick={() => void saveMessage()}
-                    busy={saving}
-                    disabled={!dirty || busy || !message.trim()}
-                  >
-                    <Check size={16} />
-                    {t("Save message")}
-                  </Button>
-                )}
-                <Button
-                  variant="primary"
-                  disabled={!message.trim()}
-                  onClick={async () => {
-                    try {
-                      const format = await copyOutreach(message);
-                      notify(
-                        t(
-                          format === "rich"
-                            ? "Message copied with formatting"
-                            : "Message copied as plain text",
-                        ),
-                      );
-                    } catch {
-                      setError(
-                        t(
-                          "Could not copy. Select and copy the message manually.",
-                        ),
-                      );
-                    }
-                  }}
-                >
-                  <Copy size={16} />
-                  {t("Copy message")}
-                </Button>
-              </div>
-            </div>
-            {dirty && (
-              <p role="status" className="hr-muted">
-                {t("You have unsaved message changes.")}
               </p>
             )}
-          </section>
-        </>
-      )}
+            <div className="hr-ai-overview">
+              <p>{tr(review.content.summary)}</p>
+              <h4>{t("Experience from the application")}</h4>
+              <p>{tr(review.content.experience)}</p>
+            </div>
+            <div className="hr-ai-evidence-grid">
+              {(
+                [
+                  ["Supported strengths", review.content.strengths],
+                  ["Limitations stated by the candidate", review.content.gaps],
+                ] as [string, Evidence[]][]
+              ).map(([title, points]) => (
+                <section key={title}>
+                  <h4>{t(title)}</h4>
+                  {points.length ? (
+                    <ul>
+                      {points.map((point, i) => (
+                        <li key={i}>
+                          <p>{tr(point.text)}</p>
+                          <details>
+                            <summary>{t("Application evidence")}</summary>
+                            <p className="hr-muted">{tr(point.question)}</p>
+                            <blockquote>{tr(point.answer)}</blockquote>
+                          </details>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="hr-muted">
+                      {t("Not established by the available answers.")}
+                    </p>
+                  )}
+                </section>
+              ))}
+            </div>
+            <section className="hr-ai-questions">
+              <h4>{t("Questions for the interview")}</h4>
+              <ol>
+                {review.content.interview_questions.map((q, i) => (
+                  <li key={i}>{tr(q)}</li>
+                ))}
+              </ol>
+            </section>
+            <section className="hr-ai-message">
+              <h4>
+                <MessageSquare size={17} />
+                {t("Message to the candidate")}
+              </h4>
+              {editingMessage ? (
+                <textarea
+                  aria-label={t("Recruiter message")}
+                  value={message}
+                  onChange={(e) =>
+                    setEdited({
+                      text: e.target.value,
+                      version: currentEdit?.version ?? review.updated_at,
+                      language,
+                    })
+                  }
+                  maxLength={6000}
+                  rows={9}
+                  disabled={saving || busy}
+                />
+              ) : (
+                <div
+                  className="hr-message-preview"
+                  role="document"
+                  aria-label={t("Recruiter message preview")}
+                  tabIndex={0}
+                >
+                  {message.split("\n").map((line, i) => {
+                    const { heading, rest } = outreachLine(line);
+                    return (
+                      <div key={i}>
+                        {heading && <strong>{heading}</strong>}
+                        {rest || (!heading ? "\u00a0" : "")}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="hr-ai-message-actions">
+                <div className="button-row">
+                  {!editingMessage && (
+                    <Button
+                      onClick={() => setEditingMessage(true)}
+                      disabled={busy || translating}
+                    >
+                      <Pencil size={16} />
+                      {t("Edit message")}
+                    </Button>
+                  )}
+                  {editingMessage && (
+                    <Button
+                      onClick={() => void saveMessage()}
+                      busy={saving}
+                      disabled={!dirty || busy || !message.trim()}
+                    >
+                      <Check size={16} />
+                      {t("Save message")}
+                    </Button>
+                  )}
+                  <Button
+                    variant="primary"
+                    disabled={!message.trim() || translating}
+                    onClick={async () => {
+                      try {
+                        const format = await copyOutreach(message);
+                        notify(
+                          t(
+                            format === "rich"
+                              ? "Message copied with formatting"
+                              : "Message copied as plain text",
+                          ),
+                        );
+                      } catch {
+                        setError(
+                          t(
+                            "Could not copy. Select and copy the message manually.",
+                          ),
+                        );
+                      }
+                    }}
+                  >
+                    <Copy size={16} />
+                    {t("Copy message")}
+                  </Button>
+                </div>
+              </div>
+              {dirty && (
+                <p role="status" className="hr-muted">
+                  {t("You have unsaved message changes.")}
+                </p>
+              )}
+            </section>
+          </>
+        )}
     </section>
   );
 }
