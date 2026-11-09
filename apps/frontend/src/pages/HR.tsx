@@ -40,6 +40,7 @@ import CandidateFiles from "../components/CandidateFiles";
 import { defaultStatuses, statusLabel, useHRStatuses } from "../lib/hrStatuses";
 import { criteria, hrText } from "../lib/hrText";
 import CandidateAI from "../components/CandidateAI";
+import ImportDialog, { type ImportResult } from "../components/CandidateImport";
 
 type Vacancy = {
   id: string;
@@ -82,21 +83,6 @@ type Results = {
   total: number;
   counts: Record<string, number>;
 };
-type Sheet = {
-  name: string;
-  columns: string[];
-  count: number;
-  mapping: Record<string, string>;
-};
-type Batch = { id: string; sheets: Sheet[] };
-type ImportResult = {
-  added: number;
-  duplicates: number;
-  invalid: number;
-  test_rows: number;
-  sample?: { name: string; email: string; phone: string }[];
-};
-const friendly = (s: string) => s.replaceAll("_", " ");
 const professional = (answers: Record<string, string>) =>
   Object.entries(answers).filter(
     ([k]) =>
@@ -1072,185 +1058,6 @@ function CandidateCard({
           )}
         </footer>
       </form>
-    </Modal>
-  );
-}
-function ImportDialog({
-  vacancy,
-  onClose,
-  onDone,
-}: {
-  vacancy: Vacancy;
-  onClose: () => void;
-  onDone: (r: ImportResult) => void;
-}) {
-  const { t } = useI18n();
-  const [batch, setBatch] = useState<Batch | null>(null);
-  const [sheet, setSheet] = useState("");
-  const [mapping, setMapping] = useState<Record<string, string>>({});
-  const [preview, setPreview] = useState<ImportResult | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const current = batch?.sheets.find((s) => s.name === sheet);
-  async function upload(file: File) {
-    setError("");
-    setBusy(true);
-    try {
-      if (file.size > 10 * 1024 * 1024)
-        throw new Error(t("Maximum file size is 10 MB."));
-      const f = new FormData();
-      f.append("file", file);
-      const b = await request<Batch>(`/hr/vacancies/${vacancy.id}/imports`, {
-        method: "POST",
-        body: f,
-      });
-      setBatch(b);
-      setSheet(b.sheets[0].name);
-      setMapping(b.sheets[0].mapping);
-      setPreview(null);
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function proceed(confirm = false) {
-    setBusy(true);
-    setError("");
-    try {
-      const r = await post<ImportResult>(
-        `/hr/imports/${batch?.id}/${confirm ? "confirm" : "preview"}`,
-        { sheet, mapping },
-      );
-      if (confirm) onDone(r);
-      else setPreview(r);
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <Modal
-      title="Import candidates"
-      wide
-      onClose={() => {
-        if (!busy) onClose();
-      }}
-    >
-      <div className="modal-body">
-        <p>
-          <strong>{vacancy.name}</strong>
-        </p>
-        {!batch ? (
-          <Field label="Excel workbook (.xlsx)">
-            <input
-              type="file"
-              accept=".xlsx"
-              disabled={busy}
-              onChange={(e) => {
-                if (e.target.files?.[0]) void upload(e.target.files[0]);
-              }}
-            />
-          </Field>
-        ) : (
-          <>
-            <div className="form-grid">
-              <Field label="Worksheet">
-                <Select
-                  disabled={busy}
-                  value={sheet}
-                  onChange={(e) => {
-                    const s = batch.sheets.find(
-                      (s) => s.name === e.target.value,
-                    )!;
-                    setSheet(s.name);
-                    setMapping(s.mapping);
-                    setPreview(null);
-                  }}
-                >
-                  {batch.sheets.map((s) => (
-                    <option key={s.name} value={s.name}>
-                      {s.name} ({s.count})
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              {(["name", "email", "phone"] as const).map((k) => (
-                <Field
-                  label={
-                    {
-                      name: "Name column",
-                      email: "Email column",
-                      phone: "Phone column",
-                    }[k]
-                  }
-                  key={k}
-                >
-                  <Select
-                    disabled={busy}
-                    value={mapping[k] || ""}
-                    onChange={(e) => {
-                      setMapping({ ...mapping, [k]: e.target.value });
-                      setPreview(null);
-                    }}
-                  >
-                    <option value="">{t("Not mapped")}</option>
-                    {current?.columns.map((c) => (
-                      <option key={c} value={c}>
-                        {friendly(c)}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              ))}
-            </div>
-            {preview && (
-              <div className="hr-import-result" role="status">
-                <strong>
-                  {t("Ready to import")}: {preview.added}
-                </strong>
-                <p>
-                  {t("Duplicates")}: {preview.duplicates} ·{" "}
-                  {t("Incomplete rows")}: {preview.invalid} ·{" "}
-                  {t("Facebook test leads")}: {preview.test_rows}
-                </p>
-                {preview.sample?.map((r, i) => (
-                  <p key={i}>
-                    {r.name} · {r.email || r.phone}
-                  </p>
-                ))}
-              </div>
-            )}
-            <p className="hr-sort-note">
-              {t(
-                "All original answers are preserved. Existing candidates, notes and statuses are never overwritten.",
-              )}
-            </p>
-          </>
-        )}
-        {busy && <Loading />}
-        {error && (
-          <p role="alert" className="error-message">
-            {error}
-          </p>
-        )}
-      </div>
-      <footer className="modal-footer">
-        <Button disabled={busy} onClick={onClose}>
-          {t("Cancel")}
-        </Button>
-        {batch && (
-          <Button
-            busy={busy}
-            variant="primary"
-            disabled={!!preview && !preview.added}
-            onClick={() => void proceed(!!preview)}
-          >
-            {t(preview ? "Confirm import" : "Check import")}
-          </Button>
-        )}
-      </footer>
     </Modal>
   );
 }

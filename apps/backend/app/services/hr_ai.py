@@ -26,7 +26,7 @@ class AIUnavailable(Exception):
         self.message, self.status = message, status
 
 PRIVATE = re.compile(r'email|e.mail|phone|телефон|номер|почт|пошт|имя|ім.?я|full.?name|first.?name|last.?name|location|citizen|national|gender|age$|возраст|вік$|прожива|громадян|страна|країна|country|пол$|стать',re.I)
-PROFESSIONAL = re.compile(r'experience|опыт|досвід|англій|англий|english|market|маркет|черт|креслен|drawing|portfolio|портфол|skill|навич|навык|управл|керув|manager|менедж|sales|продаж|crm|project|проект|проєкт|результ|result|інструмент|инструмент|tools|команд|team|освіт|образован|education|сертиф|certif|досяг|achiev|обов.?яз|обязан|responsib',re.I)
+PROFESSIONAL = re.compile(r'experience|опыт|досвід|англій|англий|english|market|маркет|черт|креслен|drawing|portfolio|портфол|skill|навич|навык|управл|керув|manager|менедж|sales|продаж|crm|project|проект|проєкт|результ|result|інструмент|инструмент|tools|команд|team|освіт|образован|education|сертиф|certif|досяг|achiev|обов.?яз|обязан|responsib|software|програм|cad|furnitur|мебл|дюйм|inch|формат роботи|формат работы',re.I)
 
 def redact(text):
     text = str(text).replace('_',' ')

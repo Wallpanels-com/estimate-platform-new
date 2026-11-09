@@ -11,7 +11,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.hr import Vacancy, Candidate, ImportBatch
 from app.models.governance import AuditEvent
-from app.services.hr_import import parse_workbook, suggest_mapping, prepare_rows, contact_flags, MAX_BYTES
+from app.services.hr_import import parse_workbook, suggest_mapping, prepare_rows, contact_flags, suggested_questions, technical_column, row_keys, MAX_BYTES
 
 from app.services.hr_scoring import qualification_score
 from app.services.hr_statuses import validate_status
@@ -48,9 +48,19 @@ class CandidateQuickInput(BaseModel):
     priority: bool | None = None
     hidden: bool | None = None
 
+class SheetImportInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    sheet: str = Field(min_length=1, max_length=160)
+    mapping: dict[str, str]
+    answer_columns: list[str] | None = Field(default=None, max_length=100)
+
 class ImportInput(BaseModel):
-    sheet: str = Field(max_length=160)
-    mapping: dict[str,str]
+    model_config = ConfigDict(extra='forbid')
+    # Keep existing single-sheet integrations compatible.
+    sheet: str | None = Field(default=None, max_length=160)
+    mapping: dict[str, str] | None = None
+    answer_columns: list[str] | None = Field(default=None, max_length=100)
+    sheets: list[SheetImportInput] | None = Field(default=None, min_length=1, max_length=100)
 
 async def vacancy(db, ident, lock=False):
     q=select(Vacancy).where(Vacancy.id==ident)
@@ -152,7 +162,15 @@ async def stage_import(ident:uuid.UUID,file:UploadFile=File(...),db:AsyncSession
     await db.execute(delete(ImportBatch).where(ImportBatch.result.is_(None),ImportBatch.created_at < datetime.now(timezone.utc)-timedelta(days=1)))
     batch=ImportBatch(vacancy_id=ident,filename=(file.filename or 'Candidates.xlsx')[:240],payload=payload)
     db.add(batch);await db.flush()
-    return {'id':batch.id,'sheets':[{'name':s['name'],'columns':s['columns'],'count':len(s['rows']),'sample':s['rows'][:3],'mapping':suggest_mapping(s['columns'])} for s in payload['sheets']]}
+    sheets=[]
+    for s in payload['sheets']:
+        mapping=suggest_mapping(s['columns'], s['rows'])
+        sheets.append({'name':s['name'], 'columns':s['columns'], 'count':len(s['rows']),
+                       'sample':s['rows'][:3], 'mapping':mapping,
+                       'answer_columns':suggested_questions(s['columns'], mapping, s['rows']),
+                       'technical_columns':[c for c in s['columns'] if technical_column(c)],
+                       'header_row':s.get('header_row',1)})
+    return {'id':batch.id,'sheets':sheets}
 
 async def load_batch(db,ident,body,lock=False):
     query=select(ImportBatch).where(ImportBatch.id==ident)
@@ -161,14 +179,37 @@ async def load_batch(db,ident,body,lock=False):
     if not batch:raise HTTPException(404,'Import not found. Upload the file again.')
     if batch.result:return batch,None,None
     if (datetime.now(timezone.utc)-batch.created_at).total_seconds()>86400:raise HTTPException(410,'Import preview expired. Upload the file again.')
-    sheet=next((s for s in batch.payload['sheets'] if s['name']==body.sheet),None)
-    if not sheet:raise HTTPException(422,'Choose a worksheet.')
-    if set(body.mapping)!={'name','email','phone'} or not body.mapping['name'] or not (body.mapping['email'] or body.mapping['phone']) or any(x and x not in sheet['columns'] for x in body.mapping.values()):raise HTTPException(422,'Map name and at least one contact column.')
-    rows,info=prepare_rows(sheet['rows'],body.mapping)
+    selections=body.sheets
+    if selections is not None and (body.sheet is not None or body.mapping is not None or body.answer_columns is not None):
+        raise HTTPException(422,'Choose either one worksheet or a worksheet selection.')
+    if selections is None:
+        if not body.sheet or body.mapping is None:
+            raise HTTPException(422,'Choose at least one worksheet.')
+        selections=[SheetImportInput(sheet=body.sheet,mapping=body.mapping,answer_columns=body.answer_columns)]
+    if len({s.sheet for s in selections})!=len(selections):
+        raise HTTPException(422,'Select each worksheet only once.')
+    rows=[];info={'invalid':0,'test_rows':0,'sheets':[]}
+    for selected in selections:
+        sheet=next((s for s in batch.payload['sheets'] if s['name']==selected.sheet),None)
+        if not sheet:raise HTTPException(422,'Choose a worksheet.')
+        mapping=selected.mapping
+        if not {'name','email','phone'}.issubset(mapping) or set(mapping)-{'name','email','phone','last_name','telegram'} or not mapping['name'] or not any(mapping.get(k) for k in ('email','phone','telegram')) or any(x and x not in sheet['columns'] for x in mapping.values()):
+            raise HTTPException(422,'Map name and at least one contact column.')
+        assigned=[v for v in mapping.values() if v]
+        if len(set(assigned))!=len(assigned):raise HTTPException(422,'Use a different column for each contact field.')
+        answers=selected.answer_columns
+        if answers is None:answers=suggested_questions(sheet['columns'],mapping,sheet['rows'])
+        if len(set(answers))!=len(answers) or any(c not in sheet['columns'] for c in answers):
+            raise HTTPException(422,'Choose valid application columns.')
+        prepared,counts=prepare_rows(sheet['rows'],mapping,answers)
+        rows.extend(prepared)
+        info['invalid']+=counts['invalid'];info['test_rows']+=counts['test_rows']
+        info['sheets'].append({'name':selected.sheet,'valid':len(prepared),**counts})
     return batch,rows,info
 
 async def existing_keys(db,vacancy_id):
-    return set((await db.execute(select(Candidate.fingerprint).where(Candidate.vacancy_id==vacancy_id))).scalars())
+    rows=(await db.execute(select(Candidate.fingerprint,Candidate.email,Candidate.phone,Candidate.telegram_username).where(Candidate.vacancy_id==vacancy_id))).mappings()
+    return set().union(*(row_keys(dict(row)) for row in rows))
 
 @router.post('/imports/{ident}/preview')
 async def preview_import(ident:uuid.UUID,body:ImportInput,db:AsyncSession=Depends(get_db),user=Depends(get_current_user)):
@@ -176,9 +217,9 @@ async def preview_import(ident:uuid.UUID,body:ImportInput,db:AsyncSession=Depend
     if batch.result:return batch.result
     seen=await existing_keys(db,batch.vacancy_id);fresh=[];duplicates=0
     for row in rows:
-        if row['fingerprint'] in seen:duplicates+=1
-        else:fresh.append(row);seen.add(row['fingerprint'])
-    return info|{'added':len(fresh),'duplicates':duplicates,'sample':[{'name':r['name'],'email':r['email'],'phone':r['phone']} for r in fresh[:5]]}
+        if row_keys(row) & seen:duplicates+=1
+        else:fresh.append(row);seen.update(row_keys(row))
+    return info|{'added':len(fresh),'duplicates':duplicates,'sample':[{'name':r['name'],'email':r['email'],'phone':r['phone'],'answers':r['answers']} for r in fresh[:5]]}
 
 @router.post('/imports/{ident}/confirm')
 async def confirm_import(ident:uuid.UUID,body:ImportInput,db:AsyncSession=Depends(get_db),user=Depends(get_current_user)):
@@ -188,9 +229,9 @@ async def confirm_import(ident:uuid.UUID,body:ImportInput,db:AsyncSession=Depend
     if v.archived:raise HTTPException(409,'Restore the vacancy before importing.')
     seen=await existing_keys(db,batch.vacancy_id);added=duplicates=0
     for row in rows:
-        if row['fingerprint'] in seen:duplicates+=1;continue
+        if row_keys(row) & seen:duplicates+=1;continue
         db.add(Candidate(vacancy_id=batch.vacancy_id,source=batch.filename,updated_by=user.name or user.email,score=qualification_score(row["answers"])["score"],**row))
-        seen.add(row['fingerprint']);added+=1
+        seen.update(row_keys(row));added+=1
     batch.result=info|{'added':added,'duplicates':duplicates}
     batch.payload={}  # candidate answers are now durable; do not keep a second copy
     await db.flush();return batch.result

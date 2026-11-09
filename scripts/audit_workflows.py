@@ -77,6 +77,8 @@ async def main():
             await check_staff(call,c,tokens)
             from hr_tools_workflow_checks import check_hr_tools
             await check_hr_tools(call,c,tokens)
+            from hr_import_workflow_checks import check_hr_import
+            await check_hr_import(call,c,tokens)
             est=(await call('POST','/estimates',201,json={'type':'pre','title':'Isolated workflow audit','client_name':'Local fixture'})).json()
             eid=est['id']; zid=est['zones'][0]['id']; path=f'/estimates/{eid}'
             revision=est['revision']

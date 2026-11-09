@@ -5,14 +5,14 @@ Desktop route: `/hr`. Initial production access is limited to the configured imm
 ## Workflow
 
 1. Add a vacancy or select Marketer / Project Manager.
-2. Import an `.xlsx` workbook (up to 10 MB, 5,000 non-empty rows and 100 columns). Empty worksheets/rows are ignored. Choose the worksheet and check the proposed name/email/phone mapping.
+2. Import an `.xlsx` workbook (up to 10 MB, 5,000 non-empty rows across the workbook and 100 columns per sheet). Empty worksheets/rows are ignored. Tick one or several worksheets; for each selected sheet, check the proposed name/email/phone mapping and choose the application questions to retain. Optional surname and Telegram mappings are available under additional contact fields. Recognized EN/RU/UA headers and email/international phone formats are detected locally by code, without AI calls. Meta advertising IDs, campaign fields and unlabelled technical columns are excluded by default.
 3. Check the preview and confirm. Facebook dummy leads, incomplete records and duplicate contact identities are reported separately. Confirmation is idempotent and imports into the selected vacancy only. Existing notes/statuses are never overwritten.
 4. Choose 20, 50 or 100 candidates per page. The table scrolls with the document, with numbered navigation and first/last boundaries. Page size is an optional browser preference; candidate records remain in PostgreSQL.
 5. Row actions: star toggles manual priority; note opens and focuses HR notes; crossed eye hides the candidate, and the open eye restores them in the Hidden view. These controls have accessible names and no visual tooltips. Hiding is reversible, stored separately from stage/notes/priority, and never deletes records.
 6. Open a candidate by name. Set priority, status, HR notes, and confirmed place of residence/work. Archive candidates via status; select Archived in the status filter to restore them. Vacancies have a separate archive checkbox and Show archive control.
 7. Saved changes include editor attribution and transaction-level audit history. Concurrent edits return 409 instead of overwriting another employee's changes.
 
-Names, phone numbers and original answers are retained as supplied. No messages are sent to candidates. Candidate workbook files, credentials, import results and personal data must never be committed to Git.
+Names, phone numbers and selected answers are retained; Meta contact prefixes are removed and separate first/last names are combined when mapped. The preview shows up to five candidate examples before explicit confirmation. Duplicates are checked across selected sheets and existing vacancy records by normalized email, phone, Telegram and legacy fingerprint. Existing candidates are never merged or overwritten. No messages are sent to candidates. Candidate workbook files, credentials, import results and personal data must never be committed to Git.
 
 ## Professional sorting
 
