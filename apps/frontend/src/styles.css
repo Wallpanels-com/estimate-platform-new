@@ -4829,9 +4829,14 @@ html:has(dialog[open]) {
   color: var(--muted);
   border-bottom: 2px solid transparent;
 }
+/* Only the OS iframe uses this navigation; standalone links keep their styles. */
+.embedded-navigation a,
+.embedded-navigation a:hover,
+.embedded-navigation a:focus-visible {
+  text-decoration: none;
+}
 .embedded-navigation a.active {
   color: var(--bronze-dark);
-  border-color: var(--bronze-dark);
   font-weight: 600;
 }
 .embedded-content {
