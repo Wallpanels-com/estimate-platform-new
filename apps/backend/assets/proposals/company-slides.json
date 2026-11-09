@@ -1,12 +1,12 @@
 {
-  "version": "corporate-approved-20261031",
+  "version": "wallpanels-approved-20261109",
   "pages": 25,
-  "sha256": "120f8252929eccea827919187dba93fe8a15863470eb567ebdf5cf15c2f18695",
-  "source": "Wallpanels_compressed.pdf",
+  "sha256": "5c28cd928b892cb7e59b402d9a43ffc1bb56ff7dc79e8edb096d1667ea9883ca",
+  "source": "Wallpanels (1)_compressed.pdf",
   "format": "16:9",
   "compression": "User-supplied PDF, copied byte-for-byte without image recompression.",
   "page_signatures": [
-    "04806f3f9d95203944c5dd9bed9a485c5baeb1747935335c392e3d6a56d83ceb",
+    "fe494d6bd8cfebd9bfe2075d090614aa63d92ed69a0945eadf4a25343c780607",
     "e7d49fa86d461a2b8cb7dd3f823c7e01c65b2f76ff2e78a6d982f0e680dd74fc",
     "b46af2c568d4ef6f75995a670b93ce50488022f968f1648ec245eebc6c763aa6",
     "49f39f424106023313b5231213a13b5249de9abd8dcdf99eabbdfe968a6a04e2",
@@ -28,7 +28,7 @@
     "9ebb204c4dbb95d2eb67f09c41247a918ca8ea709c699ed1c83dc6e4c95814ac",
     "351b902723813b475adb20ed3dd15f6579e87350348e0acae4ed5f0435a9a628",
     "22221598e99ab74f6fe4c52368552d0b3aaea5888dc8f2141f43fdb3ca4f8a55",
-    "95a5e96b69ea5b5a351dc88e250a6a457ff9b97458df61385459ac2058a922e1",
+    "379a91cdc26e23f02ea7d31595091822612d4a4c617148ccbf95f82ade36851b",
     "68b4dbdf6f5194bf52e23d520c6fd167b25b7e8e3129a257b3937c53541555e2",
     "9b79ddfb46b65326563a0d8947eef312c87fb37d0f25223e21e17229b2411718"
   ]

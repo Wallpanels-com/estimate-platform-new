@@ -41,7 +41,7 @@ class BrandSelection(TestCase):
         company = final.load_company_slides(brand='verona')
         self.assertEqual(len(company.reader.pages), 29)
         self.assertEqual(company.brand, 'verona')
-        self.assertEqual(company.digest, '7f9145682ff27ac7fccd677f1cb04da7ed28d5ea10cc415012a2edcb2f9a44db')
+        self.assertEqual(company.digest, 'f192a5be18649b94385374db6d9380454eb2840ca84fafc000eb0c036ca716b5')
         with Image.open(brands.profile('verona').assets / 'proposal-logo.png') as logo:
             self.assertEqual(logo.mode, 'RGBA')
             self.assertGreaterEqual(logo.width, 2000)

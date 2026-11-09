@@ -142,6 +142,6 @@ class FinalCompanySlides(TestCase):
         company = final.load_company_slides()
         self.assertEqual(len(company.reader.pages), 25)
         manifest = json.loads(final.COMPANY_MANIFEST.read_text())
-        self.assertEqual(company.digest, '120f8252929eccea827919187dba93fe8a15863470eb567ebdf5cf15c2f18695')
+        self.assertEqual(company.digest, '5c28cd928b892cb7e59b402d9a43ffc1bb56ff7dc79e8edb096d1667ea9883ca')
         self.assertEqual(company.digest, manifest['sha256'])
         self.assertEqual(company.signatures, manifest['page_signatures'])
