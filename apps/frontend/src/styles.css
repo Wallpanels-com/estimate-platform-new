@@ -574,8 +574,15 @@ html[lang="ru"] .line-head {
 .nav-collapsed .nav-user .button {
   margin-left: 0;
 }
-.nav-user {
+.nav-footer {
   margin-top: auto;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.nav-user {
+  margin-top: 0;
   padding-top: 18px;
   border-top: 1px solid #4a4d42;
   display: flex;

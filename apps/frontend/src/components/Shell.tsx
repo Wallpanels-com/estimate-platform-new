@@ -146,33 +146,37 @@ export default function Shell() {
               <span className="nav-label">{t("Access")}</span>
             </NavLink>
           ) : null}
-          {canAccess(user, "trash") ? (
-            <NavLink
-              aria-label={t("Trash")}
-              title={collapsed ? t("Trash") : undefined}
-              to="/trash"
-            >
-              <Trash2 size={18} />
-              <span className="nav-label">{t("Trash")}</span>
-            </NavLink>
-          ) : null}
         </nav>
-        <div className="nav-user">
-          <span className="avatar" aria-hidden="true">
-            {(user?.name || user?.email || "W").slice(0, 1).toUpperCase()}
-          </span>
-          <div className="min-zero nav-user-details">
-            <strong>{user?.name || t("Your account")}</strong>
-            <small>{user?.email}</small>
+        <div className="nav-footer">
+          {canAccess(user, "trash") && (
+            <nav aria-label={t("Trash")}>
+              <NavLink
+                aria-label={t("Trash")}
+                title={collapsed ? t("Trash") : undefined}
+                to="/trash"
+              >
+                <Trash2 size={18} />
+                <span className="nav-label">{t("Trash")}</span>
+              </NavLink>
+            </nav>
+          )}
+          <div className="nav-user">
+            <span className="avatar" aria-hidden="true">
+              {(user?.name || user?.email || "W").slice(0, 1).toUpperCase()}
+            </span>
+            <div className="min-zero nav-user-details">
+              <strong>{user?.name || t("Your account")}</strong>
+              <small>{user?.email}</small>
+            </div>
+            <Button
+              variant="ghost"
+              aria-label={t("Sign out")}
+              title={collapsed ? t("Sign out") : undefined}
+              onClick={signOut}
+            >
+              <LogOut size={17} />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            aria-label={t("Sign out")}
-            title={collapsed ? t("Sign out") : undefined}
-            onClick={signOut}
-          >
-            <LogOut size={17} />
-          </Button>
         </div>
       </aside>
       <main id="main-content" className="main-page">
