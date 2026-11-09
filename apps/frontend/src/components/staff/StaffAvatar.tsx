@@ -1,3 +1,4 @@
+import { tokenStorage } from "../../lib/portal";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { API_ORIGIN, TOKEN_KEY } from "../../lib/api";
@@ -23,7 +24,7 @@ export default function StaffAvatar({
     queryFn: async ({ signal }) => {
       const response = await fetch(`${API_ORIGIN}${path}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY) || ""}`,
+          Authorization: `Bearer ${tokenStorage.getItem(TOKEN_KEY) || ""}`,
         },
         signal,
       });

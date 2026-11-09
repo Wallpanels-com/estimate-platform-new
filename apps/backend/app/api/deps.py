@@ -19,6 +19,14 @@ async def get_current_user(
     payload = decode_token(token)
     if not payload:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+    from app.core.config import settings
+    if settings.PORTAL_AUTH_ENABLED:
+        from app.services.portal_identity import verify_identity
+        user = await verify_identity(db, payload)
+        if request is not None:
+            from app.services.page_access import authorize_request
+            await authorize_request(user, db, request)
+        return user
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")

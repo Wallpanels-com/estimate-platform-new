@@ -13,6 +13,7 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
+import { embeddedModule, isEmbedded } from "../lib/portal";
 import { canAccess, firstPage } from "../lib/access";
 import { Button } from "./ui";
 export function Brand() {
@@ -51,6 +52,35 @@ export default function Shell() {
       return next;
     });
   };
+  if (isEmbedded)
+    return (
+      <div className="embedded-workspace">
+        {embeddedModule === "estimating" && (
+          <nav
+            className="embedded-navigation"
+            aria-label={t("Estimate navigation")}
+          >
+            {(
+              [
+                ["estimates", "/", "Estimates"],
+                ["quick_estimate", "/quick-estimate", "Quick estimate"],
+                ["price_book", "/price-book", "Price book"],
+                ["trash", "/trash", "Trash"],
+              ] as const
+            )
+              .filter(([key]) => canAccess(user, key))
+              .map(([key, path, label]) => (
+                <NavLink key={key} to={path} end={path === "/"}>
+                  {t(label)}
+                </NavLink>
+              ))}
+          </nav>
+        )}
+        <main id="main-content" className="embedded-content">
+          <Outlet />
+        </main>
+      </div>
+    );
   return (
     <div className={`app-shell${collapsed ? " nav-collapsed" : ""}`}>
       <a className="skip-link" href="#main-content">

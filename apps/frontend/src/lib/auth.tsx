@@ -1,3 +1,4 @@
+import { tokenStorage } from "./portal";
 import {
   createContext,
   useContext,
@@ -16,7 +17,7 @@ const Context = createContext<{
   signOut: () => void;
 }>({ token: null, loading: false, signIn: () => {}, signOut: () => {} });
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
+  const [token, setToken] = useState(() => tokenStorage.getItem(TOKEN_KEY));
   const client = useQueryClient();
   const me = useQuery({
     queryKey: ["me", token],
@@ -27,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: true,
   });
   function signOut() {
-    localStorage.removeItem(TOKEN_KEY);
+    tokenStorage.removeItem(TOKEN_KEY);
     setToken(null);
     client.clear();
   }
@@ -50,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: me.data,
         loading: !!token && me.isLoading,
         signIn: (value) => {
-          localStorage.setItem(TOKEN_KEY, value);
+          tokenStorage.setItem(TOKEN_KEY, value);
           setToken(value);
         },
         signOut,

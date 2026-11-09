@@ -39,6 +39,7 @@ class UserOut(BaseModel):
     agentation_enabled: bool = False
     page_access: list[str] | None = None
     can_manage_access: bool = False
+    portal_managed: bool = False
     created_at: datetime
 
     class Config:

@@ -1,3 +1,4 @@
+import { tokenStorage } from "./portal";
 export const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN || "").replace(
   /\/$/,
   "",
@@ -23,7 +24,7 @@ export async function request<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const headers = new Headers(options.headers);
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = tokenStorage.getItem(TOKEN_KEY);
   if (token) headers.set("Authorization", `Bearer ${token}`);
   const writing = !["GET", "HEAD"].includes(options.method || "GET");
   let estimateId = path.match(/^\/estimates\/([0-9a-f-]{36})(?:\/|$)/)?.[1];
@@ -87,7 +88,7 @@ export const remove = (path: string) =>
 export async function download(path: string, filename: string) {
   const response = await fetch(`${API_ORIGIN}/api/v1${path}`, {
     headers: {
-      Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY) || ""}`,
+      Authorization: `Bearer ${tokenStorage.getItem(TOKEN_KEY) || ""}`,
     },
   });
   if (!response.ok) {

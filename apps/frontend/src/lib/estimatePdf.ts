@@ -1,3 +1,4 @@
+import { tokenStorage } from "./portal";
 import { API_ORIGIN, ApiError, TOKEN_KEY, safeFilename } from "./api";
 
 export type ProposalBrand = "wallpanels" | "verona";
@@ -30,7 +31,7 @@ export async function fetchEstimatePdf(
     {
       cache: "no-store",
       headers: {
-        Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY) || ""}`,
+        Authorization: `Bearer ${tokenStorage.getItem(TOKEN_KEY) || ""}`,
       },
     },
   );

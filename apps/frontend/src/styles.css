@@ -4810,3 +4810,36 @@ html:has(dialog[open]) {
   color: #526549;
   text-decoration: underline;
 }
+/* The OS owns outer navigation; embedded modules retain their native workflows. */
+.embedded-workspace {
+  min-width: 0;
+  background: var(--workspace);
+}
+.embedded-navigation {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--paper);
+}
+.embedded-navigation a {
+  padding: 8px 0;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+}
+.embedded-navigation a.active {
+  color: var(--bronze-dark);
+  border-color: var(--bronze-dark);
+  font-weight: 600;
+}
+.embedded-content {
+  padding: 24px 32px;
+  min-width: 0;
+}
+html:has(.embedded-workspace),
+html:has(.embedded-workspace) body,
+html:has(.embedded-workspace) #root {
+  min-height: 0;
+}

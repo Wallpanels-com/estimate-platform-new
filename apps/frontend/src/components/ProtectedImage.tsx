@@ -1,3 +1,4 @@
+import { tokenStorage } from "../lib/portal";
 import { useEffect, useState, type ImgHTMLAttributes } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { API_ORIGIN, ApiError, TOKEN_KEY } from "../lib/api";
@@ -18,7 +19,7 @@ export default function ProtectedImage({
     queryFn: async ({ signal }) => {
       const response = await fetch(`${API_ORIGIN}/api/v1/media/${imageId}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY) || ""}`,
+          Authorization: `Bearer ${tokenStorage.getItem(TOKEN_KEY) || ""}`,
         },
         signal,
       });

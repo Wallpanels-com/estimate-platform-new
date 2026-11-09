@@ -25,6 +25,7 @@ export default function Users() {
   const query = useQuery({
     queryKey: ["team-users"],
     queryFn: () => request<User[]>("/users"),
+    enabled: !me?.portal_managed,
   });
   const [editing, setEditing] = useState<User | "new" | null>(null);
   const [accessUser, setAccessUser] = useState<User | null>(null);
@@ -84,6 +85,23 @@ export default function Users() {
       setBusy(false);
     }
   }
+  if (me?.portal_managed)
+    return (
+      <section className="page-header">
+        <div>
+          <h1>{t("Access")}</h1>
+          <p>
+            {t("Manage accounts, passwords and permissions in WALLPANELS OS.")}
+          </p>
+          <a
+            className="button primary"
+            href="https://edu.wallpanels.com/admin/users"
+          >
+            {t("Open WALLPANELS OS")}
+          </a>
+        </div>
+      </section>
+    );
   return (
     <div className="team-page">
       <header className="page-heading">

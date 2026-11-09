@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
@@ -45,6 +45,17 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Estimate Platform API", version="1.0.0", lifespan=lifespan)
+
+
+@app.middleware('http')
+async def frame_policy(request: Request, call_next):
+    response = await call_next(request)
+    if settings.PORTAL_AUTH_ENABLED:
+        from urllib.parse import urlsplit
+        parsed = urlsplit(settings.PORTAL_BASE_URL)
+        origin = f'{parsed.scheme}://{parsed.netloc}'
+        response.headers['Content-Security-Policy'] = f"frame-ancestors 'self' {origin}"
+    return response
 
 app.add_middleware(
     CORSMiddleware,

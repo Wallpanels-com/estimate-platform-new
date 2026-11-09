@@ -10,11 +10,17 @@ PAGES = (*LEGACY_PAGES, 'hr')
 
 
 def is_access_manager(user):
+    identity = getattr(user, '_portal_profile', None)
+    if identity is not None:
+        return bool(identity.get('owner') and identity.get('module') is None)
     owner = settings.ACCESS_MANAGER_USER_ID or settings.AGENTATION_USER_ID
     return bool(owner and getattr(user, 'is_active', False) and user.id == owner)
 
 
 def allowed_pages(user):
+    identity = getattr(user, '_portal_profile', None)
+    if identity is not None:
+        return [p for p in PAGES if p in identity.get('pages', [])]
     if is_access_manager(user):
         return list(PAGES)
     configured = getattr(user, 'page_access', None)
@@ -51,6 +57,8 @@ async def authorize_request(user, db, request):
         require_any(user, 'users')
         if method not in ('GET', 'HEAD'):
             require_manager(user)
+            if getattr(user, '_portal_profile', None) is not None:
+                raise HTTPException(409, 'Manage accounts, passwords and permissions in WALLPANELS OS.')
         return
     if path.startswith('/operations/') or path == '/audit':
         require_manager(user)

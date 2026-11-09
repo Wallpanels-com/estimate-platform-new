@@ -1061,5 +1061,9 @@
   "File unavailable. Contact Dmitry.": "Файл недоступен. Обратитесь к Дмитрию.",
   "Phone": "Телефон",
   "Discard unsaved changes?": "Отменить несохранённые изменения?",
-  "Notes": "Заметки"
+  "Notes": "Заметки",
+  "Estimate navigation": "Навигация расчётов",
+  "Manage accounts, passwords and permissions in WALLPANELS OS.": "Управляйте аккаунтами, паролями и доступами в WALLPANELS OS.",
+  "Open WALLPANELS OS": "Открыть WALLPANELS OS",
+  "Could not open the workspace. Please try again.": "Не удалось открыть рабочий раздел. Повторите попытку."
 }

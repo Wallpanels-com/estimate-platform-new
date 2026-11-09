@@ -12,6 +12,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { ApiError } from "./lib/api";
 import { Loading, NoticeProvider } from "./components/ui";
+import PortalEmbed from "./components/PortalEmbed";
 import Shell from "./components/Shell";
 import { PageGate, NoPageAccess } from "./components/PageGate";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -155,7 +156,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <AuthProvider>
               <ScrollToTop />
               <ErrorBoundary>
-                <App />
+                <PortalEmbed>
+                  <App />
+                </PortalEmbed>
               </ErrorBoundary>
               <StaffFeedback />
             </AuthProvider>
