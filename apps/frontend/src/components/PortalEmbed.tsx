@@ -36,7 +36,7 @@ export default function PortalEmbed({ children }: { children: ReactNode }) {
           { code: event.data.code },
         );
         signIn(result.access_token);
-        navigate(embeddedModule === "hr" ? "/hr" : "/", { replace: true });
+        navigate(embeddedModule === "hr" ? "/hr/staff?view=chart" : "/", { replace: true });
       } catch {
         setError(true);
         notifyPortal({ type: "wp:error" });

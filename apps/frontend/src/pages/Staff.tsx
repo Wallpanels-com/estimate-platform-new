@@ -13,6 +13,7 @@ import { useAuth } from "../lib/auth";
 import { canAccess } from "../lib/access";
 import { useI18n } from "../lib/i18n";
 import { request, errorMessage } from "../lib/api";
+import { embeddedModule, isEmbedded } from "../lib/portal";
 import {
   ModalPresence,
   Button,
@@ -47,7 +48,12 @@ function Directory() {
   const [status, setStatus] = useState<StaffStatus | "">("active");
   const [department, setDepartment] = useState("");
   const [chartDirty, setChartDirty] = useState(false);
-  const [view, setView] = useState<"table" | "chart">("table");
+  const [view, setView] = useState<"table" | "chart">(() =>
+    isEmbedded && embeddedModule === "hr" &&
+    new URLSearchParams(window.location.search).get("view") === "chart"
+      ? "chart"
+      : "table",
+  );
   const layout = "teams" as const;
   const [leadersOnly, setLeadersOnly] = useState(false);
   const [selected, setSelected] = useState<StaffMember | null>(null);
