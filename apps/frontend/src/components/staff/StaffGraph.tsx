@@ -232,6 +232,7 @@ const emptyConfig: StaffChartConfig = {
 export default function StaffGraph({
   people,
   all,
+  departments,
   layout,
   open,
   ru,
@@ -243,6 +244,7 @@ export default function StaffGraph({
 }: {
   people: StaffMember[];
   all: StaffMember[];
+  departments: string[];
   layout: StaffLayout;
   open: (p: StaffMember) => void;
   ru: boolean;
@@ -958,7 +960,7 @@ export default function StaffGraph({
             <button aria-pressed={!department} onClick={() => onDepartment("")}>
               {L("All departments", "Все отделы")}
             </button>
-            {[...new Set(all.map((p) => p.department))].sort().map((d) => (
+            {departments.map((d) => (
               <button
                 key={d}
                 aria-pressed={department === d}

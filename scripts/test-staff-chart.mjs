@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
-const out=await build({stdin:{contents:"export*from'./apps/frontend/src/lib/staffChart';export*from'./apps/frontend/src/lib/staff';export*from'./apps/frontend/src/lib/staffReferenceLayouts';",resolveDir:process.cwd(),loader:'ts'},bundle:true,write:false,format:'esm',platform:'node'});
+const out=await build({stdin:{contents:"export*from'./apps/frontend/src/lib/staffChart';export*from'./apps/frontend/src/lib/staff';export*from'./apps/frontend/src/lib/staffReferenceLayouts';export*from'./apps/frontend/src/lib/staffDepartments';",resolveDir:process.cwd(),loader:'ts'},bundle:true,write:false,format:'esm',platform:'node'});
 const m=await import('data:text/javascript;base64,'+Buffer.from(out.outputFiles[0].text).toString('base64'));
 const people=[{id:'a',name:'CEO',manager_id:null,version:1},{id:'b',name:'Manager',manager_id:'a',version:2},{id:'c',name:'Employee',manager_id:'b',version:3},{id:'d',name:'Another',manager_id:'b',version:1}];
 const baseline=m.chartDraft(people,{extra_edges:[],orders:{}});
@@ -45,3 +45,8 @@ for(const count of [1,3,45,118]){
  }
 }
 console.log('Staff chart: primary/collaboration validation, immutable drafts, free drag persistence, compact filtered arrangement, manager version payload and 3 reference layouts × 4 sizes × 3 filters without overlap.');
+
+const departmentPeople=[{department:'Sales',status:'active'},{department:'Management',status:'active'},{department:'Production',status:'inactive'},{department:'Partners',status:'active'},{department:'Sales',status:'inactive'}];
+assert.deepEqual(m.staffDepartments(departmentPeople,'active'),['Management','Sales','Partners']);
+assert.deepEqual(m.staffDepartments(departmentPeople,''),['Management','Sales','Production','Partners']);
+assert.deepEqual(m.staffDepartments(departmentPeople,'inactive'),['Sales','Production']);

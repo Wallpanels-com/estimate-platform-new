@@ -1,5 +1,6 @@
 import type { StaffMember } from "./staff";
 import type { Point } from "./staffChart";
+import { compareStaffDepartments } from "./staffDepartments";
 export type ReferenceLayout = "teams" | "holi" | "compact";
 export type StaffFrame = {
   id: string;
@@ -107,7 +108,7 @@ export function referenceScene(
     ...new Set(
       people.filter((p) => !trunkIds.has(p.id)).map((p) => p.department || "—"),
     ),
-  ];
+  ].sort(compareStaffDepartments);
   let y = crown.height ? crown.height + 180 : 0;
   let maxWidth = crown.width;
   for (let row = 0; row < departments.length; row += 2) {

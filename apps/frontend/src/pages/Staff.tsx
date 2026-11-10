@@ -29,6 +29,7 @@ import StaffAvatar from "../components/staff/StaffAvatar";
 import StaffCard from "../components/staff/StaffCard";
 import StaffGraph from "../components/staff/StaffGraph";
 import type { StaffMember, StaffDirectory, StaffStatus } from "../lib/staff";
+import { staffDepartments } from "../lib/staffDepartments";
 import "./staff.css";
 
 export default function Staff() {
@@ -60,6 +61,7 @@ function Directory() {
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(20);
   const all = query.data?.items || [];
+  const departments = useMemo(() => staffDepartments(all, status), [all, status]);
   const filtered = useMemo(
     () =>
       all.filter(
@@ -150,6 +152,7 @@ function Directory() {
             className={status === s ? "selected" : ""}
             onClick={() => {
               setStatus(s);
+              setDepartment("");
               setPage(1);
             }}
             aria-pressed={status === s}
@@ -188,7 +191,7 @@ function Directory() {
           }}
         >
           <option value="">{L("All departments", "Все отделы")}</option>
-          {[...new Set(all.map((p) => p.department))].sort().map((d) => (
+          {departments.map((d) => (
             <option key={d}>{d}</option>
           ))}
         </Select>
@@ -231,6 +234,7 @@ function Directory() {
         <StaffGraph
           people={chartPeople}
           all={all}
+          departments={departments}
           layout={layout}
           open={open}
           ru={ru}
