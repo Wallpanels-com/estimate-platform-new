@@ -100,8 +100,11 @@ if settings.FRONTEND_DIST:
             raise HTTPException(404)
         requested = (frontend_dist / path).resolve()
         if requested.is_relative_to(frontend_dist) and requested.is_file():
-            return FileResponse(requested)
+            return FileResponse(requested, headers={"Cache-Control": "no-cache"} if requested.suffix == ".html" else None)
         index = frontend_dist / "index.html"
         if not index.exists():
             raise HTTPException(404, "Frontend build is unavailable. Run npm run build.")
-        return FileResponse(index)
+        # The HTML entry references content-hashed assets. Revalidate it on every
+        # navigation, including iframe loads, so a deploy cannot strand clients
+        # on filenames that belonged to the previous build.
+        return FileResponse(index, headers={"Cache-Control": "no-cache"})
