@@ -25,7 +25,7 @@ try{
   const settle=async()=>{for(let i=0;i<4;i++)await act(async()=>new Promise(r=>setTimeout(r,10)));};
   const button=(en,r)=>[...(document.querySelector('dialog[open]')||document).querySelectorAll('button')].find(b=>b.textContent.trim()===(ru?r:en)||b.getAttribute('aria-label')===(ru?r:en));
   const click=async(en,r)=>{const b=button(en,r);assert.ok(b,en);await act(async()=>b.click());await settle();};
-  await act(async()=>root.render(h(QueryClientProvider,{client},h(NoticeProvider,null,h(Graph,{all:rows,people:rows,layout:'teams',ru,open:()=>{}})))));await settle();
+  await act(async()=>root.render(h(QueryClientProvider,{client},h(NoticeProvider,null,h(Graph,{all:rows,people:rows,layout:'teams',departments:['Team'],ru,open:()=>{}})))));await settle();
   assert.equal(document.querySelector('.staff-graph-toolbar'),null);assert.equal(editorCanvas.proOptions.hideAttribution,true);
   assert.equal(editorCanvas.nodesConnectable,false);assert.equal(editorCanvas.nodesDraggable,false);assert.equal(editorCanvas.edgesReconnectable,false);
   await act(async()=>editorCanvas.onConnect({source:'c',target:'a'}));assert.equal(editorCanvas.edges.filter(e=>e.data.kind==='additional').length,0);
@@ -79,7 +79,7 @@ try{
   assert.equal(document.querySelector('dialog[open]'),null);
   const mounts=globalThis.canvasMounts;
   window.matchMedia=()=>({matches:false});
-  await act(async()=>root.render(h(QueryClientProvider,{client},h(NoticeProvider,null,h(Graph,{all:rows,people:rows.slice(1),layout:'teams',ru,open:()=>{},department:'Team',onDepartment:()=>{}})))));await settle();
+  await act(async()=>root.render(h(QueryClientProvider,{client},h(NoticeProvider,null,h(Graph,{all:rows,people:rows.slice(1),layout:'teams',departments:['Team'],ru,open:()=>{},department:'Team',onDepartment:()=>{}})))));await settle();
   assert.equal(globalThis.canvasMounts,mounts,'Department filters must not remount ReactFlow');
   assert.equal(editorCanvas.nodes.filter(n=>n.type==='person').length,2);
   assert.equal(cameraOptions.duration,240,'Filter movement uses a smooth camera transition');

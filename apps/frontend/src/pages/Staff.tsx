@@ -1,3 +1,4 @@
+import { isStaffFounder } from "../lib/staffHierarchy";
 import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate, Link } from "react-router-dom";
@@ -50,7 +51,8 @@ function Directory() {
   const [department, setDepartment] = useState("");
   const [chartDirty, setChartDirty] = useState(false);
   const [view, setView] = useState<"table" | "chart">(() =>
-    isEmbedded && embeddedModule === "hr" &&
+    isEmbedded &&
+    embeddedModule === "hr" &&
     new URLSearchParams(window.location.search).get("view") === "chart"
       ? "chart"
       : "table",
@@ -61,7 +63,10 @@ function Directory() {
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(20);
   const all = query.data?.items || [];
-  const departments = useMemo(() => staffDepartments(all, status), [all, status]);
+  const departments = useMemo(
+    () => staffDepartments(all, status),
+    [all, status],
+  );
   const filtered = useMemo(
     () =>
       all.filter(
@@ -82,7 +87,7 @@ function Directory() {
   );
   const chartPeople =
     leadersOnly && !search.trim() && !department
-      ? filtered.filter((p) => managerIds.has(p.id))
+      ? filtered.filter((p) => managerIds.has(p.id) || isStaffFounder(p))
       : filtered;
   const open = useCallback((p: StaffMember) => setSelected(p), []);
   const current = Math.min(

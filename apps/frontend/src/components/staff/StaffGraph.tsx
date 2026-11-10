@@ -1,4 +1,5 @@
 import StaffAvatar from "./StaffAvatar";
+import StaffHierarchy from "./StaffHierarchy";
 import {
   memo,
   useCallback,
@@ -788,7 +789,7 @@ export default function StaffGraph({
     .map((p) => p.id)
     .sort()
     .join();
-  const sceneKey = `${layout}:${personIds}:${expanded}:${canvasSize.width}:${canvasSize.height}`;
+  const sceneKey = `${layout}:${personIds}:${expanded}:${editing}:${canvasSize.width}:${canvasSize.height}`;
   useLayoutEffect(() => {
     if (!flow || !targetNodes.length || previousScene.current === sceneKey)
       return;
@@ -832,12 +833,20 @@ export default function StaffGraph({
         zoom,
       };
     } else {
-      const root = arranged.find((p) => !parents.get(p.id));
-      const point = (root && positions.get(root.id)) || targetNodes[0].position;
-      const zoom = 0.8;
+      const roots = arranged.filter((p) => !parents.get(p.id));
+      const points = roots
+        .map((p) => positions.get(p.id))
+        .filter((p): p is Point => !!p);
+      if (!points.length) points.push(targetNodes[0].position);
+      const left = Math.min(...points.map((p) => p.x));
+      const right = Math.max(...points.map((p) => p.x)) + geometry.width;
+      const zoom = Math.min(
+        0.8,
+        Math.max(0.06, (width - 260) / (right - left)),
+      );
       camera = {
-        x: width / 2 - (point.x + geometry.width / 2) * zoom,
-        y: 150 - point.y * zoom,
+        x: 210 + (width - 250) / 2 - ((left + right) / 2) * zoom,
+        y: 150 - Math.min(...points.map((p) => p.y)) * zoom,
         zoom,
       };
     }
@@ -923,7 +932,20 @@ export default function StaffGraph({
         </ErrorNotice>
       )}
       {error && <ErrorNotice>{error}</ErrorNotice>}
+      {layout === "teams" && !editing && (
+        <StaffHierarchy
+          people={arranged}
+          all={effectiveAll}
+          ru={ru}
+          open={open}
+          onEdit={beginEdit}
+          canEdit={!!config.data && !busy}
+          expanded={expanded}
+          onExpand={() => setExpanded((value) => !value)}
+        />
+      )}
       <section
+        hidden={layout === "teams" && !editing}
         ref={canvasRef}
         className={`staff-canvas staff-canvas-${layout} ${editing ? "staff-canvas-editing" : ""}`}
         aria-label={L("Organization chart", "Организационная структура")}

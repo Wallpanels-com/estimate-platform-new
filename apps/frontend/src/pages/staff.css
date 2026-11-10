@@ -1455,3 +1455,253 @@
   border: 0;
   min-width: 0;
 }
+
+/* Department overview: normal document flow, local reporting branches only.
+   The free-position canvas remains available explicitly in the chart editor. */
+.staff-canvas[hidden] {
+  display: none;
+}
+.staff-hierarchy {
+  --hierarchy-line: #dedbd5;
+  color: var(--ink, #25231f);
+}
+.staff-hierarchy-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.staff-hierarchy-toolbar > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.staff-hierarchy-toolbar i {
+  font-style: normal;
+  padding: 0 10px;
+}
+.staff-hierarchy-toolbar > div {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.staff-hierarchy-foundation {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid var(--hierarchy-line);
+  border-top: 3px solid #987440;
+  border-radius: 12px;
+  position: relative;
+}
+.staff-hierarchy-foundation > header {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #756448;
+  margin-bottom: 16px;
+}
+.staff-hierarchy-founders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.staff-hierarchy-founders > div {
+  min-width: 0;
+}
+.staff-hierarchy-foundation.has-departments {
+  margin-bottom: 24px;
+}
+.staff-hierarchy-foundation.has-departments::after {
+  content: "";
+  position: absolute;
+  width: 1px;
+  height: 24px;
+  background: var(--hierarchy-line);
+  left: 50%;
+  top: 100%;
+}
+.staff-hierarchy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 24px;
+  align-items: start;
+}
+.staff-hierarchy-department {
+  min-width: 0;
+  background: #fff;
+  border: 1px solid var(--hierarchy-line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.staff-hierarchy-department > header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  min-height: 66px;
+  padding: 16px 20px;
+  background: #f2f0eb;
+  border-bottom: 1px solid var(--hierarchy-line);
+}
+.staff-hierarchy-department h3 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.staff-hierarchy-department > header > span {
+  font-size: 12px;
+  color: #776b59;
+  font-variant-numeric: tabular-nums;
+}
+.staff-hierarchy-managers {
+  padding: 12px 20px;
+  min-height: 65px;
+  border-bottom: 1px solid #efede9;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.staff-hierarchy-managers > span {
+  font-size: 11px;
+  color: #77726a;
+}
+.staff-hierarchy-managers > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.staff-hierarchy-managers button {
+  border: 0;
+  background: none;
+  color: #70552e;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+}
+.staff-hierarchy-managers button:hover {
+  text-decoration: underline;
+}
+.staff-hierarchy ul {
+  list-style: none;
+  margin: 0;
+}
+.staff-hierarchy-members {
+  padding: 12px;
+}
+.staff-hierarchy-members > li + li {
+  border-top: 1px solid #f0eeea;
+}
+.staff-hierarchy-person {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.staff-hierarchy-person:hover {
+  background: #f6f4f0;
+}
+.staff-hierarchy-person:focus-visible,
+.staff-hierarchy-managers button:focus-visible {
+  outline: 2px solid #987440;
+  outline-offset: 2px;
+}
+.staff-hierarchy-person .staff-avatar {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 9px;
+  background: #eeeae3;
+  color: #756448;
+  font-size: 11px;
+}
+.staff-hierarchy-identity {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+.staff-hierarchy-identity strong {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.staff-hierarchy-person.is-lead .staff-hierarchy-identity strong {
+  font-weight: 600;
+}
+.staff-hierarchy-identity > span,
+.staff-hierarchy-identity > small {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #79736a;
+  overflow-wrap: anywhere;
+}
+.staff-hierarchy-person > svg {
+  color: #9c9488;
+  flex: 0 0 14px;
+}
+.staff-hierarchy-reports {
+  padding: 0 0 0 14px;
+  border-left: 1px solid var(--hierarchy-line);
+  margin-left: 25px !important;
+}
+.staff-hierarchy-reports > li {
+  position: relative;
+}
+.staff-hierarchy-reports > li::before {
+  content: "";
+  position: absolute;
+  top: 30px;
+  left: -14px;
+  width: 14px;
+  height: 1px;
+  background: var(--hierarchy-line);
+}
+.staff-hierarchy-reports .staff-hierarchy-reports {
+  margin-left: 12px !important;
+  padding-left: 8px;
+}
+.staff-hierarchy-reports .staff-hierarchy-reports > li::before {
+  left: -8px;
+  width: 8px;
+}
+.staff-hierarchy-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+}
+.staff-graph-expanded > .staff-hierarchy {
+  overflow: auto;
+  padding: 12px;
+}
+
+.staff-hierarchy-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 24px;
+  color: #77726a;
+  font-size: 12px;
+}
+.staff-hierarchy-divider::before,
+.staff-hierarchy-divider::after {
+  content: "";
+  height: 1px;
+  background: var(--hierarchy-line);
+  flex: 1;
+}
