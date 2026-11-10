@@ -46,6 +46,12 @@ class NewStaff(BaseModel):
         return validate_email(value.strip(), check_deliverability=False).normalized
 
 
+class CardPosition(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    x: float = Field(ge=-1000000, le=1000000, allow_inf_nan=False)
+    y: float = Field(ge=-1000000, le=1000000, allow_inf_nan=False)
+
+
 class ChartInput(BaseModel):
     model_config = ConfigDict(extra='forbid')
     version: int = Field(ge=0)
@@ -53,12 +59,15 @@ class ChartInput(BaseModel):
     extra_edges: list[ExtraEdge] = Field(default_factory=list, max_length=2000)
     orders: dict[Layout, list[uuid.UUID]] = Field(default_factory=dict, max_length=8)
     new_staff: list[NewStaff] = Field(default_factory=list, max_length=20)
+    # Omitted by older clients: preserve their existing layout on a link-only save.
+    positions: dict[Layout, dict[uuid.UUID, CardPosition]] | None = Field(default=None, max_length=8)
 
 
 def output(chart):
     return {'version': chart.version if chart else 0,
             'extra_edges': chart.extra_edges if chart else [],
             'orders': chart.orders if chart else {},
+            'positions': chart.positions if chart else {},
             'updated_by': chart.updated_by if chart else '',
             'updated_at': chart.updated_at if chart else None}
 
@@ -115,6 +124,9 @@ async def save_chart(body: ChartInput, background_tasks: BackgroundTasks, db: As
     for order in body.orders.values():
         if len(order) > 1000 or len(order) != len(set(order)) or not set(order).issubset(ids):
             raise HTTPException(422, 'Invalid card order.')
+    for positions in (body.positions or {}).values():
+        if len(positions) > 1000 or not set(positions).issubset(ids):
+            raise HTTPException(422, 'Invalid employee card positions.')
     # Validate everything before mutating either employees or chart settings.
     # Insert new managers before pointing existing employees at them. The ORM
     # cannot order a self-referencing FK from manager_id scalar values alone.
@@ -137,6 +149,9 @@ async def save_chart(body: ChartInput, background_tasks: BackgroundTasks, db: As
         db.add(chart)
     chart.extra_edges = [{'source':str(s),'target':str(t)} for s,t in edges]
     chart.orders = {layout:[str(ident) for ident in order] for layout,order in body.orders.items()}
+    if body.positions is not None:
+        chart.positions = {layout:{str(ident):point.model_dump() for ident,point in positions.items()}
+                           for layout,positions in body.positions.items()}
     chart.version += 1
     chart.updated_by = user.name or user.email
     await db.flush()

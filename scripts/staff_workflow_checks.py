@@ -77,9 +77,11 @@ async def check_staff(call, client, tokens):
     others=[p for p in rows if p['id'] not in (emp['id'],ceo['id'])]
     body={'version':0,'changes':[{'id':emp['id'],'version':emp['version'],'manager_id':others[0]['id']}],
           'extra_edges':[{'source':emp['id'],'target':ceo['id']}],
-          'orders':{'teams':[p['id'] for p in reversed(rows)]}}
+          'orders':{'teams':[p['id'] for p in reversed(rows)]},
+          'positions':{'teams':{emp['id']:{'x':1240,'y':-380},ceo['id']:{'x':100,'y':120}}}}
     saved=(await call('PUT','/hr/staff/chart',json=body)).json();assert saved['version']==1
     assert (await call('GET','/hr/staff/chart')).json()==saved
+    assert saved['positions']==body['positions']
     employee=next(p for p in (await call('GET','/hr/staff')).json()['items'] if p['id']==emp['id'])
     assert employee['manager_id']==others[0]['id'] and employee['version']==emp['version']+1
     assert all(employee[k]==emp[k] for k in ('name','title','department','status','fields','links'))
@@ -89,11 +91,14 @@ async def check_staff(call, client, tokens):
     await call('PUT','/hr/staff/chart',422,json={'version':1,'extra_edges':[{'source':emp['id'],'target':emp['id']}]})
     await call('PUT','/hr/staff/chart',422,json={'version':1,'extra_edges':[{'source':emp['id'],'target':ceo['id']}]*2})
     await call('PUT','/hr/staff/chart',422,json={'version':1,'orders':{'teams':[emp['id']]*2}})
+    for points in ({str(uuid.uuid4()):{'x':1,'y':2}}, {emp['id']:{'x':1000001,'y':0}}, {emp['id']:{'x':'NaN','y':0}}):
+        await call('PUT','/hr/staff/chart',422,json={'version':1,'positions':{'teams':points}})
     # Invalid saves have no partial effect on either graph or employee records.
     assert (await call('GET','/hr/staff/chart')).json()==saved
     assert next(p for p in (await call('GET','/hr/staff')).json()['items'] if p['id']==emp['id'])==employee
     removed=(await call('PUT','/hr/staff/chart',json={'version':1,'changes':[{'id':employee['id'],'version':employee['version'],'manager_id':None}],'extra_edges':[],'orders':saved['orders']})).json()
     assert removed['version']==2 and removed['extra_edges']==[]
+    assert removed['positions']==saved['positions'], 'Older clients omitting positions must not erase layout'
     employee=next(p for p in (await call('GET','/hr/staff')).json()['items'] if p['id']==emp['id']);assert employee['manager_id'] is None
 
     # Blank-canvas creation saves employee and chart together, with HR-selected placement.
@@ -124,6 +129,12 @@ async def check_staff(call, client, tokens):
         'changes':[{'id':emp['id'],'version':employee['version'],'manager_id':cycle_id}]})
     assert (await call('GET','/hr/staff')).json()['items']==stable
     assert (await call('GET','/hr/staff/chart')).json()['version']==4
+    before_move=(await call('GET','/hr/staff')).json()['items']
+    free_positions={'teams':{emp['id']:{'x':-720,'y':1860}}}
+    moved=(await call('PUT','/hr/staff/chart',json={'version':4,'positions':free_positions})).json()
+    assert moved['version']==5 and moved['positions']==free_positions
+    assert (await call('GET','/hr/staff')).json()['items']==before_move, 'Moving cards must never edit employee records'
+    assert (await call('GET','/hr/staff/chart')).json()==moved
 
     # Revocation applies to every staff endpoint without changing any directory data.
     client.headers['Authorization']='Bearer '+tokens[0]

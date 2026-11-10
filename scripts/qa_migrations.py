@@ -48,6 +48,17 @@ try:
             raise AssertionError("Audit rows must be immutable")
         except psycopg2.Error:
             db.rollback()
+    # Additive coordinate migration must preserve a populated, previously saved chart.
+    subprocess.run(command[:-2] + ["downgrade", "0014_hr_translations"], env=test_env, cwd=ROOT / "apps/backend", check=True)
+    chart_id=str(uuid.uuid4())
+    with db.cursor() as cursor:
+        cursor.execute("INSERT INTO hr_staff_charts(id,name,extra_edges,orders,version,updated_by) VALUES (%s,'main','[]','{\"teams\":[]}',7,'Example Recruiter')",(chart_id,))
+    db.commit()
+    subprocess.run(command, env=test_env, cwd=ROOT / "apps/backend", check=True)
+    with db.cursor() as cursor:
+        cursor.execute("SELECT positions,extra_edges,orders,version,updated_by FROM hr_staff_charts WHERE id=%s",(chart_id,))
+        assert cursor.fetchone()==({},[],{'teams':[]},7,'Example Recruiter')
+    db.commit()
     subprocess.run(command[:-2] + ["downgrade", "0003_uniform_users"], env=test_env, cwd=ROOT / "apps/backend", check=True)
     employee, pre, final, history_id = [str(uuid.uuid4()) for _ in range(4)]
     with db.cursor() as cursor:

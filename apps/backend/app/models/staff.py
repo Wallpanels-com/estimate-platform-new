@@ -30,6 +30,7 @@ class StaffChart(Base):
     name: Mapped[str] = mapped_column(String(40), unique=True, default='main')
     extra_edges: Mapped[list] = mapped_column(JSON, default=list)
     orders: Mapped[dict] = mapped_column(JSON, default=dict)
+    positions: Mapped[dict] = mapped_column(JSON, default=dict)
     version: Mapped[int] = mapped_column(Integer, default=1)
     updated_by: Mapped[str] = mapped_column(String(240), default='')
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

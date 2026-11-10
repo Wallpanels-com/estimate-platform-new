@@ -39,7 +39,7 @@ import {
   Redo2,
   Trash2,
   RotateCcw,
-  Check,
+  Pencil,
   Link2,
   GitBranch,
   X,
@@ -67,7 +67,8 @@ import {
   removeConnection,
   reconnectDraft,
   orderedStaff,
-  reorderAfterDrop,
+  moveCard,
+  arrangeCards,
   chartChanges,
   type ChartDraft,
   type StaffChartConfig,
@@ -303,8 +304,7 @@ export default function StaffGraph({
       window.removeEventListener("keydown", exit);
     };
   }, [expanded]);
-  const editing = !!config.data && !config.error;
-  const [editorRevision, setEditorRevision] = useState(0);
+  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<ChartDraft | null>(null);
   const [past, setPast] = useState<ChartDraft[]>([]);
   const [future, setFuture] = useState<ChartDraft[]>([]);
@@ -318,6 +318,7 @@ export default function StaffGraph({
     outgoing: boolean;
     kind: LinkKind;
     department: string;
+    point: Point;
   } | null>(null);
   const reconnecting = useRef<Edge | null>(null);
   const connectionStart = useRef<Point | null>(null);
@@ -327,23 +328,6 @@ export default function StaffGraph({
     draft: ChartDraft;
   } | null>(null);
   const current = editing && draft ? draft : baseline;
-  useEffect(() => {
-    // Refresh a clean editor when another recruiter saves; preserve dirty drafts.
-    if (
-      config.data &&
-      (!initial.current ||
-        !draft ||
-        JSON.stringify(draft) === JSON.stringify(initial.current.draft))
-    ) {
-      const next = chartDraft(all, config.data);
-      initial.current = {
-        staff: all.map((p) => ({ ...p })),
-        config: config.data,
-        draft: next,
-      };
-      setDraft(next);
-    }
-  }, [all, config.data, editorRevision]);
   const dirty =
     editing &&
     !!initial.current &&
@@ -390,14 +374,47 @@ export default function StaffGraph({
         : { positions: staffPositions(arranged, parents, layout), groups: [] },
     [arranged, parents, layout],
   );
-  const positions = scene.positions;
+  const positions = useMemo(() => {
+    const placed = new Map(scene.positions);
+    for (const p of arranged) {
+      const point = current.positions[layout]?.[p.id];
+      if (point) placed.set(p.id, point);
+    }
+    return placed;
+  }, [scene.positions, arranged, current.positions, layout]);
+  // Department panels follow the actual card positions, not the reporting tree.
+  // Editing a link therefore cannot move either the employee or their panel.
+  const frames = useMemo(() => {
+    if (
+      layout !== "teams" ||
+      !Object.keys(current.positions[layout] || {}).length
+    )
+      return scene.groups;
+    return [...new Set(arranged.map((p) => p.department || "—"))]
+      .filter((label) => label.toLowerCase() !== "administration")
+      .map((label) => {
+        const points = arranged
+          .filter((p) => (p.department || "—") === label)
+          .map((p) => positions.get(p.id)!);
+        const x = Math.min(...points.map((p) => p.x)) - 28;
+        const y = Math.min(...points.map((p) => p.y)) - 56;
+        return {
+          id: "department:" + label,
+          label,
+          x,
+          y,
+          width: Math.max(...points.map((p) => p.x)) - x + 328,
+          height: Math.max(...points.map((p) => p.y)) - y + 176,
+        };
+      });
+  }, [arranged, positions, scene.groups, current.positions, layout]);
   const geometry = reference(layout)
     ? referenceGeometry(layout)
     : { width: 246, height: editing ? 140 : 112 };
   // The classic layouts retain their regular cell spacing when the edit footer is visible.
   const targetNodes = useMemo<ChartNode[]>(
     () => [
-      ...scene.groups.map((frame) => ({
+      ...frames.map((frame) => ({
         id: frame.id,
         type: "department" as const,
         position: { x: frame.x, y: frame.y },
@@ -430,7 +447,7 @@ export default function StaffGraph({
       })),
     ],
     [
-      scene,
+      frames,
       arranged,
       positions,
       geometry.width,
@@ -585,9 +602,44 @@ export default function StaffGraph({
     visibleIds,
     selected,
   ]);
+  function beginEdit() {
+    if (!config.data || busy) return;
+    const next = chartDraft(all, config.data);
+    const ordered = orderedStaff(all, next.orders[layout]);
+    const roots = reportingParents(ordered, ordered);
+    const fallback = reference(layout)
+      ? referenceScene(ordered, roots, layout).positions
+      : staffPositions(ordered, roots, layout);
+    next.positions[layout] = {
+      ...Object.fromEntries(fallback),
+      ...next.positions[layout],
+      ...Object.fromEntries(
+        nodesRef.current
+          .filter((n) => n.type === "person")
+          .map((n) => [n.id, { ...n.position }]),
+      ),
+    };
+    initial.current = {
+      staff: all.map((p) => ({ ...p })),
+      config: config.data,
+      draft: next,
+    };
+    setDraft(next);
+    setPast([]);
+    setFuture([]);
+    setSelected(null);
+    setError("");
+    setEditing(true);
+    onEditStart?.();
+  }
+  function arrange() {
+    if (!editing || busy) return;
+    commit(arrangeCards(current, all, visibleIds, layout, geometry.height));
+    setAlignment((v) => v + 1);
+  }
   function cancel() {
+    setEditing(false);
     initial.current = null;
-    setEditorRevision((v) => v + 1);
     setDraft(null);
     setPast([]);
     setFuture([]);
@@ -597,7 +649,8 @@ export default function StaffGraph({
     void config.refetch();
   }
   async function save(next = current, newStaff: NewStaff[] = []) {
-    if (!initial.current || (!dirty && !newStaff.length) || busy) return;
+    if (!editing || !initial.current || (!dirty && !newStaff.length) || busy)
+      return;
     setBusy(true);
     setError("");
     try {
@@ -610,6 +663,7 @@ export default function StaffGraph({
           changes: chartChanges(next, initial.current.staff),
           extra_edges: next.extra_edges,
           orders: next.orders,
+          positions: next.positions,
           ...(newStaff.length ? { new_staff: newStaff } : {}),
         }),
       });
@@ -618,7 +672,7 @@ export default function StaffGraph({
         client.invalidateQueries({ queryKey: ["hr-staff-chart"] }),
       ]);
       initial.current = null;
-      setEditorRevision((v) => v + 1);
+      setEditing(false);
       setDraft(null);
       setPast([]);
       setFuture([]);
@@ -684,6 +738,8 @@ export default function StaffGraph({
           )
         : current;
       return (
+        editing &&
+        !busy &&
         !!connection.source &&
         !!connection.target &&
         canConnect(
@@ -694,7 +750,7 @@ export default function StaffGraph({
         )
       );
     },
-    [current, kind],
+    [current, kind, editing, busy],
   );
   const color = useCallback(
     (node: Node) =>
@@ -706,9 +762,24 @@ export default function StaffGraph({
     [],
   );
   const onChanges = useCallback(
-    (changes: NodeChange<ChartNode>[]) =>
-      setNodes((ns) => applyNodeChanges(changes, ns)),
-    [],
+    (changes: NodeChange<ChartNode>[]) => {
+      setNodes((ns) => applyNodeChanges(changes, ns));
+      // React Flow emits completed position changes for keyboard movement too.
+      // Mouse drags are committed once in onNodeDragStop instead.
+      if (editing && !busy && !dragging.current) {
+        let next = current;
+        for (const change of changes) {
+          if (
+            change.type === "position" &&
+            change.dragging === false &&
+            change.position
+          )
+            next = moveCard(next, layout, change.id, change.position);
+        }
+        if (next !== current) commit(next);
+      }
+    },
+    [editing, busy, current, layout, commit],
   );
   const selectedEdge = edgeData.find((e) => e.id === selected);
   const personIds = arranged
@@ -794,7 +865,7 @@ export default function StaffGraph({
     event: Parameters<OnConnectEnd>[0],
     state: Parameters<OnConnectEnd>[1],
   ) {
-    if (busy || creating || reconnecting.current) return;
+    if (!editing || busy || creating || reconnecting.current) return;
     const point = "changedTouches" in event ? event.changedTouches[0] : event;
     const start = connectionStart.current;
     connectionStart.current = null;
@@ -821,6 +892,10 @@ export default function StaffGraph({
     ) {
       setError("");
       setCreating({
+        point: flow?.screenToFlowPosition({
+          x: point.clientX,
+          y: point.clientY,
+        }) || { x: 0, y: 0 },
         anchor: state.fromNode.id,
         outgoing: state.fromHandle?.type === "source",
         kind,
@@ -868,7 +943,9 @@ export default function StaffGraph({
       >
         <div className="staff-canvas-caption">
           <span className="staff-live-dot" />
-          {L("Team structure", "Структура команды")}
+          {editing
+            ? L("Editing chart", "Редактирование схемы")
+            : L("Team structure", "Структура команды")}
           <span>
             {people.length} {L("people", "сотрудников")}
           </span>
@@ -908,7 +985,7 @@ export default function StaffGraph({
           onNodesChange={onChanges}
           nodesDraggable={editing && !busy}
           nodesConnectable={editing && !busy}
-          edgesReconnectable={!busy && !!config.data}
+          edgesReconnectable={editing && !busy}
           elementsSelectable={editing}
           deleteKeyCode={null}
           onInit={setFlow}
@@ -930,7 +1007,8 @@ export default function StaffGraph({
             )
               return;
             setSelected(null);
-            if (!busy && node.type === "person") open(node.data.person);
+            if (!editing && !busy && node.type === "person")
+              open(node.data.person);
           }}
           onPaneClick={() => setSelected(null)}
           onEdgeClick={(event, edge) => {
@@ -941,7 +1019,7 @@ export default function StaffGraph({
           }}
           isValidConnection={valid}
           onConnect={(connection) => {
-            if (connection.source && connection.target)
+            if (editing && !busy && connection.source && connection.target)
               commit(
                 connectDraft(
                   current,
@@ -957,7 +1035,7 @@ export default function StaffGraph({
             reconnecting.current = edge;
           }}
           onReconnect={(edge, connection) => {
-            if (!busy && connection.source && connection.target) {
+            if (editing && !busy && connection.source && connection.target) {
               const next = reconnectDraft(
                 current,
                 edge.source,
@@ -988,18 +1066,8 @@ export default function StaffGraph({
           }}
           onNodeDragStop={(_, node) => {
             dragging.current = false;
-            commit(
-              reorderAfterDrop(
-                current,
-                all,
-                arranged,
-                positions,
-                node.id,
-                node.position,
-                layout,
-              ),
-            );
-            setAlignment((v) => v + 1);
+            if (editing && !busy)
+              commit(moveCard(current, layout, node.id, node.position));
           }}
         >
           <Panel position="bottom-right" className="staff-canvas-fullscreen">
@@ -1020,85 +1088,96 @@ export default function StaffGraph({
             className="staff-chart-dock"
             aria-label={L("Chart actions", "Действия со схемой")}
           >
-            <div
-              className="staff-link-kind"
-              role="group"
-              aria-label={L("Connection type", "Тип связи")}
-            >
-              <button
-                disabled={busy}
-                aria-pressed={kind === "reporting"}
-                onClick={() => setKind("reporting")}
-              >
-                <GitBranch size={15} />
-                {L("Reporting", "Подчинение")}
-              </button>
-              <button
-                disabled={busy}
-                aria-pressed={kind === "additional"}
-                onClick={() => setKind("additional")}
-              >
-                <Link2 size={15} />
-                {L("Additional", "Доп. связь")}
-              </button>
-            </div>
-            <Button
-              variant="ghost"
-              aria-label={L("Undo chart change", "Отменить действие")}
-              disabled={!past.length || busy}
-              onClick={undo}
-            >
-              <Undo2 size={17} />
-            </Button>
-            <Button
-              variant="ghost"
-              aria-label={L("Redo chart change", "Повторить действие")}
-              disabled={!future.length || busy}
-              onClick={redo}
-            >
-              <Redo2 size={17} />
-            </Button>
-            <Button
-              variant="ghost"
-              aria-label={L("Delete connection", "Удалить связь")}
-              disabled={!selectedEdge || busy}
-              onClick={deleteSelected}
-            >
-              <Trash2 size={17} />
-            </Button>
-            <Button
-              variant="ghost"
-              aria-label={L("Auto arrange", "Выровнять")}
-              disabled={busy}
-              onClick={() => {
-                const orders = { ...current.orders };
-                delete orders[layout];
-                commit({ ...current, orders });
-                setAlignment((v) => v + 1);
-              }}
-            >
-              <RotateCcw size={17} />
-            </Button>
-            {dirty && (
+            {!editing ? (
               <Button
-                variant="ghost"
-                disabled={busy}
-                onClick={cancel}
-                aria-label={L("Cancel", "Отмена")}
+                disabled={!config.data || !!config.error}
+                onClick={beginEdit}
+                aria-label={L("Edit chart", "Редактировать схему")}
               >
-                <X size={17} />
+                <Pencil size={16} />
+                {L("Edit chart", "Редактировать")}
               </Button>
+            ) : (
+              <>
+                <div
+                  className="staff-link-kind"
+                  role="group"
+                  aria-label={L("Connection type", "Тип связи")}
+                >
+                  <button
+                    disabled={busy}
+                    aria-pressed={kind === "reporting"}
+                    onClick={() => setKind("reporting")}
+                  >
+                    <GitBranch size={15} />
+                    {L("Reporting", "Подчинение")}
+                  </button>
+                  <button
+                    disabled={busy}
+                    aria-pressed={kind === "additional"}
+                    onClick={() => setKind("additional")}
+                  >
+                    <Link2 size={15} />
+                    {L("Additional", "Доп. связь")}
+                  </button>
+                </div>
+                <Button
+                  variant="ghost"
+                  aria-label={L("Undo chart change", "Отменить действие")}
+                  disabled={!past.length || busy}
+                  onClick={undo}
+                >
+                  <Undo2 size={17} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  aria-label={L("Redo chart change", "Повторить действие")}
+                  disabled={!future.length || busy}
+                  onClick={redo}
+                >
+                  <Redo2 size={17} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  aria-label={L("Delete connection", "Удалить связь")}
+                  disabled={!selectedEdge || busy}
+                  onClick={deleteSelected}
+                >
+                  <Trash2 size={17} />
+                  {selectedEdge && L("Unlink", "Отвязать")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  aria-label={L("Auto arrange", "Привести в порядок")}
+                  disabled={busy}
+                  onClick={arrange}
+                >
+                  <RotateCcw size={17} />
+                  {L("Auto arrange", "Привести в порядок")}
+                </Button>
+                {editing && (
+                  <Button
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={cancel}
+                    aria-label={L("Cancel", "Отмена")}
+                  >
+                    <X size={17} />
+                    {L("Cancel", "Отмена")}
+                  </Button>
+                )}
+                <Button
+                  variant={dirty ? "primary" : "ghost"}
+                  aria-label={L("Save chart", "Сохранить схему")}
+                  busy={busy}
+                  disabled={!dirty || !config.data}
+                  onClick={() => void save()}
+                >
+                  <Save size={16} />
+                  {L("Save", "Сохранить")}
+                </Button>{" "}
+              </>
             )}
-            <Button
-              variant={dirty ? "primary" : "ghost"}
-              aria-label={L("Save chart", "Сохранить схему")}
-              busy={busy}
-              disabled={!dirty || !config.data}
-              onClick={() => void save()}
-            >
-              {dirty ? <Save size={16} /> : <Check size={16} />}
-              {dirty ? L("Save", "Сохранить") : L("Saved", "Сохранено")}
-            </Button>
           </Panel>
           <Background
             variant={
@@ -1152,6 +1231,13 @@ export default function StaffGraph({
             submit={async (person) => {
               const next: ChartDraft = {
                 ...current,
+                positions: {
+                  ...current.positions,
+                  [layout]: {
+                    ...current.positions[layout],
+                    [person.id]: creating.point,
+                  },
+                },
                 managers: {
                   ...current.managers,
                   [person.id]: person.manager_id,

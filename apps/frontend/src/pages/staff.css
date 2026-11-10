@@ -273,6 +273,9 @@
   min-height: 34px;
 }
 .staff-canvas {
+  --staff-map-width: 150px;
+  --staff-control-width: 40px;
+  --staff-canvas-gutter: 16px;
   position: relative;
   height: max(620px, calc(100vh - 350px));
   min-height: 620px;
@@ -452,7 +455,7 @@
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #dce4de;
-  width: 150px;
+  width: var(--staff-map-width);
   height: 95px;
   bottom: 52px;
   right: 4px;
@@ -1407,7 +1410,7 @@
 }
 
 /* Canvas actions use the same control geometry without taking a page row. */
-.staff-chart-dock {
+.staff-canvas .react-flow__panel.staff-chart-dock {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1415,7 +1418,15 @@
   gap: 4px;
   padding: 6px;
   width: max-content;
-  max-width: calc(100% - 240px);
+  /* Centre within the free space between zoom controls and the minimap. */
+  left: calc(var(--staff-control-width) + var(--staff-canvas-gutter));
+  right: calc(var(--staff-map-width) + 2 * var(--staff-canvas-gutter));
+  transform: none;
+  margin: 0 auto var(--staff-canvas-gutter);
+  max-width: calc(
+    100% - var(--staff-control-width) - var(--staff-map-width) - 3 *
+      var(--staff-canvas-gutter)
+  );
   border: 1px solid #dfe2e6;
   border-radius: 10px;
   background: #fffffff5;

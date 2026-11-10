@@ -18,9 +18,12 @@ assert.equal(m.removeConnection(baseline,'b','c','reporting').managers.c,null);
 const reconnected=m.reconnectDraft(baseline,'b','c','a','c','reporting');assert.equal(reconnected.managers.c,'a');
 assert.equal(m.reconnectDraft(baseline,'a','b','c','b','reporting'),baseline,'Invalid reconnection must keep the old link');
 assert.equal(m.reconnectDraft(extra,'c','a','d','a','additional').extra_edges[0].source,'d');
-const positions=new Map([['c',{x:0,y:200}],['d',{x:350,y:200}]]);
-const reordered=m.reorderAfterDrop(baseline,people,people,positions,'c',{x:450,y:200},'holi');assert.equal(reordered.orders.holi.indexOf('c'),reordered.orders.holi.indexOf('d')+1);assert.deepEqual(reordered.managers,baseline.managers);
-assert.equal(m.reorderAfterDrop(baseline,people,people,positions,'a',{x:900,y:900},'holi'),baseline);
+const placed=m.moveCard(baseline,'teams','c',{x:420,y:-180});
+assert.deepEqual(placed.positions.teams.c,{x:420,y:-180});assert.deepEqual(placed.managers,baseline.managers);assert.deepEqual(baseline.positions,{});
+assert.deepEqual(m.removeConnection(placed,'b','c','reporting').positions,placed.positions,'Unlink must preserve all coordinates');
+assert.deepEqual(m.connectDraft(placed,'a','c','reporting').positions,placed.positions,'Relinking must preserve coordinates');
+assert.deepEqual(m.chartDraft(people,{extra_edges:[],orders:{},positions:placed.positions}).positions,placed.positions);
+assert.equal(m.moveCard(placed,'teams','unknown',{x:0,y:0}),placed);assert.equal(m.moveCard(placed,'teams','c',{x:NaN,y:0}),placed);
 for(const count of [1,3,45,118]){
  const all=Array.from({length:count},(_,i)=>({id:String(i),name:'Person '+i,title:'Position',department:i<3?'Administration':'Department '+i%7,status:i%3?'active':'paused',manager_id:i?String(Math.floor((i-1)/4)):null}));
  for(const subset of [all,all.filter(p=>p.status==='active'),all.filter(p=>p.department==='Department 2')])for(const layout of ['teams','holi','compact']){
@@ -32,6 +35,13 @@ for(const count of [1,3,45,118]){
    assert.ok(Math.abs(a.x-b.x)>=geometry.width||Math.abs(a.y-b.y)>=geometry.height,`${layout} ${count}: overlapping cards ${i}/${j}`);
   }
   for(const group of scene.groups)assert.ok(group.width>0&&group.height>0);
+  const clean=m.arrangeCards(m.chartDraft(all,{orders:{},extra_edges:[]}),all,new Set(subset.map(p=>p.id)),layout,geometry.height).positions[layout];
+  assert.equal(Object.keys(clean).length,count);
+  const compact=m.referenceScene(m.orderedStaff(subset),parents,layout);
+  for(const p of subset)assert.deepEqual(clean[p.id],compact.positions.get(p.id),'Visible cards keep their compact filtered layout');
+  for(let i=0;i<all.length;i++)for(let j=i+1;j<all.length;j++){
+    const a=clean[all[i].id],b=clean[all[j].id];assert.ok(Math.abs(a.x-b.x)>=geometry.width||Math.abs(a.y-b.y)>=geometry.height,'Hidden and visible cards must not overlap after arrangement');
+  }
  }
 }
-console.log('Staff chart: primary/collaboration validation, immutable drafts, ordered drag, manager version payload and 3 reference layouts × 4 sizes × 3 filters without overlap.');
+console.log('Staff chart: primary/collaboration validation, immutable drafts, free drag persistence, compact filtered arrangement, manager version payload and 3 reference layouts × 4 sizes × 3 filters without overlap.');

@@ -1,9 +1,18 @@
-import type { StaffMember, StaffLayout } from "./staff";
+import {
+  reportingParents,
+  staffPositions,
+  type StaffMember,
+  type StaffLayout,
+} from "./staff";
 export type ExtraConnection = { source: string; target: string };
+export type ChartPositions = Partial<
+  Record<StaffLayout, Record<string, Point>>
+>;
 export type StaffChartConfig = {
   version: number;
   extra_edges: ExtraConnection[];
   orders: Partial<Record<StaffLayout, string[]>>;
+  positions?: ChartPositions;
   updated_by: string;
   updated_at: string | null;
 };
@@ -11,6 +20,7 @@ export type ChartDraft = {
   managers: Record<string, string | null>;
   extra_edges: ExtraConnection[];
   orders: Partial<Record<StaffLayout, string[]>>;
+  positions: ChartPositions;
 };
 export type LinkKind = "reporting" | "additional";
 export type NewStaff = {
@@ -40,6 +50,7 @@ export function chartDraft(
       )
       .map((e) => ({ ...e })),
     orders: structuredClone(config.orders),
+    positions: structuredClone(config.positions || {}),
   };
 }
 export function canConnect(
@@ -124,45 +135,6 @@ export function orderedStaff(people: StaffMember[], order: string[] = []) {
       a.id.localeCompare(b.id),
   );
 }
-/** Drop changes sibling order, never an employee's manager/department or arbitrary coordinates. */
-export function reorderAfterDrop(
-  draft: ChartDraft,
-  all: StaffMember[],
-  visible: StaffMember[],
-  positions: Map<string, Point>,
-  id: string,
-  drop: Point,
-  layout: StaffLayout,
-): ChartDraft {
-  const current = orderedStaff(all, draft.orders[layout]);
-  const siblings = visible.filter(
-    (p) =>
-      p.id !== id &&
-      draft.managers[p.id] === draft.managers[id] &&
-      positions.has(p.id),
-  );
-  if (!siblings.length) return draft;
-  const nearest = [...siblings].sort((a, b) => {
-    const pa = positions.get(a.id)!,
-      pb = positions.get(b.id)!;
-    return (
-      Math.hypot(pa.x - drop.x, pa.y - drop.y) -
-      Math.hypot(pb.x - drop.x, pb.y - drop.y)
-    );
-  })[0];
-  const anchor = positions.get(nearest.id)!;
-  const after =
-    layout === "horizontal"
-      ? drop.y > anchor.y
-      : Math.abs(drop.y - anchor.y) > 65
-        ? drop.y > anchor.y
-        : drop.x > anchor.x;
-  const ids = current.map((p) => p.id).filter((value) => value !== id);
-  const index = ids.indexOf(nearest.id);
-  ids.splice(index + (after ? 1 : 0), 0, id);
-  if (ids.every((value, i) => value === current[i]?.id)) return draft;
-  return { ...draft, orders: { ...draft.orders, [layout]: ids } };
-}
 export function chartChanges(draft: ChartDraft, baseline: StaffMember[]) {
   return baseline
     .filter((p) => draft.managers[p.id] !== p.manager_id)
@@ -171,4 +143,68 @@ export function chartChanges(draft: ChartDraft, baseline: StaffMember[]) {
       version: p.version,
       manager_id: draft.managers[p.id],
     }));
+}
+
+/** Moving a card never changes its reporting line or triggers auto-layout. */
+export function moveCard(
+  draft: ChartDraft,
+  layout: StaffLayout,
+  id: string,
+  point: Point,
+): ChartDraft {
+  if (
+    !(id in draft.managers) ||
+    !Number.isFinite(point.x) ||
+    !Number.isFinite(point.y)
+  )
+    return draft;
+  return {
+    ...draft,
+    positions: {
+      ...draft.positions,
+      [layout]: {
+        ...draft.positions[layout],
+        [id]: { x: point.x, y: point.y },
+      },
+    },
+  };
+}
+
+/** Compact the visible team; park filtered-out cards below it, never on top. */
+export function arrangeCards(
+  draft: ChartDraft,
+  all: StaffMember[],
+  visibleIds: ReadonlySet<string>,
+  layout: StaffLayout,
+  cardHeight: number,
+) {
+  const ordered = orderedStaff(
+    all.map((p) => ({ ...p, manager_id: draft.managers[p.id] ?? null })),
+    draft.orders[layout],
+  );
+  const shown = ordered.filter((p) => visibleIds.has(p.id));
+  const hidden = ordered.filter((p) => !visibleIds.has(p.id));
+  const placed = staffPositions(
+    shown,
+    reportingParents(shown, ordered),
+    layout,
+  );
+  const parked = staffPositions(
+    hidden,
+    reportingParents(hidden, ordered),
+    layout,
+  );
+  const offset =
+    placed.size && parked.size
+      ? Math.max(...[...placed.values()].map((p) => p.y)) +
+        cardHeight +
+        200 -
+        Math.min(...[...parked.values()].map((p) => p.y))
+      : 0;
+  for (const [id, point] of parked)
+    placed.set(id, { x: point.x, y: point.y + offset });
+  return {
+    ...draft,
+    positions: { ...draft.positions, [layout]: Object.fromEntries(placed) },
+  };
 }

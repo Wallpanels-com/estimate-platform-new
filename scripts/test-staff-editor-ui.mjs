@@ -14,7 +14,7 @@ window.matchMedia=()=>({matches:true});
 HTMLDialogElement.prototype.showModal=function(){this.open=true;};HTMLDialogElement.prototype.close=function(){this.open=false;};
 const dir=await mkdtemp(resolve('.local/staff-editor-ui-'));
 try{
- const bundle=await build({stdin:{contents:`export{default as Graph}from'./apps/frontend/src/components/staff/StaffGraph';export{NoticeProvider}from'./apps/frontend/src/components/ui';export{QueryClient,QueryClientProvider}from'@tanstack/react-query';export{createElement,act}from'react';export{createRoot}from'react-dom/client';`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,packages:'external',format:'esm',platform:'node',jsx:'automatic',write:false,loader:{'.css':'empty'},define:{'import.meta.env.VITE_API_ORIGIN':'""'},plugins:[{name:'canvas-events',setup(b){b.onResolve({filter:/\.css$/},()=>({path:'css',namespace:'blank'}));b.onLoad({filter:/.*/,namespace:'blank'},()=>({contents:'',loader:'js'}));b.onResolve({filter:/^@xyflow\/react$/},()=>({path:'canvas',namespace:'stub'}));b.onLoad({filter:/.*/,namespace:'stub'},()=>({resolveDir:process.cwd(),loader:'tsx',contents:`import{useEffect}from'react';export function ReactFlow(p){globalThis.editorCanvas=p;useEffect(()=>{globalThis.canvasMounts=(globalThis.canvasMounts||0)+1;p.onInit?.({setViewport:async(v,o)=>{globalThis.cameraOptions=o;return true}})},[]);return <div><div className="react-flow__pane"/>{p.children}</div>};export function Panel(p){return <div className={p.className}>{p.children}</div>};export function BaseEdge(){return null};export function Handle(){return null};export function Background(){return null};export function Controls(){return null};export function MiniMap(){return null};export const Position={Bottom:'bottom',Top:'top'};export const MarkerType={ArrowClosed:'arrow'};export const BackgroundVariant={Lines:'lines',Dots:'dots'};export const getSmoothStepPath=()=>['M0,0'];export const applyNodeChanges=(_,ns)=>ns;`}));}}]});
+ const bundle=await build({stdin:{contents:`export{default as Graph}from'./apps/frontend/src/components/staff/StaffGraph';export{NoticeProvider}from'./apps/frontend/src/components/ui';export{QueryClient,QueryClientProvider}from'@tanstack/react-query';export{createElement,act}from'react';export{createRoot}from'react-dom/client';`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,packages:'external',format:'esm',platform:'node',jsx:'automatic',write:false,loader:{'.css':'empty'},define:{'import.meta.env.VITE_API_ORIGIN':'""'},plugins:[{name:'canvas-events',setup(b){b.onResolve({filter:/\.css$/},()=>({path:'css',namespace:'blank'}));b.onLoad({filter:/.*/,namespace:'blank'},()=>({contents:'',loader:'js'}));b.onResolve({filter:/^@xyflow\/react$/},()=>({path:'canvas',namespace:'stub'}));b.onLoad({filter:/.*/,namespace:'stub'},()=>({resolveDir:process.cwd(),loader:'tsx',contents:`import{useEffect}from'react';export function ReactFlow(p){globalThis.editorCanvas=p;useEffect(()=>{globalThis.canvasMounts=(globalThis.canvasMounts||0)+1;p.onInit?.({screenToFlowPosition:p=>p,setViewport:async(v,o)=>{globalThis.cameraOptions=o;return true}})},[]);return <div><div className="react-flow__pane"/>{p.children}</div>};export function Panel(p){return <div className={p.className}>{p.children}</div>};export function BaseEdge(){return null};export function Handle(){return null};export function Background(){return null};export function Controls(){return null};export function MiniMap(){return null};export const Position={Bottom:'bottom',Top:'top'};export const MarkerType={ArrowClosed:'arrow'};export const BackgroundVariant={Lines:'lines',Dots:'dots'};export const getSmoothStepPath=()=>['M0,0'];export const applyNodeChanges=(_,ns)=>ns;`}));}}]});
  await writeFile(resolve(dir,'editor.mjs'),bundle.outputFiles[0].contents);
  const {Graph,NoticeProvider,QueryClient,QueryClientProvider,createElement:h,act,createRoot}=await import(pathToFileURL(resolve(dir,'editor.mjs')));
  for(const ru of [false,true]){
@@ -23,15 +23,21 @@ try{
   globalThis.fetch=async(_path,opts={})=>{if(opts.method==='PUT'){const body=JSON.parse(opts.body);writes.push(body);if(conflict)return new Response(JSON.stringify({detail:'Conflict'}),{status:409,headers:{'Content-Type':'application/json'}});config={...config,...body,version:config.version+1};}return new Response(JSON.stringify(config),{headers:{'Content-Type':'application/json'}});};
   const client=new QueryClient({defaultOptions:{queries:{retry:false,gcTime:0}}}),root=createRoot(document.getElementById('root'));
   const settle=async()=>{for(let i=0;i<4;i++)await act(async()=>new Promise(r=>setTimeout(r,10)));};
-  const button=(en,r)=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===(ru?r:en)||b.getAttribute('aria-label')===(ru?r:en));
+  const button=(en,r)=>[...(document.querySelector('dialog[open]')||document).querySelectorAll('button')].find(b=>b.textContent.trim()===(ru?r:en)||b.getAttribute('aria-label')===(ru?r:en));
   const click=async(en,r)=>{const b=button(en,r);assert.ok(b,en);await act(async()=>b.click());await settle();};
   await act(async()=>root.render(h(QueryClientProvider,{client},h(NoticeProvider,null,h(Graph,{all:rows,people:rows,layout:'teams',ru,open:()=>{}})))));await settle();
-  assert.equal(document.querySelector('.staff-graph-toolbar'),null);assert.equal(editorCanvas.proOptions.hideAttribution,true);assert.equal(editorCanvas.edgesReconnectable,true);await click('Additional','Доп. связь');
+  assert.equal(document.querySelector('.staff-graph-toolbar'),null);assert.equal(editorCanvas.proOptions.hideAttribution,true);
+  assert.equal(editorCanvas.nodesConnectable,false);assert.equal(editorCanvas.nodesDraggable,false);assert.equal(editorCanvas.edgesReconnectable,false);
+  await act(async()=>editorCanvas.onConnect({source:'c',target:'a'}));assert.equal(editorCanvas.edges.filter(e=>e.data.kind==='additional').length,0);
+  await click('Edit chart','Редактировать схему');assert.equal(editorCanvas.edgesReconnectable,true);assert.equal(button('Save chart','Сохранить схему').disabled,true);
+  const points=()=>Object.fromEntries(editorCanvas.nodes.filter(n=>n.type==='person').map(n=>[n.id,{...n.position}]));
+  const entryPoints=points();
+  await click('Additional','Доп. связь');
   await act(async()=>editorCanvas.onConnect({source:'c',target:'a'}));await settle();assert.equal(editorCanvas.edges.filter(e=>e.data.kind==='additional').length,1);
   await click('Undo chart change','Отменить действие');assert.equal(editorCanvas.edges.filter(e=>e.data.kind==='additional').length,0);
   await click('Redo chart change','Повторить действие');assert.equal(editorCanvas.edges.filter(e=>e.data.kind==='additional').length,1);
   await click('Save chart','Сохранить схему');assert.deepEqual(writes.at(-1).changes,[]);assert.deepEqual(config.extra_edges,[{source:'c',target:'a'}]);
-  assert.equal(editorCanvas.nodesConnectable,true);await click('Reporting','Подчинение');assert.equal(editorCanvas.isValidConnection({source:'c',target:'a'}),false);
+  assert.equal(editorCanvas.nodesConnectable,false);await click('Edit chart','Редактировать схему');assert.deepEqual(points(),entryPoints);await click('Reporting','Подчинение');assert.equal(editorCanvas.isValidConnection({source:'c',target:'a'}),false);
   const reconnectExtra=editorCanvas.edges.find(e=>e.data.kind==='additional');
   await act(async()=>editorCanvas.onReconnectStart({},reconnectExtra));assert.equal(editorCanvas.isValidConnection({source:'b',target:'a'}),true,'Reconnecting an additional edge keeps its kind even when Reporting is selected');
   await act(async()=>{editorCanvas.onReconnect(reconnectExtra,{source:'b',target:'a'});editorCanvas.onReconnectEnd();});await settle();
@@ -43,8 +49,20 @@ try{
   await act(async()=>editorCanvas.onConnect({source:'a',target:'c'}));await settle();
   conflict=true;await click('Save chart','Сохранить схему');assert.ok(button('Save chart','Сохранить схему'));assert.equal(button('Save chart','Сохранить схему').disabled,false);assert.ok(document.body.textContent.includes(ru?'Черновик оставлен':'draft is preserved'));assert.deepEqual(writes.at(-1).changes,[{id:'c',version:1,manager_id:'a'}]);
   await click('Cancel','Отмена');conflict=false;
-  assert.equal(editorCanvas.nodesConnectable,true);
+  assert.equal(editorCanvas.nodesConnectable,false);await click('Edit chart','Редактировать схему');
   const extra=editorCanvas.edges.find(e=>e.data.kind==='additional');await act(async()=>editorCanvas.onEdgeClick({stopPropagation(){}},extra));await settle();await click('Delete connection','Удалить связь');await click('Save chart','Сохранить схему');assert.deepEqual(config.extra_edges,[]);assert.equal(rows.length,3);
+  await click('Edit chart','Редактировать схему');
+  const reporting=editorCanvas.edges.find(e=>e.data.kind==='reporting'&&e.target==='c');
+  const beforeUnlink=points();await act(async()=>editorCanvas.onEdgeClick({stopPropagation(){}},reporting));await settle();await click('Delete connection','Удалить связь');
+  assert.deepEqual(points(),beforeUnlink,'Removing a reporting line must leave every card exactly in place');
+  await act(async()=>{editorCanvas.onNodeDragStart();editorCanvas.onNodeDragStop({}, {...editorCanvas.nodes.find(n=>n.id==='c'),position:{x:1240,y:820}});});await settle();
+  assert.deepEqual(points().c,{x:1240,y:820},'A disconnected card stays at its free drag position');assert.deepEqual(points().b,beforeUnlink.b);
+  await click('Save chart','Сохранить схему');assert.deepEqual(writes.at(-1).positions.teams.c,{x:1240,y:820});assert.equal(editorCanvas.nodesConnectable,false);
+  await click('Edit chart','Редактировать схему');assert.deepEqual(points().c,{x:1240,y:820},'Saving and reopening must retain coordinates');
+  await act(async()=>editorCanvas.onNodesChange([{id:'c',type:'position',dragging:false,position:{x:1260,y:820}}]));await settle();assert.deepEqual(points().c,{x:1260,y:820},'Keyboard moves join the persistent undoable draft');await click('Undo chart change','Отменить действие');assert.deepEqual(points().c,{x:1240,y:820});
+  await click('Auto arrange','Привести в порядок');assert.notDeepEqual(points().c,{x:1240,y:820});
+  const cards=editorCanvas.nodes.filter(n=>n.type==='person');for(let i=0;i<cards.length;i++)for(let j=i+1;j<cards.length;j++)assert.ok(Math.abs(cards[i].position.x-cards[j].position.x)>=300||Math.abs(cards[i].position.y-cards[j].position.y)>=148,'Auto-arranged cards must not overlap');
+  await click('Undo chart change','Отменить действие');assert.deepEqual(points().c,{x:1240,y:820});await click('Cancel','Отмена');await click('Edit chart','Редактировать схему');
   const beforeCreate=writes.length;
   const blank=()=>{
     editorCanvas.onConnectStart(new MouseEvent('mousedown',{clientX:100,clientY:100}));
@@ -57,7 +75,7 @@ try{
   const input=document.querySelector('dialog input');
   await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'New colleague');input.dispatchEvent(new Event('input',{bubbles:true}));});
   await click('Create employee & save chart','Создать и сохранить схему');
-  assert.equal(writes.at(-1).new_staff[0].name,'New colleague');assert.equal(writes.at(-1).new_staff[0].manager_id,'b');assert.equal(writes.at(-1).new_staff[0].department,'Team');
+  assert.equal(writes.at(-1).new_staff[0].name,'New colleague');assert.equal(writes.at(-1).new_staff[0].manager_id,'b');assert.equal(writes.at(-1).new_staff[0].department,'Team');assert.deepEqual(writes.at(-1).positions.teams[writes.at(-1).new_staff[0].id],{x:500,y:300});
   assert.equal(document.querySelector('dialog[open]'),null);
   const mounts=globalThis.canvasMounts;
   window.matchMedia=()=>({matches:false});
@@ -68,5 +86,5 @@ try{
   window.matchMedia=()=>({matches:true});
   await act(async()=>root.unmount());client.clear();document.getElementById('root').innerHTML='';
  }
- console.log('Staff editor UI: EN/RU edit, extra/reporting links, cycles, undo/redo, atomic payload, 409 draft retention, cancel, connection deletion without employee deletion, stable canvas and smooth department transitions.');
+ console.log('Staff editor UI: EN/RU edit, extra/reporting links, cycles, undo/redo, explicit edit mode, stationary unlink/reconnect, free drag persistence, manual auto-arrange/undo, atomic payload, 409 draft retention, cancel, connection deletion without employee deletion, stable canvas and smooth department transitions.');
 }finally{await rm(dir,{recursive:true,force:true});}
