@@ -62,6 +62,7 @@ import AiInput from "../components/AiInput";
 import EstimatePdfPreview from "../components/EstimatePdfPreview";
 import ProposalBrandSwitch from "../components/ProposalBrandSwitch";
 import PresentationOptions from "../components/PresentationOptions";
+import PresentationTaxForm from "../components/PresentationTaxForm";
 import PdfChecks, { type ExportChecks } from "../components/PdfChecks";
 import {
   createEstimatePdfLoader,
@@ -87,6 +88,7 @@ export default function Builder() {
   }, [panel]);
   const [proposal, setProposal] = useState(false);
   const [details, setDetails] = useState(false);
+  const [taxForm, setTaxForm] = useState(false);
   const [records, setRecords] = useState(false);
   const [zoneForm, setZoneForm] = useState<"new" | "edit" | null>(null);
   const [adding, setAdding] = useState<
@@ -150,10 +152,11 @@ export default function Builder() {
         estimate.updated_at,
         Number(estimate.markup_pct || 0),
         Number(estimate.discount_pct || 0),
-        pdfMode === "final" ? "final-corporate-v14" : "pre-corporate-v9",
+        pdfMode === "final" ? "final-corporate-v15" : "pre-corporate-v10",
         proposalBrand,
         presentationVisibility.show_grand_total,
         presentationVisibility.show_calculations,
+        estimate.pdf_layout?.presentation_tax,
       ])
     : undefined;
   const pdfFilename = estimatePdfFilename(
@@ -825,6 +828,10 @@ export default function Builder() {
               />
               <PresentationOptions
                 value={presentationVisibility}
+                taxEnabled={
+                  estimate.pdf_layout?.presentation_tax?.enabled === true
+                }
+                onTax={() => setTaxForm(true)}
                 disabled={busy || hasDrafts || saveFailed || !!exporting}
                 onChange={(value) => {
                   void mutate(() =>
@@ -915,6 +922,18 @@ export default function Builder() {
             loadPdf={loadPdf}
             checks={pdfMode === "final" ? finalChecks.data : undefined}
             onClose={() => setProposal(false)}
+          />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {taxForm ? (
+          <PresentationTaxForm
+            estimateId={estimate.id}
+            showTotal={presentationVisibility.show_grand_total}
+            onClose={() => setTaxForm(false)}
+            onSave={(value) =>
+              mutate(() => patch(`/estimates/${id}/presentation-tax`, value))
+            }
           />
         ) : null}
       </ModalPresence>

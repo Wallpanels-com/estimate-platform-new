@@ -48,4 +48,7 @@ def initial_layout(estimate):
     options = display_options(estimate)
     if not options.show_grand_total or not options.show_calculations:
         result['presentation_options'] = vars(options)
+    if isinstance(getattr(estimate, 'pdf_layout', None), dict) and 'presentation_tax' in estimate.pdf_layout:
+        from .presentation_tax import tax_options
+        result['presentation_tax'] = tax_options(estimate).model_dump(mode='json')
     return result or None

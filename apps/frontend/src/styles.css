@@ -3958,7 +3958,7 @@ input[aria-invalid="true"] {
 .presentation-visibility button {
   display: grid;
   place-items: center;
-  width: 34px;
+  width: 32px;
   height: 34px;
   padding: 0;
   border: 1px solid var(--border);
@@ -5071,4 +5071,49 @@ html:has(.embedded-workspace) #root {
 .hr-import-sample dt {
   color: var(--muted);
   margin-bottom: 4px;
+}
+
+/* Tax uses the existing dialog and form grid; values are read-only outputs. */
+.tax-form-body {
+  display: grid;
+  gap: 22px;
+}
+.tax-enabled {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+.tax-enabled input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+.tax-totals {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.tax-totals > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: baseline;
+}
+.tax-totals dt {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.tax-totals dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+}
+.tax-totals .tax-grand {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.tax-grand dd {
+  font-size: 22px;
 }

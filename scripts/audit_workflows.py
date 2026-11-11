@@ -146,6 +146,8 @@ async def main():
             assert (await call('GET',f'/estimates/{pre_id}')).json()['pdf_layout']['proposal_brand']=='verona'
             from presentation_workflow_checks import check_presentation_options
             await check_presentation_options(call,c,pre_id,eid,tokens)
+            from tax_workflow_checks import check_tax
+            await check_tax(call,c,pre_id,eid,tokens)
             history=(await call('GET',path+'/history?limit=500')).json();assert history and len({row['actor_name'] for row in history})==2
             # Shared visibility and recovery through a fresh authenticated session.
             c.headers['Authorization']='Bearer '+tokens[0]
@@ -193,7 +195,7 @@ async def main():
                 await call(method,target,403,headers=staff_headers,**({'json':body} if body is not None else {}))
             await call('PUT',grant_path,json={'pages':[],'expected_updated_at':current['updated_at']})
             assert (await call('GET','/auth/me',headers=staff_headers)).json()['page_access']==[]
-            for target in ('/estimates','/pricing/schema',f'/pdf/{eid}/final-estimate',f'/media/{image_id}'):
+            for target in ('/estimates','/pricing/schema',f'/pdf/{eid}/final-estimate',f'/media/{image_id}',f'/estimates/{eid}/presentation-tax'):
                 await call('GET',target,403,headers=staff_headers)
             current=(await call('GET',grant_path)).json()
             await call('PUT',grant_path,json={'pages':['quick_estimate'],'expected_updated_at':current['updated_at']})

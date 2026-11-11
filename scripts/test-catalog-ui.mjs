@@ -56,7 +56,7 @@ const dir = await mkdtemp(resolve(".local/catalog-ui-"));
 try {
   const compiled = await build({
     stdin: {
-      contents: `export {default as PresentationOptions} from './apps/frontend/src/components/PresentationOptions'; export {default as ProposalBrandSwitch} from './apps/frontend/src/components/ProposalBrandSwitch'; export {default as ItemForm} from './apps/frontend/src/components/pricebook/ItemForm'; export {default as ItemNameFields} from './apps/frontend/src/components/pricebook/ItemNameFields'; export {default as Photos} from './apps/frontend/src/components/Photos'; export {default as CategoryForm} from './apps/frontend/src/components/pricebook/CategoryForm'; export {default as PriceBook} from './apps/frontend/src/pages/PriceBook'; export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
+      contents: `export {default as PresentationTaxForm} from './apps/frontend/src/components/PresentationTaxForm'; export {taxPreview} from './apps/frontend/src/lib/presentationTax'; export {default as PresentationOptions} from './apps/frontend/src/components/PresentationOptions'; export {default as ProposalBrandSwitch} from './apps/frontend/src/components/ProposalBrandSwitch'; export {default as ItemForm} from './apps/frontend/src/components/pricebook/ItemForm'; export {default as ItemNameFields} from './apps/frontend/src/components/pricebook/ItemNameFields'; export {default as Photos} from './apps/frontend/src/components/Photos'; export {default as CategoryForm} from './apps/frontend/src/components/pricebook/CategoryForm'; export {default as PriceBook} from './apps/frontend/src/pages/PriceBook'; export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -72,6 +72,8 @@ try {
   const {
     ProposalBrandSwitch,
     PresentationOptions,
+    PresentationTaxForm,
+    taxPreview,
     AddItems,
     ItemNameFields,
     ItemForm,
@@ -124,6 +126,38 @@ try {
     assert.equal(changes.length, 2, 'Saving/exporting disables edits to presentation settings');
     await act(async () => root.unmount());
   }
+  assert.deepEqual(taxPreview('38600.00', {enabled:true,mode:'percent',rate:'7',amount:'0'}), {subtotal:'38600.00',tax:'2702.00',grand_total:'41302.00'});
+  assert.equal(taxPreview('0.05', {enabled:true,mode:'percent',rate:'10',amount:'0'}).tax,'0.01');
+  assert.equal(taxPreview('100.00', {enabled:true,mode:'amount',rate:'7',amount:'12.34'}).grand_total,'112.34');
+  for (const invalid of ['-1','100.0001','NaN','7.00001','']) assert.equal(taxPreview('100.00',{enabled:true,mode:'percent',rate:invalid,amount:'0'}),null);
+  const taxFetch = globalThis.fetch;
+  for (const language of ['en','ru']) {
+    localStorage.setItem('wallpanels.ui-language',language);
+    globalThis.fetch = async () => new Response(JSON.stringify({id:'tax-fixture',revision:'r1',options:{enabled:false,mode:'percent',rate:'7',amount:'0'},subtotal:'38600.00',tax:'0.00',grand_total:'38600.00'}), {headers:{'Content-Type':'application/json'}});
+    const root = createRoot(document.getElementById('root'));
+    let closed = 0, succeed = false; const saves=[];
+    await act(async () => {
+      root.render(h(LanguageProvider,null,h(PresentationTaxForm,{estimateId:'tax-fixture',showTotal:false,onClose:()=>closed++,onSave:async value=>{saves.push(value);return succeed;}})));
+      await new Promise(r=>setTimeout(r,5));
+    });
+    await act(async () => {await new Promise(r=>setTimeout(r,5));});
+    const check=document.querySelector('input[type="checkbox"]');assert.ok(check);
+    assert.equal(document.querySelector('input[name="tax_rate"]').disabled,true);
+    await act(async () => check.click());
+    assert.equal(document.querySelector('input[name="tax_rate"]').disabled,false);
+    assert.match(document.querySelector('.tax-totals').textContent,/41,302/);
+    assert.match(document.querySelector('.form-hint').textContent,/Σ/);
+    if(language==='ru') assert.match(document.querySelector('h2').textContent,/налога/);
+    await act(async () => document.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    assert.equal(closed,0,'Failed tax save retains draft and modal');
+    assert.ok(document.querySelector('.error-notice, [role="alert"]'));
+    succeed=true;
+    await act(async () => document.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    assert.equal(closed,1);
+    assert.deepEqual(saves.at(-1),{enabled:true,mode:'percent',rate:'7',amount:'0'});
+    await act(async () => root.unmount());
+  }
+  globalThis.fetch=taxFetch;
   const categories = ["wall", "cabinet", "mirror", "services"].map((id) => ({
     id,
     icon: "folder",

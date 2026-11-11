@@ -45,6 +45,17 @@ for (const mode of ['pre', 'final']) {
   }
 }
 
+assert.match(builder, /estimate\.pdf_layout\?\.presentation_tax/);
+const taxLoad = pdf.createEstimatePdfLoader(async source => new Blob([source.revision]));
+let lastTax;
+for (const tax of [{enabled:false},{enabled:true,rate:'7'},{enabled:true,rate:'8'},{enabled:true,mode:'amount',amount:'25'}]) {
+  const source={...pre, revision:JSON.stringify(['saved',tax])};
+  const snapshot=await taxLoad(source);
+  assert.notEqual(snapshot,lastTax,'Tax changes invalidate the preview snapshot');
+  assert.equal(await taxLoad(source),snapshot,'Tax preview and download share exact bytes');
+  lastTax=snapshot;
+}
+
 let attempts = 0;
 const retry = pdf.createEstimatePdfLoader(async () => {
   if (++attempts === 1) throw new Error('temporary failure');

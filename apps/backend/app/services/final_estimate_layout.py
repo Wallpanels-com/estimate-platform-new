@@ -702,6 +702,18 @@ def summary_slide(c, page, est, factor, final_page, pricing=None):
         total = pricing.grand_total if pricing else subtotal * (1 - discount / 100)
         if not pricing and getattr(est, "manual_override", False):
             total = number(est.final_total) * factor * (1 - discount / 100)
+        from .presentation_tax import tax_options, draw_totals
+        if tax_options(est).enabled:
+            note = ''
+            if pricing and pricing.manual_adjustment:
+                note = f'Manual adjustment: {amount(pricing.manual_adjustment)}'
+            elif discount:
+                note = f'Discount ({_plain_number(discount)}%): −{amount(pricing.discount if pricing else subtotal * discount / 100)}'
+            draw_totals(c, est, total, M, 90, W - 2 * M, 78, note,
+                        unpriced=bool(final_page) and all(i.is_tbd for z in final_page for i in z.line_items) and total == 0)
+            if any(i.is_tbd for z in final_page for i in z.line_items):
+                text(c, 'Unpriced scope is excluded. Pricing will be confirmed separately.', M, 74, 12, color=MUTED)
+            return
         x, y, width, height = M, 90, W - 2 * M, 78
         c.saveState()
         path = c.beginPath()

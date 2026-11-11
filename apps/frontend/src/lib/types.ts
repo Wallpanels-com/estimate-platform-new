@@ -58,6 +58,12 @@ export interface Estimate {
       show_grand_total?: boolean;
       show_calculations?: boolean;
     };
+    presentation_tax?: {
+      enabled: boolean;
+      mode: "percent" | "amount";
+      rate: string;
+      amount: string;
+    };
     final_zone_photos?: Record<string, number>;
     [key: string]: unknown;
   } | null;

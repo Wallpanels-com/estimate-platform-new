@@ -718,7 +718,7 @@ def zone_slide(c, page, factor, index, count, media):
     )
 
 
-def summary(c, page, factor, total, pending, show_total=True):
+def summary(c, page, factor, total, pending, show_total=True, estimate=None):
     text(c, "Investment Summary", M, 528, 32, "Medium")
     text(
         c,
@@ -740,31 +740,35 @@ def summary(c, page, factor, total, pending, show_total=True):
     if not show_total:
         return
     unpriced = total == 0 and pending
-    money_block(
-        c,
-        "Current Calculation Basis",
-        "To be confirmed" if unpriced else money(total),
-        M,
-        84,
-        COLUMN_WIDTH,
-        88,
-        32,
-        WARM,
-    )
-    money_block(
-        c,
-        "Preliminary Investment Range",
-        (
-            "To be confirmed"
-            if unpriced
-            else f'{money(total*Decimal("0.90"))} - {money(total*Decimal("1.15"))}'
-        ),
-        M + COLUMN_WIDTH + COLUMN_GAP,
-        84,
-        COLUMN_WIDTH,
-        88,
-        32,
-    )
+    from .presentation_tax import tax_options, draw_totals
+    if estimate is not None and tax_options(estimate).enabled:
+        draw_totals(c, estimate, total, M, 84, W - 2 * M, unpriced=unpriced)
+    else:
+        money_block(
+            c,
+            "Current Calculation Basis",
+            "To be confirmed" if unpriced else money(total),
+            M,
+            84,
+            COLUMN_WIDTH,
+            88,
+            32,
+            WARM,
+        )
+        money_block(
+            c,
+            "Preliminary Investment Range",
+            (
+                "To be confirmed"
+                if unpriced
+                else f'{money(total*Decimal("0.90"))} - {money(total*Decimal("1.15"))}'
+            ),
+            M + COLUMN_WIDTH + COLUMN_GAP,
+            84,
+            COLUMN_WIDTH,
+            88,
+            32,
+        )
     note = "Preliminary guide, not a contract. Final pricing follows confirmed scope and measurements."
     if pending:
         note += " Unpriced scope is excluded."
@@ -824,7 +828,7 @@ def generate_pre_estimate(est, output_path):
         elif page.kind.startswith("zone"):
             zone_slide(c, page, factor, zones.index(page.zone) + 1, len(zones), media)
         else:
-            summary(c, page, factor, total, pending, display_options(est).show_grand_total)
+            summary(c, page, factor, total, pending, display_options(est).show_grand_total, est)
         c.showPage()
     c.save()
     return str(output_path) if isinstance(output_path, (str, Path)) else output_path

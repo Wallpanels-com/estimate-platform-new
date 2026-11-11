@@ -1,4 +1,4 @@
-import { Calculator, Sigma } from "lucide-react";
+import { Calculator, Sigma, Percent } from "lucide-react";
 import { useI18n } from "../lib/i18n";
 
 export type PresentationVisibility = {
@@ -10,10 +10,14 @@ export default function PresentationOptions({
   value,
   disabled,
   onChange,
+  taxEnabled,
+  onTax,
 }: {
   value: PresentationVisibility;
   disabled: boolean;
   onChange: (value: PresentationVisibility) => void;
+  taxEnabled?: boolean;
+  onTax?: () => void;
 }) {
   const { t } = useI18n();
   return (
@@ -40,6 +44,19 @@ export default function PresentationOptions({
           <Icon size={17} aria-hidden="true" />
         </button>
       ))}
+      {onTax ? (
+        <button
+          type="button"
+          disabled={disabled}
+          aria-label={t("Tax settings")}
+          title={t("Tax settings")}
+          aria-pressed={!!taxEnabled}
+          aria-haspopup="dialog"
+          onClick={onTax}
+        >
+          <Percent size={17} aria-hidden="true" />
+        </button>
+      ) : null}
     </div>
   );
 }

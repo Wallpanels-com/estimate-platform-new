@@ -599,6 +599,11 @@ def _summary(c, est, page, factor, total, pending):
         return
     if not display_options(est).show_grand_total:
         return
+    from .presentation_tax import tax_options, draw_totals
+    if tax_options(est).enabled:
+        draw_totals(c, est, total, M, 154, W - 2 * M, unpriced=total == 0 and pending)
+        _paragraph(c, 'This preliminary estimate is a guide, not a contract or invoice. Final pricing follows confirmed scope and measurements.', M, 130, W - 2 * M, 11, 17, color=MUTED)
+        return
     # The established 90–115% rule is applied exactly once to the adjusted basis.
     _text(c, "Current calculation basis", M, 243, 12, color=MUTED)
     _text(

@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field, StrictBool, ConfigDict, model_validator
 from app.services.final_zone_photos import select_photo
 from app.services.proposal_brands import select_brand
 from app.services.proposal_display import select_display_options
+from app.services.presentation_tax import TaxOptions, tax_options, select_tax, proposal_subtotal, breakdown
 from app.core.estimate_routes import EstimateRoute
 
 router = APIRouter(prefix="/estimates", tags=["estimates"], route_class=EstimateRoute)
@@ -247,6 +248,40 @@ async def update_estimate(
 
 class ProposalBrandUpdate(BaseModel):
     brand: Literal["wallpanels", "verona"]
+
+
+@router.get("/{estimate_id}/presentation-tax")
+async def get_presentation_tax(estimate_id: uuid.UUID, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    est = await load_estimate(estimate_id, current_user, db)
+    if getattr(est, 'deleted_at', None):
+        raise HTTPException(404, 'Estimate not found')
+    if est.source_estimate_id:
+        est = await synchronize(db, est)
+        await db.commit()
+        est = await load_estimate(est.id, current_user, db)
+    try:
+        values = breakdown(est, proposal_subtotal(est))
+        options = tax_options(est)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    return {'id': str(est.id), 'revision': est.revision, 'options': options.model_dump(mode='json'), 'subtotal': str(values.subtotal), 'tax': str(values.tax), 'grand_total': str(values.grand_total)}
+
+
+@router.patch("/{estimate_id}/presentation-tax", response_model=EstimateOut)
+async def update_presentation_tax(estimate_id: uuid.UUID, data: TaxOptions, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    est = await load_estimate(estimate_id, current_user, db)
+    if getattr(est, 'deleted_at', None):
+        raise HTTPException(404, 'Estimate not found')
+    if 'enabled' not in data.model_fields_set:
+        raise HTTPException(422, 'Choose whether to add tax to the presentation.')
+    select_tax(est, data)
+    try:
+        breakdown(est, proposal_subtotal(est))
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    touch(est, current_user)
+    await db.commit()
+    return await load_estimate(estimate_id, current_user, db)
 
 
 class PresentationOptionsUpdate(BaseModel):

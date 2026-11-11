@@ -1101,5 +1101,21 @@
   "Choose a smaller batch of HR text.": "Выберите меньший объём текста для перевода.",
   "Presentation visibility": "Что показывать в PDF",
   "Show grand total in PDF": "Показывать общую сумму в PDF",
-  "Show calculations in PDF": "Показывать расчёты в PDF"
+  "Show calculations in PDF": "Показывать расчёты в PDF",
+  "Tax settings": "Настройки налога",
+  "Add tax to the presentation": "Добавить налог в презентацию",
+  "Tax calculation": "Способ расчёта налога",
+  "Percentage": "Процент",
+  "Fixed tax amount": "Сумма налога вручную",
+  "Tax rate (%)": "Ставка налога (%)",
+  "Tax amount ($)": "Сумма налога ($)",
+  "Subtotal (before tax)": "Сумма до налога",
+  "Tax": "Налог",
+  "Grand total (with tax)": "Итого с налогом",
+  "Save tax settings": "Сохранить налог",
+  "Enter a valid tax rate or amount.": "Введите корректную ставку или сумму налога.",
+  "Tax settings could not be saved. Please try again.": "Не удалось сохранить настройки налога. Повторите попытку.",
+  "The total block is hidden in PDF. Enable Σ to show Subtotal, Tax and Grand Total.": "Итоговый блок скрыт в PDF. Включите Σ, чтобы показать сумму до налога, налог и общий итог.",
+  "Tax settings are invalid. Review the presentation tax settings.": "Некорректные настройки налога. Проверьте их перед созданием презентации.",
+  "Tax requires a valid, non-negative project subtotal.": "Для налога нужна корректная сумма проекта не меньше нуля."
 }
