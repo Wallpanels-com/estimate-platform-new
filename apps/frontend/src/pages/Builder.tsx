@@ -61,6 +61,7 @@ import EstimateRecords from "../components/EstimateRecords";
 import AiInput from "../components/AiInput";
 import EstimatePdfPreview from "../components/EstimatePdfPreview";
 import ProposalBrandSwitch from "../components/ProposalBrandSwitch";
+import PresentationOptions from "../components/PresentationOptions";
 import PdfChecks, { type ExportChecks } from "../components/PdfChecks";
 import {
   createEstimatePdfLoader,
@@ -138,6 +139,12 @@ export default function Builder() {
   const pdfId = estimate?.id;
   const proposalBrand =
     estimate?.pdf_layout?.proposal_brand === "verona" ? "verona" : "wallpanels";
+  const presentationVisibility = {
+    show_grand_total:
+      estimate?.pdf_layout?.presentation_options?.show_grand_total !== false,
+    show_calculations:
+      estimate?.pdf_layout?.presentation_options?.show_calculations !== false,
+  };
   const pdfRevision = estimate?.updated_at
     ? JSON.stringify([
         estimate.updated_at,
@@ -145,6 +152,8 @@ export default function Builder() {
         Number(estimate.discount_pct || 0),
         pdfMode === "final" ? "final-corporate-v13" : "pre-corporate-v8",
         proposalBrand,
+        presentationVisibility.show_grand_total,
+        presentationVisibility.show_calculations,
       ])
     : undefined;
   const pdfFilename = estimatePdfFilename(
@@ -803,16 +812,27 @@ export default function Builder() {
               </Button>
               <strong>{money(total)}</strong>
             </div>
-            <ProposalBrandSwitch
-              value={proposalBrand}
-              disabled={busy || hasDrafts || saveFailed || !!exporting}
-              onChange={(brand) => {
-                if (brand === proposalBrand) return;
-                void mutate(() =>
-                  patch(`/estimates/${id}/proposal-brand`, { brand }),
-                );
-              }}
-            />
+            <div className="presentation-controls">
+              <ProposalBrandSwitch
+                value={proposalBrand}
+                disabled={busy || hasDrafts || saveFailed || !!exporting}
+                onChange={(brand) => {
+                  if (brand === proposalBrand) return;
+                  void mutate(() =>
+                    patch(`/estimates/${id}/proposal-brand`, { brand }),
+                  );
+                }}
+              />
+              <PresentationOptions
+                value={presentationVisibility}
+                disabled={busy || hasDrafts || saveFailed || !!exporting}
+                onChange={(value) => {
+                  void mutate(() =>
+                    patch(`/estimates/${id}/presentation-options`, value),
+                  );
+                }}
+              />
+            </div>
             {pendingZoneCount ? (
               <p className="pending-scope-note">
                 {t("Zones with unconfirmed pricing: {0}.", pendingZoneCount)}

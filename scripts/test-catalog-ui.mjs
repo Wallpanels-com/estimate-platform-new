@@ -56,7 +56,7 @@ const dir = await mkdtemp(resolve(".local/catalog-ui-"));
 try {
   const compiled = await build({
     stdin: {
-      contents: `export {default as ProposalBrandSwitch} from './apps/frontend/src/components/ProposalBrandSwitch'; export {default as ItemForm} from './apps/frontend/src/components/pricebook/ItemForm'; export {default as ItemNameFields} from './apps/frontend/src/components/pricebook/ItemNameFields'; export {default as Photos} from './apps/frontend/src/components/Photos'; export {default as CategoryForm} from './apps/frontend/src/components/pricebook/CategoryForm'; export {default as PriceBook} from './apps/frontend/src/pages/PriceBook'; export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
+      contents: `export {default as PresentationOptions} from './apps/frontend/src/components/PresentationOptions'; export {default as ProposalBrandSwitch} from './apps/frontend/src/components/ProposalBrandSwitch'; export {default as ItemForm} from './apps/frontend/src/components/pricebook/ItemForm'; export {default as ItemNameFields} from './apps/frontend/src/components/pricebook/ItemNameFields'; export {default as Photos} from './apps/frontend/src/components/Photos'; export {default as CategoryForm} from './apps/frontend/src/components/pricebook/CategoryForm'; export {default as PriceBook} from './apps/frontend/src/pages/PriceBook'; export {default as AddItems} from './apps/frontend/src/components/AddItems'; export {LanguageProvider} from './apps/frontend/src/lib/i18n'; export {QueryClient,QueryClientProvider} from '@tanstack/react-query'; export {createElement,act} from 'react'; export {createRoot} from 'react-dom/client';`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -71,6 +71,7 @@ try {
   await writeFile(resolve(dir, "app.mjs"), compiled.outputFiles[0].contents);
   const {
     ProposalBrandSwitch,
+    PresentationOptions,
     AddItems,
     ItemNameFields,
     ItemForm,
@@ -99,6 +100,29 @@ try {
     await act(async () => document.querySelector('button[aria-label="WallPanels"]').click());
     assert.deepEqual(choices, ['verona'], 'Brand switching is blocked while saving/exporting');
     await act(async () => brandRoot.unmount());
+  }
+  for (const language of ['en', 'ru']) {
+    localStorage.setItem('wallpanels.ui-language', language);
+    const root = createRoot(document.getElementById('root'));
+    let value = {show_grand_total: true, show_calculations: true};
+    const changes = [];
+    const render = (disabled = false) => root.render(h(LanguageProvider, null, h(PresentationOptions, {value, disabled, onChange: next => {value = next; changes.push(next);}})));
+    await act(async () => render());
+    let buttons = [...document.querySelectorAll('button')];
+    assert.equal(buttons.length, 2);
+    assert.ok(buttons.every(b => b.textContent === '' && b.getAttribute('aria-label') && b.title && b.getAttribute('aria-pressed') === 'true'), 'Icon-only controls have localized accessible labels and pressed state');
+    if (language === 'ru') assert.match(buttons[0].getAttribute('aria-label'), /Показывать/);
+    await act(async () => buttons[0].click());
+    assert.deepEqual(value, {show_grand_total: false, show_calculations: true});
+    await act(async () => render());
+    buttons = [...document.querySelectorAll('button')];
+    assert.equal(buttons[0].getAttribute('aria-pressed'), 'false');
+    await act(async () => buttons[1].click());
+    assert.deepEqual(value, {show_grand_total: false, show_calculations: false});
+    await act(async () => render(true));
+    await act(async () => document.querySelector('button').click());
+    assert.equal(changes.length, 2, 'Saving/exporting disables edits to presentation settings');
+    await act(async () => root.unmount());
   }
   const categories = ["wall", "cabinet", "mirror", "services"].map((id) => ({
     id,

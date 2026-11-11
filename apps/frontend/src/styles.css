@@ -3937,6 +3937,55 @@ input[aria-invalid="true"] {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+.presentation-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  margin: 14px 0;
+}
+.presentation-controls .proposal-brand-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+}
+.presentation-visibility {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+.presentation-visibility button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+.presentation-visibility button[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: white;
+}
+.presentation-visibility button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.presentation-visibility button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.presentation-visibility button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
 
 /* One shared grid for all employee page grants, including future pages. */
 .access-body {

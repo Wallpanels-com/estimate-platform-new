@@ -32,6 +32,7 @@ from .pre_estimate_v1 import (
 )
 from .pdf_optimization import contained as _contain
 from .proposal_style import fonts as _fonts, background as slide_background, pre_title, brand as slide_brand
+from .proposal_display import display_options
 
 W, H, M = 1152, 648, 64
 INK = HexColor("#292724")
@@ -364,7 +365,7 @@ def zone_pages(zone, factor, media):
                 # Preserve known scope and quantity without repeating the price
                 # status in the description, item amount and zone investment.
                 detail = item.description or ""
-                if item.quantity is not None:
+                if item.quantity is not None and not getattr(item, '_hide_calculations', False):
                     quantity = f'{_plain_number(item.quantity)}{" " + item.unit if item.unit else ""}'
                     detail = "  ·  ".join(
                         value for value in (detail, quantity) if value
@@ -597,6 +598,8 @@ def overview(c, est, page, factor, total, zones):
         column_entries(c, page, factor)
     else:
         entries(c, page, factor)
+    if not display_options(est).show_grand_total:
+        return
     pending = any(_pending(z) for z in zones)
     value = "To be confirmed" if total == 0 and pending else money(total)
     money_block(c, "Current Calculation Basis", value, M, 76, W - 2 * M, 88, 31)
@@ -715,7 +718,7 @@ def zone_slide(c, page, factor, index, count, media):
     )
 
 
-def summary(c, page, factor, total, pending):
+def summary(c, page, factor, total, pending, show_total=True):
     text(c, "Investment Summary", M, 528, 32, "Medium")
     text(
         c,
@@ -733,6 +736,8 @@ def summary(c, page, factor, total, pending):
         text(
             c, "Investment summary continues on the next slide.", M, 96, 13, color=MUTED
         )
+        return
+    if not show_total:
         return
     unpriced = total == 0 and pending
     money_block(
@@ -819,7 +824,7 @@ def generate_pre_estimate(est, output_path):
         elif page.kind.startswith("zone"):
             zone_slide(c, page, factor, zones.index(page.zone) + 1, len(zones), media)
         else:
-            summary(c, page, factor, total, pending)
+            summary(c, page, factor, total, pending, display_options(est).show_grand_total)
         c.showPage()
     c.save()
     return str(output_path) if isinstance(output_path, (str, Path)) else output_path

@@ -1098,5 +1098,8 @@
   "English translation is unavailable. Contact Dmitry.": "Перевод на английский недоступен. Обратитесь к Дмитрию.",
   "English translation is already being prepared. Please wait.": "Перевод уже готовится. Подождите.",
   "HR content changed. Reopen the card and try again.": "Анкета изменилась. Откройте карточку заново и повторите попытку.",
-  "Choose a smaller batch of HR text.": "Выберите меньший объём текста для перевода."
+  "Choose a smaller batch of HR text.": "Выберите меньший объём текста для перевода.",
+  "Presentation visibility": "Что показывать в PDF",
+  "Show grand total in PDF": "Показывать общую сумму в PDF",
+  "Show calculations in PDF": "Показывать расчёты в PDF"
 }

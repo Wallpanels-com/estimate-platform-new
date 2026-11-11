@@ -205,13 +205,14 @@ def compose_final_pdf(client_path, output_path, company=None):
 
 
 def generate_final_estimate(estimate, output_dir):
+    from .proposal_display import presentation_view
     brand = brand_key(estimate)
     company = load_company_slides() if brand == "wallpanels" else load_company_slides(brand=brand)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='client-slides-', dir=output_dir) as directory:
         try:
-            original = generate_final_client(estimate, Path(directory) / 'client.pdf')
+            original = generate_final_client(presentation_view(estimate), Path(directory) / 'client.pdf')
         except (ValueError, OSError) as error:
             raise FinalEstimatePdfError(str(error)) from error
         return compose_final_pdf(original, output_dir / f'{uuid.uuid4()}.pdf', company)

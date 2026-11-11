@@ -26,6 +26,25 @@ const editedPdf = await load(edited);
 assert.notEqual(editedPdf, await load({ ...edited, id: 'two' }), 'Another estimate invalidates the snapshot');
 assert.notEqual(await load({ ...edited, revision: 'r3' }), editedPdf, 'Data changes invalidate old bytes');
 
+// Builder includes both persisted display flags in its revision, alongside saved data.
+const {readFileSync} = await import('node:fs');
+const builder = readFileSync('apps/frontend/src/pages/Builder.tsx', 'utf8');
+assert.match(builder, /presentationVisibility\.show_grand_total/);
+assert.match(builder, /presentationVisibility\.show_calculations/);
+const visibilityLoader = pdf.createEstimatePdfLoader(async source => new Blob([source.revision]));
+for (const mode of ['pre', 'final']) {
+  for (const brand of ['wallpanels', 'verona']) {
+    let previous;
+    for (const total of [true, false]) for (const calculations of [true, false]) {
+      const source = {...pre, mode, brand, revision: JSON.stringify(['saved', total, calculations])};
+      const preview = await visibilityLoader(source);
+      assert.equal(await visibilityLoader(source), preview, 'Preview and Download reuse the same display settings and bytes');
+      assert.notEqual(preview, previous, 'Changing either presentation toggle invalidates cached bytes');
+      previous = preview;
+    }
+  }
+}
+
 let attempts = 0;
 const retry = pdf.createEstimatePdfLoader(async () => {
   if (++attempts === 1) throw new Error('temporary failure');

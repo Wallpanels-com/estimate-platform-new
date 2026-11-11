@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
+from .proposal_display import display_options
 from threading import Lock
 import os
 
@@ -205,6 +206,10 @@ def _item_detail(item, factor=Decimal(1)):
     bits = []
     if item.description:
         bits.append(item.description)
+    if getattr(item, '_hide_calculations', False):
+        if getattr(item, 'is_tbd', False):
+            bits.append('Pricing to be confirmed')
+        return '  ·  '.join(bits)
     if getattr(item, "is_tbd", False):
         bits.append("Pricing to be confirmed")
     elif (
@@ -466,6 +471,8 @@ def _overview(c, est, page, factor, total, zone_count):
         y = y_after - 12
         _rule(c, M, y, W - 2 * M)
         y -= 25
+    if not display_options(est).show_grand_total:
+        return
     _text(c, "Current calculation basis", M, 111, 11, color=MUTED)
     _right(
         c,
@@ -596,6 +603,8 @@ def _summary(c, est, page, factor, total, pending):
             12,
             color=MUTED,
         )
+        return
+    if not display_options(est).show_grand_total:
         return
     # The established 90–115% rule is applied exactly once to the adjusted basis.
     _text(c, "Current calculation basis", M, 243, 12, color=MUTED)

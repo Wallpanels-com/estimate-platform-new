@@ -17,6 +17,7 @@ from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from .pre_estimate_v1 import _wrap, number, money, _plain_number
 from .proposal_style import fonts as _fonts, background as slide_background, final_title, brand as slide_brand
+from .proposal_display import display_options
 from .pre_estimate_v2 import Asset, gallery_cells
 from . import final_zone_layout as zone_layout
 from .final_pricing import quote as price_quote, key as price_key
@@ -695,7 +696,7 @@ def summary_slide(c, page, est, factor, final_page, pricing=None):
                 )
             top -= height
             line(c, x, top, page.width)
-    if final_page is not None:
+    if final_page is not None and display_options(est).show_grand_total:
         subtotal = sum((zone_total(z, factor) for z in final_page), Decimal(0))
         discount = number(getattr(est, "discount_pct", None))
         total = pricing.grand_total if pricing else subtotal * (1 - discount / 100)

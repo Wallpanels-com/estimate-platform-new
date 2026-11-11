@@ -16,9 +16,10 @@ from app.schemas.estimate import (
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.services.estimate_branches import switch_mode, synchronize
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictBool, ConfigDict, model_validator
 from app.services.final_zone_photos import select_photo
 from app.services.proposal_brands import select_brand
+from app.services.proposal_display import select_display_options
 from app.core.estimate_routes import EstimateRoute
 
 router = APIRouter(prefix="/estimates", tags=["estimates"], route_class=EstimateRoute)
@@ -246,6 +247,34 @@ async def update_estimate(
 
 class ProposalBrandUpdate(BaseModel):
     brand: Literal["wallpanels", "verona"]
+
+
+class PresentationOptionsUpdate(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    show_grand_total: StrictBool | None = None
+    show_calculations: StrictBool | None = None
+
+    @model_validator(mode='after')
+    def has_changes(self):
+        if self.show_grand_total is None and self.show_calculations is None:
+            raise ValueError('Choose a presentation option to change.')
+        return self
+
+
+@router.patch("/{estimate_id}/presentation-options", response_model=EstimateOut)
+async def update_presentation_options(
+    estimate_id: uuid.UUID,
+    data: PresentationOptionsUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    est = await load_estimate(estimate_id, current_user, db)
+    if getattr(est, 'deleted_at', None):
+        raise HTTPException(404, 'Estimate not found')
+    select_display_options(est, data.model_dump(exclude_none=True))
+    touch(est, current_user)
+    await db.commit()
+    return await load_estimate(estimate_id, current_user, db)
 
 
 @router.patch("/{estimate_id}/proposal-brand", response_model=EstimateOut)

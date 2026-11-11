@@ -54,6 +54,10 @@ export interface Zone {
 export interface Estimate {
   pdf_layout?: {
     proposal_brand?: "wallpanels" | "verona";
+    presentation_options?: {
+      show_grand_total?: boolean;
+      show_calculations?: boolean;
+    };
     final_zone_photos?: Record<string, number>;
     [key: string]: unknown;
   } | null;

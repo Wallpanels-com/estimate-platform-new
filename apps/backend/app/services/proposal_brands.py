@@ -43,4 +43,9 @@ def select_brand(estimate, brand):
 
 def initial_layout(estimate):
     # A newly created Final inherits the chosen brand, never old zone/photo IDs.
-    return {'proposal_brand': brand_key(estimate)} if brand_key(estimate) != DEFAULT_BRAND else None
+    from .proposal_display import display_options
+    result = {'proposal_brand': brand_key(estimate)} if brand_key(estimate) != DEFAULT_BRAND else {}
+    options = display_options(estimate)
+    if not options.show_grand_total or not options.show_calculations:
+        result['presentation_options'] = vars(options)
+    return result or None

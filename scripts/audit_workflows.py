@@ -144,6 +144,8 @@ async def main():
                 after=await refresh();assert after['subtotal']==before['subtotal']==total
             await refresh();await call('PATCH',path+'/proposal-brand',json={'brand':'wallpanels'})
             assert (await call('GET',f'/estimates/{pre_id}')).json()['pdf_layout']['proposal_brand']=='verona'
+            from presentation_workflow_checks import check_presentation_options
+            await check_presentation_options(call,c,pre_id,eid,tokens)
             history=(await call('GET',path+'/history?limit=500')).json();assert history and len({row['actor_name'] for row in history})==2
             # Shared visibility and recovery through a fresh authenticated session.
             c.headers['Authorization']='Bearer '+tokens[0]
