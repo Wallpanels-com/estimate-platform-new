@@ -32,7 +32,7 @@ from .pre_estimate_v1 import (
 )
 from .pdf_optimization import contained as _contain
 from .proposal_style import fonts as _fonts, background as slide_background, pre_title, brand as slide_brand
-from .proposal_display import display_options
+from .proposal_display import display_options, item_caption, without_calculations
 
 W, H, M = 1152, 648, 64
 INK = HexColor("#292724")
@@ -358,13 +358,13 @@ def zone_pages(zone, factor, media):
             detail_size, detail_leading = (17, 24) if scope_only else (15.5, 22)
             content = [
                 (s, "Medium", name_size, name_leading, INK)
-                for s in _wrap(item.name, name_width, name_size, "WP-Medium")
+                for s in _wrap(item_caption(item), name_width, name_size, "WP-Medium")
             ]
             detail = _item_detail(item, factor)
             if getattr(item, "is_tbd", False):
                 # Preserve known scope and quantity without repeating the price
                 # status in the description, item amount and zone investment.
-                detail = item.description or ""
+                detail = without_calculations(item.description)
                 if item.quantity is not None and not getattr(item, '_hide_calculations', False):
                     quantity = f'{_plain_number(item.quantity)}{" " + item.unit if item.unit else ""}'
                     detail = "  ·  ".join(
@@ -385,11 +385,11 @@ def zone_pages(zone, factor, media):
             inline = (
                 not scope_only
                 and page.text_width >= 960
-                and len(_wrap(item.name, 400, 19, "WP-Medium")) == 1
+                and len(_wrap(item_caption(item), 400, 19, "WP-Medium")) == 1
                 and len(_wrap(detail, page.text_width - 432 - price_gutter, 15.5)) == 1
             )
             if inline:
-                content = [(str(item.name), "Medium", 19, 27, INK)]
+                content = [(item_caption(item), "Medium", 19, 27, INK)]
                 if detail:
                     content.append((detail, "Regular", 15.5, 22, MUTED))
             padding = 22 if scope_only else 14

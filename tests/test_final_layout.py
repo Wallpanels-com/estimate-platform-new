@@ -166,6 +166,29 @@ class FinalLayout(TestCase):
                     )
         return PdfReader(self.path / name)
 
+    def test_calculation_rows_wrap_and_paginate_with_long_names_both_photo_orientations(self):
+        from app.services.proposal_display import select_display_options
+        for photo_index in (0, 1):
+            for count in (1, 2, 3, 5, 12):
+                with self.subTest(photo=photo_index, count=count):
+                    z = zone('Architectural finishes', count=count, images=[self.photos(2)[photo_index]])
+                    for n, row in enumerate(z.line_items):
+                        row.name = 'Flat baked sand wall panels with concealed fixings and matching architectural finish ' + str(n + 1)
+                        row.calc_type = 'sf'; row.quantity = Decimal('1234.567')
+                        row.unit_price = Decimal('1234.56789')
+                        row.total_price = (row.quantity * row.unit_price).quantize(Decimal('.01'))
+                    est = estimate([z]); est.markup_pct = Decimal('17.5'); est.discount_pct = Decimal('7.25')
+                    before = deepcopy(est)
+                    shown = self.check_geometry(est, f'calculations-{photo_index}-{count}.pdf')
+                    text = ' '.join(' '.join(p.extract_text() for p in shown.pages).split())
+                    self.assertIn('1234.567 SF ×', text)
+                    self.assertEqual(est, before)
+                    select_display_options(est, {'show_calculations': False})
+                    hidden = self.check_geometry(est, f'no-calculations-{photo_index}-{count}.pdf')
+                    text = ' '.join(' '.join(p.extract_text() for p in hidden.pages).split())
+                    self.assertNotIn('×', text)
+                    self.assertIn('Flat baked sand', text)
+
     def test_zero_to_four_photos_four_scope_items_fit_one_zone_page(self):
         for count in range(5):
             with self.subTest(photos=count):

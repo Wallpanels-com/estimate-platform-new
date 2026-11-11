@@ -13,7 +13,7 @@ sys.path[:0] = [str(ROOT / 'apps/backend'), str(ROOT / 'tests')]
 from pydantic import ValidationError
 from pypdf import PdfReader
 from test_final_layout import estimate, zone
-from app.services.proposal_display import display_options, select_display_options, presentation_view, without_calculations
+from app.services.proposal_display import display_options, select_display_options, presentation_view, without_calculations, calculation_detail
 from app.services.proposal_brands import select_brand, initial_layout, profile
 from app.services.final_pricing import quote
 from app.services.final_estimate_service import generate_final_estimate, load_company_slides, page_signature
@@ -51,6 +51,33 @@ class DisplayOptions(TestCase):
         ):
             self.assertEqual(without_calculations(source), expected, source)
 
+    def test_generated_calculations_reconcile_with_adjusted_cents_and_handle_manual_scope(self):
+        from test_final_layout import item
+        wall = item(name='Flat panels', quantity=Decimal(140), unit='SF', unit_price=Decimal(70), total_price=Decimal(9800), calc_type='sf')
+        self.assertEqual(calculation_detail(wall, Decimal(9800)), '140 SF × $70.00')
+        wall.quantity = Decimal('2.5'); wall.unit_price = Decimal('19.95'); wall.total_price = Decimal('49.875')
+        self.assertEqual(calculation_detail(wall, Decimal('49.88')), '2.5 SF × $19.95')
+        wall.quantity = Decimal(5); wall.unit = 'LF'; wall.unit_price = Decimal(1200); wall.total_price = Decimal(6000)
+        for amount in (Decimal('6000.00'), Decimal('6538.88'), Decimal('0.00'), Decimal('5999.99')):
+            annotation = calculation_detail(wall, amount)
+            rate = Decimal(annotation.split('$')[-1].replace(',', ''))
+            self.assertEqual(format(rate * wall.quantity, '.2f'), format(amount, '.2f'), annotation)
+        wall.quantity = Decimal('12345.678'); wall.unit_price = Decimal('1234.56789'); wall.total_price = (wall.quantity * wall.unit_price).quantize(Decimal('.01'))
+        self.assertEqual(calculation_detail(wall, Decimal('16610461.83')), '12345.678 LF · Adjusted amount')
+        wall.quantity = Decimal(5); wall.unit_price = Decimal(1200)
+        wall.total_price = Decimal(6500)
+        self.assertEqual(calculation_detail(wall, 6500), '5 LF · Agreed amount')
+        wall.calc_type = 'fixed'
+        self.assertEqual(calculation_detail(wall, 6500), 'Fixed amount')
+        wall.calc_type = 'lf'; wall.unit_price = None
+        self.assertEqual(calculation_detail(wall, 6500), '5 LF · Agreed amount')
+        wall.is_tbd = True
+        self.assertEqual(calculation_detail(wall, 0), '5 LF')
+        wall.quantity = None
+        self.assertEqual(calculation_detail(wall, 0), '')
+        wall._hide_calculations = True
+        self.assertEqual(calculation_detail(wall, 0), '')
+
     def test_proxies_preserve_price_math_and_original_data(self):
         est = estimate([zone(count=3)])
         est.markup_pct = Decimal('17.5'); est.discount_pct = Decimal('7.25')
@@ -73,6 +100,9 @@ class DisplayOptions(TestCase):
             item.id = uuid.uuid4(); item.zone_id = est.zones[0].id
             item.name = 'Laundry - 5 linear x 1200' if n == 0 else f'Component {n+1}'
             item.description = 'Measured finish'; item.calc_type = 'sf'; item.unit = 'SF'
+        est.line_items[0].quantity = Decimal(5); est.line_items[0].unit = 'LF'
+        est.line_items[0].unit_price = Decimal(1200); est.line_items[0].total_price = Decimal(6000)
+        est.subtotal = est.final_total = sum(i.total_price for i in est.line_items)
         with TemporaryDirectory() as directory:
             folder = Path(directory)
             for brand in ('wallpanels', 'verona'):
@@ -91,7 +121,11 @@ class DisplayOptions(TestCase):
                                 text = ' '.join(' '.join(p.extract_text() for p in pages).split())
                                 self.assertIn('investment summary', text.lower())
                                 self.assertEqual('GRAND TOTAL' in text if mode == 'final' else 'Current Calculation Basis' in text, total)
-                                self.assertEqual('5 linear x 1200' in text, calculations)
+                                self.assertNotIn('5 linear x 1200', text, 'Stale inline arithmetic is replaced by structured current fields')
+                                self.assertEqual('5 LF ×' in text, calculations)
+                                if calculations:
+                                    expected = calculation_detail(est.line_items[0], quote(est).item_prices[str(est.line_items[0].id)]) if mode == 'final' else '5 LF × $1,113.00'
+                                    self.assertIn(expected, text)
                                 if mode == 'pre':
                                     self.assertEqual('×' in text, calculations)
                                     self.assertEqual('Preliminary Investment Range' in text, total)

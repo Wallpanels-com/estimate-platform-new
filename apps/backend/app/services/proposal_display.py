@@ -1,5 +1,6 @@
 """Presentation-only visibility; saved scope, quantities and prices stay intact."""
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import re
 
 
@@ -46,6 +47,63 @@ def without_calculations(value):
     cleaned = re.sub(r'\s*[-–—|·]\s*(?=[-–—|·]|$)', '', cleaned)
     cleaned = re.sub(r'^[\s\-–—|·]+|[\s\-–—|·]+$', '', cleaned)
     return re.sub(r'[ \t]{2,}', ' ', cleaned).strip()
+
+
+def item_caption(item):
+    """Use current structured fields, not stale arithmetic typed into a name."""
+    return without_calculations(item.name) or str(item.name or 'Scope item')
+
+
+def calculation_detail(item, displayed_amount):
+    """A truthful, display-only quantity/rate annotation for Pre and Final.
+
+    Saved totals are authoritative. Never turn a manual price into an invented
+    unit rate. Final uses its allocated, adjusted cents; Pre passes its own
+    displayed amount (its existing discount-only pricing remains unchanged).
+    """
+    if getattr(item, '_hide_calculations', False):
+        return ''
+
+    def decimal(value):
+        try:
+            result = Decimal(str(value))
+            return result if result.is_finite() else None
+        except (InvalidOperation, ValueError, TypeError):
+            return None
+
+    qty = decimal(getattr(item, 'quantity', None))
+    rate = decimal(getattr(item, 'unit_price', None))
+    saved = decimal(getattr(item, 'total_price', None))
+    amount = decimal(displayed_amount)
+    unit = str(getattr(item, 'unit', None) or '').strip()
+    # Plain fixed amounts need no artificial "1 × price" equation.
+    kind = str(getattr(item, 'calc_type', '') or '').lower()
+    if kind == 'fixed' or (kind == 'manual' and qty in (None, Decimal(1)) and unit in ('', 'ea')):
+        return '' if getattr(item, 'is_tbd', False) else 'Fixed amount'
+    if qty is None or qty <= 0:
+        return '' if getattr(item, 'is_tbd', False) else 'Agreed amount'
+    quantity = format(qty, 'f')
+    if '.' in quantity:
+        quantity = quantity.rstrip('0').rstrip('.')
+    measured = f'{quantity}{" " + unit if unit else ""}'
+    if getattr(item, 'is_tbd', False):
+        return measured
+    if rate is None or saved is None or amount is None or rate < 0:
+        return measured + ' · Agreed amount'
+    # Compare exactly as the renderer formats currency; preserve manual totals.
+    if format(qty * rate, '.2f') != format(saved, '.2f'):
+        return measured + ' · Agreed amount'
+    target = Decimal(format(amount, '.2f'))
+    effective = target / qty
+    for places in range(2, 7):
+        shown = effective.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)
+        if format(qty * shown, '.2f') == format(target, '.2f'):
+            value = format(shown, f',.{places}f')
+            if places > 2:
+                value = value.rstrip('0')
+            return f'{measured} × ${value}'
+    # Extreme fractional quantities may not admit a short, accurate rate.
+    return measured + ' · Adjusted amount'
 
 
 class _View:

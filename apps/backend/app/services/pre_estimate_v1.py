@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
-from .proposal_display import display_options
+from .proposal_display import display_options, item_caption, calculation_detail, without_calculations
 from threading import Lock
 import os
 
@@ -205,23 +205,16 @@ def _pending_only(zone):
 def _item_detail(item, factor=Decimal(1)):
     bits = []
     if item.description:
-        bits.append(item.description)
+        bits.append(without_calculations(item.description))
     if getattr(item, '_hide_calculations', False):
         if getattr(item, 'is_tbd', False):
             bits.append('Pricing to be confirmed')
         return '  ·  '.join(bits)
-    if getattr(item, "is_tbd", False):
-        bits.append("Pricing to be confirmed")
-    elif (
-        item.calc_type in ("fixed", "manual")
-        and item.quantity in (None, 1)
-        and (item.unit in ("ea", None))
-    ):
-        bits.append("Fixed amount")
-    elif item.quantity is not None and item.unit_price is not None:
-        bits.append(
-            f'{_plain_number(item.quantity)}{" "+item.unit if item.unit else ""} × {money(number(item.unit_price)*factor)}'
-        )
+    detail = calculation_detail(item, number(item.total_price) * factor)
+    if detail:
+        bits.append(detail)
+    if getattr(item, 'is_tbd', False):
+        bits.append('Pricing to be confirmed')
     return "  ·  ".join(bits)
 
 
@@ -305,7 +298,7 @@ def _zone_pages(zone, factor):
         for item in group:
             lines = [
                 (t, "WP-Medium", 15, 21, INK)
-                for t in _wrap(item.name, text_width, 15, "WP-Medium")
+                for t in _wrap(item_caption(item), text_width, 15, "WP-Medium")
             ]
             lines += (
                 [

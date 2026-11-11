@@ -5,9 +5,12 @@ Two icon buttons beside W / VH control the saved estimate's PDFs:
 - Sigma: show the project total band. Turning it off removes its background, label,
   project amount and accompanying adjustment/discount. Zone prices remain visible.
   Pre-Estimate also hides its aggregate calculation-basis and investment-range blocks.
-- Calculator: show calculation annotations. Turning it off hides generated quantity,
-  unit and rate details and recognizable inline pricing expressions such as
-  `Laundry - 5 linear x 1200`. Names, descriptive scope and extended amounts remain.
+- Calculator: generate quantity × unit-rate annotations from the saved structured
+  fields in both Pre and Final (for example `140 SF × $70.00`, with `$9,800.00`
+  alongside it). Turning it off hides calculation annotations. Recognizable stale
+  arithmetic typed into names is removed from the displayed caption in either state;
+  current saved quantities/rates supply the equation, avoiding duplicate or stale math.
+  Names, descriptive scope and extended amounts remain.
   Product dimensions (`2 x 4 lumber`, `2 ft x 8 ft`) and material codes are preserved.
 
 Dark means on; outlined means off. Both default to on for existing estimates. Buttons
@@ -17,6 +20,18 @@ are disabled during unsaved edits, failed saves, saving and export preparation.
 Settings apply to WallPanels and Verona, Pre and Final, and are shared by everyone
 opening that estimate. The site still displays its saved base quantities and prices.
 XLSX, pricing rules, company appendices, title/zone photos and image quality are unchanged.
+
+The displayed rate includes only the adjustments already applied by the selected
+renderer: Final markup/discount and cent allocation; Pre retains its existing
+discount-only behavior. Rates use two decimals when possible, up to six when needed
+to reconcile the displayed extended amount. Manual mismatches show the known quantity
+and “Agreed amount”; fixed scope shows “Fixed amount”; unpriced items show quantity
+without a made-up rate. If no short accurate rate exists, “Adjusted amount” is used.
+These annotations never recalculate or overwrite stored prices.
+
+Final names use the full text column; the calculation and amount share the next line.
+All lines participate in measured wrapping/pagination. Sparse scopes retain their
+caption clearance, and each continuation retains the selected zone photo.
 
 ## Persistence and rendering
 

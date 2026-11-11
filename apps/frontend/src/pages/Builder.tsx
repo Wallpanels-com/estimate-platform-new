@@ -150,7 +150,7 @@ export default function Builder() {
         estimate.updated_at,
         Number(estimate.markup_pct || 0),
         Number(estimate.discount_pct || 0),
-        pdfMode === "final" ? "final-corporate-v13" : "pre-corporate-v8",
+        pdfMode === "final" ? "final-corporate-v14" : "pre-corporate-v9",
         proposalBrand,
         presentationVisibility.show_grand_total,
         presentationVisibility.show_calculations,

@@ -1,7 +1,8 @@
 """Deterministic reference-led Final zone layouts, independent of the old engine.
 
 The approved blank image is a background only. Zone numbers, headings, row
-names/prices, separators and totals are native PDF marks. Descriptions and SKU
+names, optional saved-field calculations, prices, separators and totals are native
+PDF marks. Descriptions and SKU
 fields are deliberately excluded from zone slides; source records stay intact.
 """
 
@@ -16,6 +17,7 @@ from .pre_estimate_v1 import _wrap
 from .proposal_style import fonts as _fonts, background as slide_background, brand as slide_brand
 from .final_pricing import key
 from .final_zone_photos import PHOTO_REQUIRED
+from .proposal_display import item_caption, calculation_detail
 
 W, H = 1440, 810
 X = 82
@@ -98,6 +100,9 @@ class Row:
     price_below: bool = False
     price_offset: float = 0
     price_size: float = 0
+    detail_start: int | None = None
+    detail_size: float = 0
+    price_line: int = 0
 
 
 @dataclass
@@ -191,8 +196,8 @@ def geometry(zone, number, assets, continued=False):
     )
 
 
-def row_data(items, width, capacity, quote, size=19, padding=20, weight="Regular"):
-    lead = size + 8
+def row_data(items, width, capacity, quote, size=19, padding=20, weight="Regular", show_calculations=True):
+    lead = size + (6 if show_calculations and weight == "Regular" else 8)
     price_width = max(
         145,
         max(
@@ -212,9 +217,18 @@ def row_data(items, width, capacity, quote, size=19, padding=20, weight="Regular
     max_lines = max(1, int((capacity - 24) // lead))
     rows = []
     for item in items:
-        names = _wrap(item.name, name_width, size, "WP-" + weight)
+        detail_size = max(15, size - 5)
+        detail = calculation_detail(item, quote.item_prices[key(item)]) if show_calculations else ''
+        # Put the price alongside the smaller calculation line, leaving the
+        # full text width for names. Four ordinary components still fit without
+        # squeezing their type or reducing the photograph.
+        names = _wrap(item_caption(item), width if detail else name_width, size, "WP-" + weight)
+        name_count = len(names)
+        if detail:
+            names += _wrap(detail, name_width, detail_size, 'WP-Regular')
         for start in range(0, len(names), max_lines):
             part = names[start : start + max_lines]
+            priced = start <= name_count < start + len(part) if detail else start == 0
             rows.append(
                 Row(
                     item,
@@ -225,19 +239,22 @@ def row_data(items, width, capacity, quote, size=19, padding=20, weight="Regular
                             if item.is_tbd
                             else money(quote.item_prices[key(item)])
                         )
-                        if start == 0
+                        if priced
                         else ""
                     ),
                     max(46, len(part) * lead + padding),
                     size,
                     lead,
                     start > 0,
+                    detail_start=max(0, name_count - start) if detail else None,
+                    detail_size=detail_size,
+                    price_line=name_count - start if priced and detail else 0,
                 )
             )
     return rows
 
 
-def paginate(zone, number, quote, selected_slot=None, photo_required=True):
+def paginate(zone, number, quote, selected_slot=None, photo_required=True, show_calculations=True):
     assets = photos(zone, selected_slot, required=photo_required)
     base, introductions = geometry(zone, number, assets)
     if introductions and assets:
@@ -299,11 +316,16 @@ def paginate(zone, number, quote, selected_slot=None, photo_required=True):
                 capacity,
                 quote,
                 size,
-                padding=16 if not page.sparse and len(items) > 8 else 20,
+                padding=12 if show_calculations and not page.sparse else 16 if not page.sparse and len(items) > 8 else 20,
                 weight="Medium" if page.sparse else "Regular",
+                show_calculations=show_calculations,
             )
             if len(items) == 1:
-                names = _wrap(items[0].name, width, 30, "WP-Medium")
+                names = _wrap(item_caption(items[0]), width, 30, "WP-Medium")
+                name_count = len(names)
+                detail = calculation_detail(items[0], quote.item_prices[key(items[0])]) if show_calculations else ''
+                if detail:
+                    names += _wrap(detail, width, 21, 'WP-Regular')
                 offset = (len(names) - 1) * 38 + 58
                 if offset + 36 <= capacity:
                     rows = [
@@ -317,6 +339,8 @@ def paginate(zone, number, quote, selected_slot=None, photo_required=True):
                             price_below=True,
                             price_offset=offset,
                             price_size=36,
+                            detail_start=name_count if detail else None,
+                            detail_size=21,
                         )
                     ]
             pending += rows
@@ -351,21 +375,27 @@ def paginate(zone, number, quote, selected_slot=None, photo_required=True):
                         Row(
                             row.item,
                             tail,
-                            "",
+                            row.price if row.price_line >= cut else "",
                             len(tail) * row.lead + 20,
                             row.size,
                             row.lead,
                             True,
+                            detail_start=max(0, row.detail_start - cut) if row.detail_start is not None else None,
+                            detail_size=row.detail_size,
+                            price_line=max(0, row.price_line - cut),
                         ),
                     )
                 row = Row(
                     row.item,
                     names,
-                    row.price,
+                    row.price if row.price_line < cut else "",
                     len(names) * row.lead + 20,
                     row.size,
                     row.lead,
                     row.continued,
+                    detail_start=row.detail_start,
+                    detail_size=row.detail_size,
+                    price_line=row.price_line if row.price_line < cut else 0,
                 )
             # Keep each text-first column within its own vertical capacity.
             if page.columns == 2:
@@ -530,20 +560,22 @@ def draw(c, page, quote):
         right = x + width
         y = page.body_top - used[col]
         for n, name in enumerate(row.names):
+            detail = row.detail_start is not None and n >= row.detail_start
             text(
                 c,
                 name,
                 x,
                 y - n * row.lead,
-                row.size,
-                "Medium" if page.sparse else "Regular",
+                row.detail_size if detail else row.size,
+                "Regular" if detail else "Medium" if page.sparse else "Regular",
+                MUTED if detail else INK,
             )
         if row.price:
             if row.price_below:
                 text(c, row.price, x, y - row.price_offset, row.price_size, "Medium")
                 rule(c, x, y - row.price_offset - 26, min(width, 520))
             else:
-                text(c, row.price, right, y, row.size, "Medium", right=True)
+                text(c, row.price, right, y - row.price_line * row.lead, row.size, "Medium", right=True)
         used[col] += row.height + extra
         # Center the rule in the measured gap between this row and the next.
         # A fixed offset from the next baseline can cross its ascenders.

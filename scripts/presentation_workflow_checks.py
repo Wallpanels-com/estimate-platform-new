@@ -35,7 +35,7 @@ async def check_presentation_options(call, client, pre_id, final_id, tokens):
                     assert pdf.metadata['/WallPanelsCompanySlidesCount'] == str(count)
                     text = ' '.join(' '.join(p.extract_text() for p in pdf.pages[:-count]).split())
                     assert ('GRAND TOTAL' in text if mode == 'final' else 'Current Calculation Basis' in text) == total
-                    if mode == 'pre': assert ('×' in text) == calculations
+                    assert ('×' in text) == calculations, f'{mode} calculations must be generated from saved numeric fields'
         # Each branch keeps its own preferences; changing Final never resets Pre.
         if mode == 'final':
             other = (await call('GET',f'/estimates/{pre_id}')).json()
