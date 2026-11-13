@@ -1,3 +1,5 @@
+import ManualBatch from "./ManualBatch";
+import type { BatchPayload } from "../lib/manualBatch";
 import Select, { Combobox } from "./Select";
 import CatalogPicker from "./pricebook/CatalogPicker";
 import ItemForm from "./pricebook/ItemForm";
@@ -26,12 +28,14 @@ import type { CalculatedItem, PricingSchema, Zone } from "../lib/types";
 export default function AddItems({
   zone,
   onAdd,
+  onBatch,
   onClose,
   initial = "calculator",
   canEditPriceBook = true,
 }: {
   zone: Zone;
   onAdd: (items: CalculatedItem[]) => Promise<void>;
+  onBatch?: (data: BatchPayload) => Promise<void>;
   onClose: () => void;
   initial?: "calculator" | "manual" | "services" | "catalog";
   canEditPriceBook?: boolean;
@@ -174,7 +178,14 @@ export default function AddItems({
   const s = schema.data;
   return (
     <>
-      <Modal title={t("Add line items")} onClose={onClose} wide>
+      <Modal
+        title={t("Add line items")}
+        onClose={() => {
+          if (!busy) onClose();
+        }}
+        wide
+        className={tab === "manual" && onBatch ? "batch-modal" : ""}
+      >
         <div className="modal-tabs segments">
           {[
             ["calculator", t("Price calculator")],
@@ -184,6 +195,7 @@ export default function AddItems({
           ].map(([value, label]) => (
             <button
               key={value}
+              disabled={busy}
               aria-pressed={tab === value}
               onClick={() => {
                 setTab(value as typeof tab);
@@ -195,23 +207,27 @@ export default function AddItems({
             </button>
           ))}
         </div>
-        <p className="modal-intro">
-          {t(
-            tab === "calculator"
-              ? "Calculate a scope from dimensions and selected options, then add it to the zone."
-              : tab === "manual"
-                ? "Add a custom work item with your own quantity and price."
-                : tab === "catalog"
-                  ? "Select a saved Price Book item and set its quantity."
-                  : "Choose a service, then set its project price in the estimate.",
-          )}
-        </p>
+        {!(tab === "manual" && onBatch) && (
+          <p className="modal-intro">
+            {t(
+              tab === "calculator"
+                ? "Calculate a scope from dimensions and selected options, then add it to the zone."
+                : tab === "manual"
+                  ? "Add a custom work item with your own quantity and price."
+                  : tab === "catalog"
+                    ? "Select a saved Price Book item and set its quantity."
+                    : "Choose a service, then set its project price in the estimate.",
+            )}
+          </p>
+        )}
         {error ? (
           <div className="modal-error">
             <ErrorNotice>{error}</ErrorNotice>
           </div>
         ) : null}
-        {tab === "manual" ? (
+        {tab === "manual" && onBatch ? (
+          <ManualBatch onAdd={onBatch} onClose={onClose} onBusy={setBusy} />
+        ) : tab === "manual" ? (
           <form onSubmit={manual}>
             <div className="modal-body form-grid">
               <Field label={t("Item name")} className="span-all">

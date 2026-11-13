@@ -71,6 +71,8 @@ async def main():
                 tokens.append((await call('POST','/auth/login',json={'email':login,'password':password})).json()['access_token'])
             c.headers['Authorization']='Bearer '+tokens[0]
             await call('GET','/auth/me')
+            from manual_batch_workflow_checks import check_manual_batch
+            await check_manual_batch(call,c,tokens)
             from hr_workflow_checks import check_hr
             await check_hr(call,c,tokens)
             from staff_workflow_checks import check_staff

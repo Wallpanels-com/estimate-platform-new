@@ -21,6 +21,7 @@ from app.services.final_zone_photos import select_photo
 from app.services.proposal_brands import select_brand
 from app.services.proposal_display import select_display_options
 from app.services.presentation_tax import TaxOptions, tax_options, select_tax, proposal_subtotal, breakdown
+from app.services.manual_batch import ManualBatch, save_batch
 from app.core.estimate_routes import EstimateRoute
 
 router = APIRouter(prefix="/estimates", tags=["estimates"], route_class=EstimateRoute)
@@ -420,6 +421,14 @@ async def list_line_items(
 ):
     est = await load_estimate(estimate_id, current_user, db)
     return est.line_items
+
+
+@router.post("/{estimate_id}/manual-batch", response_model=EstimateOut)
+async def create_manual_batch(
+    estimate_id: uuid.UUID, data: ManualBatch,
+    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user),
+):
+    return await save_batch(estimate_id, data, current_user, db, load_estimate, recalc_totals, touch)
 
 
 @router.post("/{estimate_id}/line-items", response_model=LineItemOut, status_code=201)

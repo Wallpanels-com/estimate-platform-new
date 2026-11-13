@@ -1,3 +1,4 @@
+import type { BatchPayload } from "../lib/manualBatch";
 import { PageGate } from "../components/PageGate";
 import { useAuth } from "../lib/auth";
 import { canAccess, firstPage } from "../lib/access";
@@ -282,6 +283,27 @@ export default function Builder() {
       });
     await refresh();
     notify("Line items added");
+  }
+  async function addBatch(data: BatchPayload) {
+    if (!zone) throw new Error("Select a zone first.");
+    let failure: unknown;
+    const saved = await mutate(async () => {
+      try {
+        const next = await post<Estimate>(`/estimates/${id}/manual-batch`, {
+          ...data,
+          zone_id: zone.id,
+        });
+        client.setQueryData(["estimate", next.id], next);
+      } catch (error) {
+        failure = error;
+        throw error;
+      }
+    }, "Line items added");
+    if (!saved)
+      throw (
+        failure ||
+        new Error("The request could not be completed. Please try again.")
+      );
   }
   async function exportFile(kind: "pdf" | "xlsx") {
     if (!estimate) return;
@@ -977,6 +999,7 @@ export default function Builder() {
             initial={adding}
             onClose={() => setAdding(null)}
             onAdd={addItems}
+            onBatch={me?.can_manage_access ? addBatch : undefined}
           />
         ) : null}
       </ModalPresence>

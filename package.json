@@ -33,7 +33,8 @@
     "test:staff-ui": "node scripts/test-staff-ui.mjs",
     "test:staff-chart": "node scripts/test-staff-chart.mjs",
     "test:staff-editor-ui": "node scripts/test-staff-editor-ui.mjs",
-    "test:hr-import-ui": "node scripts/test-hr-import-ui.mjs"
+    "test:hr-import-ui": "node scripts/test-hr-import-ui.mjs",
+    "test:manual-batch": "node scripts/test-manual-batch.mjs"
   },
   "engines": {
     "node": ">=22.12.0"
