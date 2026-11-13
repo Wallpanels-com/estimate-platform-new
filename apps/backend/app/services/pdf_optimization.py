@@ -1,4 +1,4 @@
-"""Lossless PDF packing by default; isolated owner-only photo export trial."""
+"""Lossless PDF packing with approved photo optimization for authenticated exports."""
 
 from io import BytesIO
 from contextvars import ContextVar
@@ -85,14 +85,13 @@ def warm_static_images():
 
 # Request-local state: never allow one employee's export policy to leak into
 # another concurrent render. Only explicitly listed uploaded JPEGs are eligible.
-_photo_trial = ContextVar("pdf_photo_trial", default=None)
+_photo_export = ContextVar("pdf_photo_export", default=None)
 
 
-def photo_trial_enabled(user):
+def photo_optimization_enabled(user):
     from app.core.config import settings
-    return bool(settings.PDF_PHOTO_TRIAL_USER_ID
-                and getattr(user, 'is_active', False)
-                and getattr(user, 'id', None) == settings.PDF_PHOTO_TRIAL_USER_ID)
+    return bool(settings.PDF_PHOTO_OPTIMIZATION_ENABLED
+                and getattr(user, 'is_active', False))
 
 
 def render_for_user(user, renderer, estimate, destination):
@@ -101,16 +100,16 @@ def render_for_user(user, renderer, estimate, destination):
         images.extend(getattr(zone, 'images', []) or [])
     allowed = {str(Path(image.file_path).resolve()) for image in images
                if getattr(image, 'file_path', None)}
-    state = (allowed, {}) if photo_trial_enabled(user) else None
-    token = _photo_trial.set(state)
+    state = (allowed, {}) if photo_optimization_enabled(user) else None
+    token = _photo_export.set(state)
     try:
         return renderer(estimate, destination)
     finally:
-        _photo_trial.reset(token)
+        _photo_export.reset(token)
 
 
-def _trial_jpeg(path):
-    state = _photo_trial.get()
+def _optimized_jpeg(path):
+    state = _photo_export.get()
     if state is None or str(Path(path).resolve()) not in state[0]:
         return None
     cache = state[1]
@@ -139,7 +138,7 @@ def _trial_jpeg(path):
 
 def image_reader(path):
     """Embed an unchanged JPEG directly instead of inflating it to raw RGB."""
-    trial = _trial_jpeg(path)
+    trial = _optimized_jpeg(path)
     if trial is not None:
         return trial
     with Image.open(path) as source:

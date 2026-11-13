@@ -14,7 +14,7 @@ from app.core.config import settings
 from app.models.user import User
 from app.models.estimate import Estimate, EstimateZone, PdfFile
 from app.services.pdf_service import generate_pdf
-from app.services.pdf_optimization import render_for_user, photo_trial_enabled
+from app.services.pdf_optimization import render_for_user, photo_optimization_enabled
 from app.services.final_estimate_service import generate_final_estimate, FinalEstimatePdfError
 from app.services.passport_service import generate_passport
 from app.services.pre_estimate_service import generate_pre_estimate, design_version
@@ -189,7 +189,7 @@ async def pre_estimate(
         path, media_type="application/pdf",
         filename=f"Pre-Estimate - {profile(brand_key(estimate)).label} - {client}.pdf",
         content_disposition_type="attachment" if download else "inline",
-        headers={"Cache-Control": "no-store", "X-PDF-Photo-Mode": "trial-2560-q95" if photo_trial_enabled(current_user) else "original", "X-Pre-Estimate-Design": design_version(), "X-Proposal-Brand": brand_key(estimate)},
+        headers={"Cache-Control": "no-store", "X-PDF-Photo-Mode": "optimized-2560-q95" if photo_optimization_enabled(current_user) else "original", "X-Pre-Estimate-Design": design_version(), "X-Proposal-Brand": brand_key(estimate)},
         background=BackgroundTask(temporary.cleanup),
     )
 
@@ -262,6 +262,6 @@ async def final_estimate(
         path, media_type="application/pdf",
         filename=f"Final Estimate - {profile(brand_key(estimate)).label} - {client}.pdf",
         content_disposition_type="attachment" if download else "inline",
-        headers={"Cache-Control": "no-store", "X-PDF-Photo-Mode": "trial-2560-q95" if photo_trial_enabled(current_user) else "original", "X-WallPanels-Company-Pages": str(profile(brand_key(estimate)).company_pages), "X-Proposal-Brand": brand_key(estimate)},
+        headers={"Cache-Control": "no-store", "X-PDF-Photo-Mode": "optimized-2560-q95" if photo_optimization_enabled(current_user) else "original", "X-WallPanels-Company-Pages": str(profile(brand_key(estimate)).company_pages), "X-Proposal-Brand": brand_key(estimate)},
         background=BackgroundTask(temporary.cleanup),
     )

@@ -129,8 +129,8 @@ def _photo_paths(zone):
 
 
 def _contain(c, path, x, y, w, h):
-    from .pdf_optimization import _trial_jpeg
-    trial = _trial_jpeg(path)
+    from .pdf_optimization import _optimized_jpeg
+    trial = _optimized_jpeg(path)
     if trial is not None:
         iw, ih = trial.getSize()
         scale = min(w / iw, h / ih)

@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     ACCESS_MANAGER_USER_ID: UUID | None = None
     STORAGE_PATH: str = "/data"
     MAX_UPLOAD_SIZE_MB: int = 20
-    PDF_PHOTO_TRIAL_USER_ID: UUID | None = None
+    PDF_PHOTO_OPTIMIZATION_ENABLED: bool = True
     PRE_ESTIMATE_DESIGN: Literal["v1", "v2"] = "v2"
     ALLOWED_ORIGINS: str = "*"
     ALLOW_SELF_REGISTRATION: bool = False
