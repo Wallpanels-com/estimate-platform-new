@@ -1,6 +1,7 @@
-"""Lossless PDF packing. Never resample, quantize, or JPEG-encode an image."""
+"""Lossless PDF packing by default; isolated owner-only photo export trial."""
 
 from io import BytesIO
+from contextvars import ContextVar
 import struct
 from collections import OrderedDict
 from hashlib import sha256
@@ -82,8 +83,65 @@ def warm_static_images():
             logging.getLogger(__name__).warning('PDF asset warm-up skipped: %s', path.name)
 
 
+# Request-local state: never allow one employee's export policy to leak into
+# another concurrent render. Only explicitly listed uploaded JPEGs are eligible.
+_photo_trial = ContextVar("pdf_photo_trial", default=None)
+
+
+def photo_trial_enabled(user):
+    from app.core.config import settings
+    return bool(settings.PDF_PHOTO_TRIAL_USER_ID
+                and getattr(user, 'is_active', False)
+                and getattr(user, 'id', None) == settings.PDF_PHOTO_TRIAL_USER_ID)
+
+
+def render_for_user(user, renderer, estimate, destination):
+    images = list(getattr(estimate, 'images', []) or [])
+    for zone in getattr(estimate, 'zones', []) or []:
+        images.extend(getattr(zone, 'images', []) or [])
+    allowed = {str(Path(image.file_path).resolve()) for image in images
+               if getattr(image, 'file_path', None)}
+    state = (allowed, {}) if photo_trial_enabled(user) else None
+    token = _photo_trial.set(state)
+    try:
+        return renderer(estimate, destination)
+    finally:
+        _photo_trial.reset(token)
+
+
+def _trial_jpeg(path):
+    state = _photo_trial.get()
+    if state is None or str(Path(path).resolve()) not in state[0]:
+        return None
+    cache = state[1]
+    key = str(Path(path).resolve())
+    if key in cache:
+        data = cache[key]
+        return ImageReader(BytesIO(data)) if data else None
+    data = None
+    with Image.open(path) as source:
+        # Preserve PNG drawings, transparency and CMYK images. Keep embedded
+        # color profiles on eligible RGB/gray JPEGs.
+        if source.format == 'JPEG' and source.mode in ('RGB', 'L'):
+            image = ImageOps.exif_transpose(source)
+            image.thumbnail((2560, 2560), Image.Resampling.LANCZOS)
+            output = BytesIO()
+            image.save(output, format='JPEG', quality=95, subsampling=0, optimize=True,
+                       icc_profile=source.info.get('icc_profile'))
+            candidate = output.getvalue()
+            if len(candidate) < Path(path).stat().st_size:
+                data = candidate
+    # Cache only encoded bytes, bounded per render, never source files or PDFs.
+    if sum(len(value) for value in cache.values() if value) + len(data or b'') <= 32 * 1024 * 1024:
+        cache[key] = data
+    return ImageReader(BytesIO(data)) if data else None
+
+
 def image_reader(path):
     """Embed an unchanged JPEG directly instead of inflating it to raw RGB."""
+    trial = _trial_jpeg(path)
+    if trial is not None:
+        return trial
     with Image.open(path) as source:
         if (source.format == 'JPEG' and source.mode in ('RGB', 'L')
                 and source.getexif().get(274, 1) == 1):

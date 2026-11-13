@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.models.user import User
 from app.models.estimate import Estimate, EstimateZone, PdfFile
 from app.services.pdf_service import generate_pdf
+from app.services.pdf_optimization import render_for_user, photo_trial_enabled
 from app.services.final_estimate_service import generate_final_estimate, FinalEstimatePdfError
 from app.services.passport_service import generate_passport
 from app.services.pre_estimate_service import generate_pre_estimate, design_version
@@ -40,9 +41,9 @@ class _FinalEstimateView:
         return getattr(self._estimate, name)
 
 
-async def _render_final(estimate, output_dir):
+async def _render_final(estimate, output_dir, user=None):
     try:
-        return await run_in_threadpool(generate_final_estimate, _FinalEstimateView(estimate), output_dir)
+        return await run_in_threadpool(render_for_user, user, generate_final_estimate, _FinalEstimateView(estimate), output_dir)
     except FinalEstimatePdfError as error:
         raise HTTPException(status_code=422 if str(error) == PHOTO_REQUIRED else 503, detail=str(error)) from error
 
@@ -91,9 +92,9 @@ async def generate(
     mode = 'final' if estimate.type == 'final' else 'pre'
     with tempfile.TemporaryDirectory(prefix="wallpanels-validate-") as output_dir:
         if mode == 'final':
-            await _render_final(estimate, output_dir)
+            await _render_final(estimate, output_dir, current_user)
         else:
-            await run_in_threadpool(generate_pre_estimate, estimate, Path(output_dir) / 'pre-estimate.pdf')
+            await run_in_threadpool(render_for_user, current_user, generate_pre_estimate, estimate, Path(output_dir) / 'pre-estimate.pdf')
     endpoint = f"/api/v1/pdf/{estimate_id}/{mode}-estimate"
     return {"status": "ready", "preview_url": endpoint, "download_url": endpoint + "?download=true"}
 
@@ -176,7 +177,7 @@ async def pre_estimate(
         raise HTTPException(404, "Estimate not found")
     temporary = tempfile.TemporaryDirectory(prefix="wallpanels-proposal-")
     try:
-        path = await run_in_threadpool(generate_pre_estimate, estimate, Path(temporary.name) / "proposal.pdf")
+        path = await run_in_threadpool(render_for_user, current_user, generate_pre_estimate, estimate, Path(temporary.name) / "proposal.pdf")
     except FinalEstimatePdfError as error:
         temporary.cleanup()
         raise HTTPException(status_code=503, detail=str(error)) from error
@@ -188,7 +189,7 @@ async def pre_estimate(
         path, media_type="application/pdf",
         filename=f"Pre-Estimate - {profile(brand_key(estimate)).label} - {client}.pdf",
         content_disposition_type="attachment" if download else "inline",
-        headers={"Cache-Control": "no-store", "X-Pre-Estimate-Design": design_version(), "X-Proposal-Brand": brand_key(estimate)},
+        headers={"Cache-Control": "no-store", "X-PDF-Photo-Mode": "trial-2560-q95" if photo_trial_enabled(current_user) else "original", "X-Pre-Estimate-Design": design_version(), "X-Proposal-Brand": brand_key(estimate)},
         background=BackgroundTask(temporary.cleanup),
     )
 
@@ -252,7 +253,7 @@ async def final_estimate(
         await db.commit()
     temporary = tempfile.TemporaryDirectory(prefix="wallpanels-final-")
     try:
-        path = await _render_final(estimate, temporary.name)
+        path = await _render_final(estimate, temporary.name, current_user)
     except Exception:
         temporary.cleanup()
         raise
@@ -261,6 +262,6 @@ async def final_estimate(
         path, media_type="application/pdf",
         filename=f"Final Estimate - {profile(brand_key(estimate)).label} - {client}.pdf",
         content_disposition_type="attachment" if download else "inline",
-        headers={"Cache-Control": "no-store", "X-WallPanels-Company-Pages": str(profile(brand_key(estimate)).company_pages), "X-Proposal-Brand": brand_key(estimate)},
+        headers={"Cache-Control": "no-store", "X-PDF-Photo-Mode": "trial-2560-q95" if photo_trial_enabled(current_user) else "original", "X-WallPanels-Company-Pages": str(profile(brand_key(estimate)).company_pages), "X-Proposal-Brand": brand_key(estimate)},
         background=BackgroundTask(temporary.cleanup),
     )

@@ -129,6 +129,14 @@ def _photo_paths(zone):
 
 
 def _contain(c, path, x, y, w, h):
+    from .pdf_optimization import _trial_jpeg
+    trial = _trial_jpeg(path)
+    if trial is not None:
+        iw, ih = trial.getSize()
+        scale = min(w / iw, h / ih)
+        c.drawImage(trial, x + (w - iw * scale) / 2, y + (h - ih * scale) / 2,
+                    iw * scale, ih * scale, mask="auto")
+        return
     with Image.open(path) as original:
         im = ImageOps.exif_transpose(original).convert("RGBA")
         scale = min(w / im.width, h / im.height)
