@@ -1,4 +1,4 @@
-"""Owner-only batch entry: real API checks in audit_workflows' disposable schema."""
+"""Shared employee batch entry: real API checks in audit_workflows' disposable schema."""
 import asyncio
 from copy import deepcopy
 from decimal import Decimal
@@ -17,8 +17,6 @@ async def check_manual_batch(call, c, tokens):
     original_revision = est['revision']
     c.headers['If-Match'] = original_revision
     c.headers['Authorization'] = 'Bearer ' + tokens[1]
-    await call('POST', path+'/manual-batch',403,json=payload)
-    c.headers['Authorization'] = 'Bearer ' + tokens[0]
     invalid = deepcopy(payload); invalid['rows'][1]['total_price'] = '-1'
     await call('POST', path+'/manual-batch',422,json=invalid)
     invalid = deepcopy(payload); invalid['rows'][0]['total_price'] = '10'
@@ -57,3 +55,4 @@ async def check_manual_batch(call, c, tokens):
     assert Decimal(final['subtotal'])==44245
     pre=(await call('GET',path)).json();assert Decimal(pre['subtotal'])==44220
     c.headers.pop('If-Match',None)
+    c.headers['Authorization'] = 'Bearer ' + tokens[0]

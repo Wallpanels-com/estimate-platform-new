@@ -97,5 +97,23 @@ Table base - 5 Lin x 500 = 2500`);
   assert.equal(closed,1);assert.equal(requests[0].request_id,requests[1].request_id);assert.equal(requests[1].rows[1].quantity,'140.00');
   await act(async()=>root.unmount());
  }
+ localStorage.setItem('wallpanels.ui-language','en');
+ const aiRoot=createRoot(document.getElementById('root'));let aiCalls=0,saveCalls=0,releaseAI;
+ const aiResult={rows:[{name:'Cabinets',section:'General',quantity:'2.00',unit:'LF',unit_price:'10.00',total_price:'20.00',source:'Cabinets two LF at 10, total 20'}]};
+ await act(async()=>aiRoot.render(h(LanguageProvider,null,h(ManualBatch,{onBusy:()=>{},onClose:()=>{},onAdd:async()=>saveCalls++,onParse:async()=>{aiCalls++;if(aiCalls===1)throw new Error('AI unavailable');return await new Promise(resolve=>releaseAI=()=>resolve(aiResult));}}))));
+ const aiButton=text=>[...document.querySelectorAll('button')].find(b=>b.textContent===text);
+ await act(async()=>aiButton('Paste list').click());
+ const pasted='Cabinets two LF at 10, total 20';
+ await act(async()=>{const el=document.querySelector('textarea');Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value').set.call(el,pasted);el.dispatchEvent(new Event('input',{bubbles:true}));});
+ await act(async()=>aiButton('Parse with AI').click());
+ assert.equal(document.querySelector('textarea').value,pasted);assert.equal(saveCalls,0);
+ await act(async()=>aiButton('Parse with AI').click());
+ assert.equal(document.querySelector('textarea').disabled,true);assert.equal(aiButton('Add items').disabled,true);assert.equal(aiButton('Cancel').disabled,true);
+ await act(async()=>releaseAI());
+ assert.equal(document.querySelector('.batch-entry input').value,'Cabinets');assert.equal(saveCalls,0);
+ await act(async()=>aiButton('Add items').click());assert.equal(saveCalls,0);
+ await act(async()=>document.querySelector('.batch-review input[type=checkbox]').click());
+ await act(async()=>aiButton('Add items').click());assert.equal(saveCalls,1);
+ await act(async()=>aiRoot.unmount());
  console.log('Manual batch: parser, decimal arithmetic, RU/EN editing, ordering and idempotent retry passed');
 } finally {await rm(dir,{recursive:true,force:true});dom.window.close();}

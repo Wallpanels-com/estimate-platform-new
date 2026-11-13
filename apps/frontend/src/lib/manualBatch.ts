@@ -62,7 +62,8 @@ export function mismatch(row: BatchRow) {
 }
 export function rowError(row: BatchRow): string | null {
   if (!row.name.trim()) return "Enter an item name.";
-  if (row.name.trim().length > 500) return "Use up to 500 characters for an item name.";
+  if (row.name.trim().length > 500)
+    return "Use up to 500 characters for an item name.";
   if (!row.section.trim()) return "Enter a section.";
   if (decimal(row.total_price) === null) return "Enter a valid amount.";
   if (row.quantity || row.unit_price) {
@@ -147,3 +148,15 @@ export function parseList(text: string): BatchRow[] {
   }
   return rows;
 }
+
+export type AIParsedRow = Pick<
+  BatchRow,
+  | "name"
+  | "section"
+  | "quantity"
+  | "unit"
+  | "unit_price"
+  | "total_price"
+  | "source"
+>;
+export type ParseBatch = (text: string) => Promise<{ rows: AIParsedRow[] }>;

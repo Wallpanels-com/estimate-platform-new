@@ -4,6 +4,7 @@ import {
   ArrowUp,
   ClipboardPaste,
   Plus,
+  ScanText,
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
@@ -21,14 +22,17 @@ import {
   rowError,
   type BatchRow,
   type BatchPayload,
+  type ParseBatch,
 } from "../lib/manualBatch";
 
 export default function ManualBatch({
   onAdd,
+  onParse,
   onClose,
   onBusy,
 }: {
   onAdd: (data: BatchPayload) => Promise<void>;
+  onParse?: ParseBatch;
   onClose: () => void;
   onBusy: (value: boolean) => void;
 }) {
@@ -39,9 +43,11 @@ export default function ManualBatch({
   const [open, setOpen] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [parsing, setParsing] = useState(false);
+  const parsingRef = useRef(false);
   const [pending, setPending] = useState<BatchPayload | null>(null);
   const sending = useRef(false);
-  const locked = busy || !!pending;
+  const locked = busy || parsing || !!pending;
   const total = rows.reduce(
     (sum, row) => sum + (cents(row.total_price) ?? 0n),
     0n,
@@ -95,8 +101,49 @@ export default function ManualBatch({
       setError(t(errorMessage(e)));
     }
   }
+  async function parseWithAI() {
+    if (!onParse || parsingRef.current || locked) return;
+    if (
+      text.length > 16000 ||
+      text.split(/\r?\n/).filter((line) => line.trim()).length > 60
+    ) {
+      setError(
+        t("Use up to 60 non-empty lines and 16000 characters for AI parsing."),
+      );
+      return;
+    }
+    parsingRef.current = true;
+    setParsing(true);
+    onBusy(true);
+    setError("");
+    try {
+      const result = await onParse(text);
+      const existing = rows.filter(
+        (r) =>
+          r.name ||
+          r.total_price ||
+          r.quantity ||
+          r.unit_price ||
+          r.description,
+      );
+      if (existing.length + result.rows.length > 200)
+        throw new Error("Use up to 200 lines at a time.");
+      setRows([
+        ...existing,
+        ...result.rows.map((row) => ({ ...blankRow(), ...row, review: true })),
+      ]);
+      setText("");
+      setPasting(false);
+    } catch (e) {
+      setError(t(errorMessage(e)));
+    } finally {
+      parsingRef.current = false;
+      setParsing(false);
+      onBusy(false);
+    }
+  }
   async function save() {
-    if (sending.current) return;
+    if (sending.current || parsingRef.current) return;
     const invalid = rows.find((row) => rowError(row));
     if (!pending && invalid) {
       setError(t(rowError(invalid)!));
@@ -146,6 +193,7 @@ export default function ManualBatch({
             <Field label={t("Paste your item list")}>
               <textarea
                 rows={6}
+                disabled={locked}
                 value={text}
                 maxLength={100000}
                 onChange={(e) => setText(e.target.value)}
@@ -154,9 +202,21 @@ export default function ManualBatch({
                 }
               />
             </Field>
-            <Button onClick={parse} disabled={!text.trim() || locked}>
-              {t("Review list")}
-            </Button>
+            <div className="button-row">
+              <Button onClick={parse} disabled={!text.trim() || locked}>
+                {t("Review list")}
+              </Button>
+              {onParse && (
+                <Button
+                  onClick={parseWithAI}
+                  busy={parsing}
+                  disabled={!text.trim() || locked}
+                >
+                  <ScanText size={16} />
+                  {t(parsing ? "Parsing list…" : "Parse with AI")}
+                </Button>
+              )}
+            </div>
           </div>
         )}
         {error ? <ErrorNotice>{error}</ErrorNotice> : null}
@@ -347,13 +407,13 @@ export default function ManualBatch({
         </div>
       </div>
       <footer className="modal-footer">
-        <Button disabled={busy} onClick={onClose}>
+        <Button disabled={busy || parsing} onClick={onClose}>
           {t("Cancel")}
         </Button>
         <Button
           variant="primary"
           busy={busy}
-          disabled={!rows.length}
+          disabled={!rows.length || parsing}
           onClick={save}
         >
           {t(pending ? "Retry save" : "Add items")}

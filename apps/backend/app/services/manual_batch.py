@@ -1,4 +1,4 @@
-"""Owner-only manual-list pilot. Reuses line items and transaction audit receipts."""
+"""Transactional manual-list entry. Reuses line items and transaction audit receipts."""
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Literal
 import hashlib
@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from app.models.estimate import Estimate, LineItem
 from app.models.governance import AuditEvent
-from app.services.page_access import require_manager
+from app.services.page_access import require_any
 
 
 class ManualRow(BaseModel):
@@ -50,7 +50,7 @@ class ManualBatch(BaseModel):
 
 
 async def save_batch(estimate_id, data, user, db, load_estimate, recalc_totals, touch):
-    require_manager(user)
+    require_any(user, "estimates", "quick_estimate")
     # Lock before checking the receipt: a concurrent retry must see the commit.
     source = (await db.execute(select(Estimate.source_estimate_id).where(Estimate.id == estimate_id))).scalar_one_or_none()
     await db.execute(select(Estimate.id).where(Estimate.id == (source or estimate_id)).with_for_update())

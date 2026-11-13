@@ -22,6 +22,7 @@ from app.services.proposal_brands import select_brand
 from app.services.proposal_display import select_display_options
 from app.services.presentation_tax import TaxOptions, tax_options, select_tax, proposal_subtotal, breakdown
 from app.services.manual_batch import ManualBatch, save_batch
+from app.services.manual_import_ai import ParseInput, parse_list
 from app.core.estimate_routes import EstimateRoute
 
 router = APIRouter(prefix="/estimates", tags=["estimates"], route_class=EstimateRoute)
@@ -421,6 +422,20 @@ async def list_line_items(
 ):
     est = await load_estimate(estimate_id, current_user, db)
     return est.line_items
+
+
+@router.post("/{estimate_id}/manual-parse")
+async def parse_manual_list(
+    estimate_id: uuid.UUID, data: ParseInput,
+    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user),
+):
+    # Read-only preview: do not hold an estimate edit lock during an external call.
+    exists = await db.scalar(select(Estimate.id).where(Estimate.id == estimate_id, Estimate.deleted_at.is_(None)))
+    if not exists:
+        raise HTTPException(404, "Estimate not found")
+    user_id = current_user.id
+    await db.rollback()
+    return await parse_list(data.text, user_id)
 
 
 @router.post("/{estimate_id}/manual-batch", response_model=EstimateOut)

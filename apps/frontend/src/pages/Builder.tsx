@@ -1,4 +1,4 @@
-import type { BatchPayload } from "../lib/manualBatch";
+import type { BatchPayload, AIParsedRow } from "../lib/manualBatch";
 import { PageGate } from "../components/PageGate";
 import { useAuth } from "../lib/auth";
 import { canAccess, firstPage } from "../lib/access";
@@ -999,7 +999,12 @@ export default function Builder() {
             initial={adding}
             onClose={() => setAdding(null)}
             onAdd={addItems}
-            onBatch={me?.can_manage_access ? addBatch : undefined}
+            onBatch={addBatch}
+            onParseBatch={(text) =>
+              post<{ rows: AIParsedRow[] }>(`/estimates/${id}/manual-parse`, {
+                text,
+              })
+            }
           />
         ) : null}
       </ModalPresence>

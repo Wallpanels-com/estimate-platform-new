@@ -1,5 +1,5 @@
 import ManualBatch from "./ManualBatch";
-import type { BatchPayload } from "../lib/manualBatch";
+import type { BatchPayload, ParseBatch } from "../lib/manualBatch";
 import Select, { Combobox } from "./Select";
 import CatalogPicker from "./pricebook/CatalogPicker";
 import ItemForm from "./pricebook/ItemForm";
@@ -29,6 +29,7 @@ export default function AddItems({
   zone,
   onAdd,
   onBatch,
+  onParseBatch,
   onClose,
   initial = "calculator",
   canEditPriceBook = true,
@@ -36,6 +37,7 @@ export default function AddItems({
   zone: Zone;
   onAdd: (items: CalculatedItem[]) => Promise<void>;
   onBatch?: (data: BatchPayload) => Promise<void>;
+  onParseBatch?: ParseBatch;
   onClose: () => void;
   initial?: "calculator" | "manual" | "services" | "catalog";
   canEditPriceBook?: boolean;
@@ -226,7 +228,12 @@ export default function AddItems({
           </div>
         ) : null}
         {tab === "manual" && onBatch ? (
-          <ManualBatch onAdd={onBatch} onClose={onClose} onBusy={setBusy} />
+          <ManualBatch
+            onAdd={onBatch}
+            onParse={onParseBatch}
+            onClose={onClose}
+            onBusy={setBusy}
+          />
         ) : tab === "manual" ? (
           <form onSubmit={manual}>
             <div className="modal-body form-grid">

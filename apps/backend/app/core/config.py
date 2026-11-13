@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
     OPENAI_API_KEY: str = ""
     GROQ_API_KEY: str = Field(default="", repr=False)
+    MANUAL_IMPORT_GROQ_API_KEY: str = Field(default="", repr=False)
+    MANUAL_IMPORT_AI_MODEL: str = "openai/gpt-oss-120b"
     HR_AI_MODEL: str = "openai/gpt-oss-120b"
     FRONTEND_DIST: str = ""
     AGENTATION_USER_ID: UUID | None = None
