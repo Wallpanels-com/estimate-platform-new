@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.schema_version import current_revision
 from app.core.database import engine, Base, AsyncSessionLocal
 from app.api.v1 import auth, estimates, voice, files, pdf, pricing, zones, pricebook, users, governance, backups, hr
+from app.api.v1 import sales
 from app.services import audit  # register transaction-level audit hooks
 
 
@@ -33,9 +34,17 @@ async def lifespan(app: FastAPI):
     await run_in_threadpool(warm_static_images)
     from app.services.backups import daily_backups
     backup_task = asyncio.create_task(daily_backups()) if settings.BACKUP_ENABLED else None
+    from app.services.sales.sync import run_worker
+    sales_task = asyncio.create_task(run_worker()) if settings.SALES_SYNC_ENABLED else None
     try:
         yield
     finally:
+        if sales_task:
+            sales_task.cancel()
+            try:
+                await sales_task
+            except asyncio.CancelledError:
+                pass
         if backup_task:
             backup_task.cancel()
             try:
@@ -50,6 +59,8 @@ app = FastAPI(title="Estimate Platform API", version="1.0.0", lifespan=lifespan)
 @app.middleware('http')
 async def frame_policy(request: Request, call_next):
     response = await call_next(request)
+    if request.url.path.startswith('/api/v1/sales'):
+        response.headers['Cache-Control'] = 'no-store'
     if settings.PORTAL_AUTH_ENABLED or settings.PORTAL_EMBED_ENABLED:
         from urllib.parse import urlsplit
         parsed = urlsplit(settings.PORTAL_BASE_URL)
@@ -79,6 +90,7 @@ app.include_router(users.router, prefix="/api/v1")
 app.include_router(governance.router, prefix="/api/v1")
 app.include_router(backups.router, prefix="/api/v1")
 app.include_router(hr.router, prefix="/api/v1")
+app.include_router(sales.router, prefix="/api/v1")
 
 
 @app.get("/health")

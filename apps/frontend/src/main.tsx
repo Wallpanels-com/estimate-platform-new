@@ -29,6 +29,7 @@ const QuickEstimate = lazy(() => import("./pages/QuickEstimate"));
 const Staff = lazy(() => import("./pages/Staff"));
 const HR = lazy(() => import("./pages/HR"));
 const Users = lazy(() => import("./pages/Users"));
+const SalesControl = lazy(() => import("./pages/SalesControl"));
 const client = new QueryClient({
   defaultOptions: {
     queries: {
@@ -64,6 +65,7 @@ function App() {
         <Route path="/register" element={<Auth register />} />
         <Route element={<Protected />}>
           <Route element={<Shell />}>
+            <Route path="sales-control" element={<SalesControl />} />
             <Route
               index
               element={

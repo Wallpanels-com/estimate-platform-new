@@ -9,6 +9,18 @@ LEGACY_PAGES = ('estimates', 'quick_estimate', 'price_book', 'users', 'trash')
 PAGES = (*LEGACY_PAGES, 'hr')
 
 
+def can_view_sales(user):
+    """Immutable owner only, including the owner's Estimator embedded session.
+
+    Not a grantable page: employee page_access and roles cannot grant this pilot.
+    """
+    owner = settings.ACCESS_MANAGER_USER_ID or settings.AGENTATION_USER_ID
+    if not (owner and getattr(user, 'is_active', False) and user.id == owner):
+        return False
+    identity = getattr(user, '_portal_profile', None)
+    return identity is None or (identity.get('owner') is True and identity.get('module') in (None, 'estimating'))
+
+
 def is_access_manager(user):
     identity = getattr(user, '_portal_profile', None)
     if identity is not None:
@@ -48,6 +60,12 @@ async def authorize_request(user, db, request):
     """One boundary for every authenticated API, including media and exports."""
     path = request.url.path.removeprefix('/api/v1').rstrip('/')
     method = request.method
+    if path == '/sales' or path.startswith('/sales/'):
+        if not can_view_sales(user):
+            raise HTTPException(403, 'Sales Control is available only to the platform owner.')
+        if method not in ('GET', 'HEAD'):
+            raise HTTPException(405, 'Sales Control is read-only.')
+        return
     if path.startswith('/auth/'):
         return  # Login/profile/password-self remain available even with no grants.
     if path == '/hr' or path.startswith('/hr/'):

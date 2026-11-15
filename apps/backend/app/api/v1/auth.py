@@ -80,6 +80,8 @@ def user_profile(user: User) -> UserOut:
     from app.services.page_access import allowed_pages, is_access_manager
     profile.page_access = allowed_pages(user)
     profile.can_manage_access = is_access_manager(user)
+    from app.services.page_access import can_view_sales
+    profile.sales_control_enabled = can_view_sales(user)
     profile.agentation_enabled = bool(user.is_active and settings.AGENTATION_USER_ID and user.id == settings.AGENTATION_USER_ID)
     identity = getattr(user, '_portal_profile', None)
     if identity is not None:

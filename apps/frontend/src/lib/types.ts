@@ -1,5 +1,6 @@
 export type NumberValue = number | string | null;
 export interface User {
+  sales_control_enabled?: boolean;
   portal_managed?: boolean;
   id: string;
   email: string;

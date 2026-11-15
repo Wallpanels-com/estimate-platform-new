@@ -5,3 +5,4 @@ from app.models.estimate import Estimate, EstimateZone, LineItem, EstimateImage,
 from app.models.hr import Vacancy, Candidate, ImportBatch, CandidateAIReview, CandidateStatus, CandidateAttachment, HRTranslation
 
 from app.models.staff import StaffMember, StaffChart
+from app.models.sales import SalesRecord, SalesSync, SalesJob, SalesAnalysis

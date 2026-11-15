@@ -14,6 +14,13 @@ class Settings(BaseSettings):
     MANUAL_IMPORT_GROQ_API_KEY: str = Field(default="", repr=False)
     MANUAL_IMPORT_AI_MODEL: str = "openai/gpt-oss-120b"
     HR_AI_MODEL: str = "openai/gpt-oss-120b"
+    SALES_GHL_LOCATION_ID: str = ""
+    SALES_GHL_TOKEN: str = Field(default="", repr=False)
+    SALES_GROQ_API_KEY: str = Field(default="", repr=False)
+    SALES_AI_MODEL: str = "openai/gpt-oss-120b"
+    SALES_SYNC_ENABLED: bool = False
+    SALES_HISTORY_DAYS: int = 90
+    SALES_AI_DAILY_LIMIT: int = 150
     FRONTEND_DIST: str = ""
     AGENTATION_USER_ID: UUID | None = None
     ACCESS_MANAGER_USER_ID: UUID | None = None

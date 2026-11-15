@@ -8,6 +8,7 @@ import {
   Trash2,
   LogOut,
   Users,
+  Activity,
   BriefcaseBusiness,
   PanelLeftClose,
   PanelLeftOpen,
@@ -60,6 +61,9 @@ export default function Shell() {
             className="embedded-navigation"
             aria-label={t("Estimate navigation")}
           >
+            {user?.sales_control_enabled && (
+              <NavLink to="/sales-control">Sales Control</NavLink>
+            )}
             {(
               [
                 ["estimates", "/", "Estimates"],
@@ -125,6 +129,16 @@ export default function Shell() {
           </div>
         </div>
         <nav id="main-navigation" aria-label={t("Main navigation")}>
+          {user?.sales_control_enabled && (
+            <NavLink
+              to="/sales-control"
+              aria-label="Sales Control"
+              title={collapsed ? "Sales Control" : undefined}
+            >
+              <Activity size={18} />
+              <span className="nav-label">Sales Control</span>
+            </NavLink>
+          )}
           {canAccess(user, "estimates") ? (
             <NavLink
               aria-label={t("Estimates")}
