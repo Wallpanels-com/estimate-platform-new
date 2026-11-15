@@ -65,12 +65,14 @@ status and assignment changes are stored from integration activation onward.
 
 Groq runs after available calls and after two minutes of message inactivity.
 Input is bounded to 60 messages / 45,000 characters; unchanged sources are not
-reanalyzed. The daily request budget (including failed requests) defaults to 150
+reanalyzed. The daily request budget (excluding rejected HTTP 429 requests) defaults to 150
 UTC; queued work resumes the next day. Each accepted finding must contain an exact
 quote from an included source. Strengths, issues and optional improvements are
 separate. Empty findings are valid. Reviews remain AI suggestions, not verified
 employee violations. No approved Sales Ops policy was supplied, so the prompt
 forbids inventing pricing, territory, delivery or company-policy rules.
+Provider rate limits pause the whole AI queue according to `Retry-After`, without
+blocking CRM synchronization or spending the daily budget on rejected retries.
 
 ## Operation
 

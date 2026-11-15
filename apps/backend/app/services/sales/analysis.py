@@ -107,11 +107,14 @@ async def analyze(db,job):
         db.add(usage)
     day=midnight.date().isoformat()
     count=usage.state.get('requests',0) if usage.state.get('day')==day else 0
+    blocked_until=stamp(usage.state.get('blocked_until'))
+    if blocked_until and blocked_until>now():
+        job.next_run=blocked_until;return False
     if count>=settings.SALES_AI_DAILY_LIMIT:
         job.next_run=midnight+timedelta(days=1);return False
-    # Count requests (including provider failures), not just completed reviews.
+    # Reserve requests; rate-limit rejections are refunded below.
     usage.state={'day':day,'requests':count+1,'limit':settings.SALES_AI_DAILY_LIMIT}
-    usage.last_success=now()
+    usage.last_success=now();usage.error=None
     await db.commit()
     async with httpx.AsyncClient(timeout=httpx.Timeout(60,connect=8),follow_redirects=False) as c:
         r=await c.post('https://api.groq.com/openai/v1/chat/completions',headers={'Authorization':'Bearer '+settings.SALES_GROQ_API_KEY},json={
@@ -123,6 +126,13 @@ async def analyze(db,job):
         job.error=f'Groq HTTP {r.status_code}; retry scheduled.'
         job.attempts+=1
         job.next_run=now()+timedelta(seconds=min(3600,60*2**min(job.attempts,6)))
+        if r.status_code==429:
+            try:delay=float(r.headers.get('retry-after','60'))
+            except (TypeError,ValueError):delay=60
+            blocked=now()+timedelta(seconds=max(30,min(86400,delay)))
+            usage.state={**usage.state,'requests':count,'blocked_until':blocked.isoformat()}
+            usage.error='Groq rate limit; analysis queue temporarily paused.'
+            job.next_run=blocked
         return False
     raw=json.loads(r.json()['choices'][0]['message']['content']);payload=validate_review(raw,sources)
     if unreviewed_calls:payload['limitations'].append('В диалоге есть звонки, содержание которых не включено в этот текстовый разбор.')

@@ -104,3 +104,22 @@ class SyncCursors(IsolatedAsyncioTestCase):
         with patch('app.services.sales.sync.state_for',AsyncMock(return_value=row)),patch('app.services.sales.sync.reconcile',AsyncMock()) as reconcile:
             with self.assertRaises(GhlError):await sync_resource(O(),client,'numbers')
             reconcile.assert_not_awaited();self.assertEqual(row.state,{})
+
+class ProviderBackoff(IsolatedAsyncioTestCase):
+    async def test_rate_limit_pauses_all_jobs_and_refunds_rejected_request(self):
+        from unittest.mock import AsyncMock, MagicMock
+        from app.models.sales import SalesSync
+        from app.services.sales.analysis import analyze
+        from app.services.sales.store import now,stamp
+        usage=O(state={'day':now().date().isoformat(),'requests':2},last_success=None,error=None)
+        async def get(model,key):return usage if model is SalesSync else None
+        db=O(get=get,commit=AsyncMock())
+        job=O(payload={'source_kind':'calls','id':'test'},attempts=0,error=None,next_run=now())
+        client=MagicMock();client.__aenter__=AsyncMock(return_value=client);client.__aexit__=AsyncMock(return_value=False)
+        client.post=AsyncMock(return_value=httpx.Response(429,headers={'retry-after':'45'},json={'error':{'code':'rate_limit'}}))
+        with patch.object(settings,'SALES_GROQ_API_KEY','synthetic'),patch.object(settings,'SALES_AI_DAILY_LIMIT',150),patch('app.services.sales.analysis.sources_for',AsyncMock(return_value=([{'id':'call:test','text':'Available conversation text for a grounded analysis. '*3}],None))),patch('app.services.sales.analysis.httpx.AsyncClient',return_value=client):
+            self.assertFalse(await analyze(db,job))
+            self.assertEqual(usage.state['requests'],2)
+            self.assertGreater(stamp(usage.state['blocked_until']),now())
+            self.assertFalse(await analyze(db,job))
+            client.post.assert_awaited_once()
