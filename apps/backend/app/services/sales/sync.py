@@ -105,7 +105,8 @@ async def sync_resource(db,c,resource):
         for item in d['callLogs']:
             await save(db,'calls',item)
             if item.get('transcript') and not item.get('trialCall') and (stamp(item.get('createdAt')) or now())>=cutoff:
-                await enqueue(db,'analysis','call:'+item['id'],{'source_kind':'calls','id':item['id']},priority=10)
+                priority=30 if (stamp(item.get('createdAt')) or cutoff)>=now()-timedelta(days=1) else 1
+                await enqueue(db,'analysis','call:'+item['id'],{'source_kind':'calls','id':item['id']},priority=priority)
         if d['callLogs'] and params['page']*50<d['total']:
             state={'page':params['page']+1,'total':d['total']};delay=0
         else:state={'page':1,'total':d['total'],'complete':True};delay=60
@@ -152,7 +153,9 @@ async def sync_messages(db,c,job):
         if not cursor or cursor==p.get('cursor'):raise ValueError('Repeated message cursor')
         p['cursor']=cursor;job.payload=p;job.next_run=now();return False
     await enqueue(db,'contact',p['contactId'],priority=job.priority)
-    await enqueue(db,'analysis','conversation:'+p['id'],{'source_kind':'messages','id':p['id'],'contactId':p['contactId']},priority=job.priority)
+    # Recent activity and explicitly opened clients outrank the archive backlog.
+    review_priority=max(20,job.priority) if job.priority>=5 else 0
+    await enqueue(db,'analysis','conversation:'+p['id'],{'source_kind':'messages','id':p['id'],'contactId':p['contactId']},priority=review_priority)
     sync=await state_for(db,'messages:'+p['id']);sync.last_success=now();sync.state={'complete':True,'history_days':settings.SALES_HISTORY_DAYS};sync.next_run=now()+timedelta(seconds=60);sync.error=None
     return True
 
