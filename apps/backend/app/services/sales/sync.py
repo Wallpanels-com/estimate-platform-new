@@ -257,6 +257,12 @@ async def run_worker():
                         tomorrow=now().replace(hour=0,minute=0,second=0,microsecond=0)+timedelta(days=1)
                         await db.execute(update(SalesJob).where(SalesJob.location_id==loc(),SalesJob.kind=='analysis',SalesJob.next_run==tomorrow).values(next_run=now()))
                         await db.commit()
+                # Previous builds treated absent transcripts as retryable GHL errors.
+                # Recheck them with the audio fallback immediately after upgrading.
+                async with AsyncSessionLocal() as db:
+                    await db.execute(update(SalesJob).where(SalesJob.location_id==loc(),SalesJob.kind=='transcript',SalesJob.error.like('%HTTP 400%')).values(next_run=now(),error=None))
+                    await db.execute(update(SalesJob).where(SalesJob.location_id==loc(),SalesJob.kind=='analysis',SalesJob.error.like('%HTTP 413%')).values(next_run=now(),error=None))
+                    await db.commit()
                 c=GhlClient()
                 try:
                     async def poll_loop(fn):
