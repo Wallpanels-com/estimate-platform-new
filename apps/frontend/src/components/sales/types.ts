@@ -51,6 +51,9 @@ export interface GhlRecord {
   messageId?: string;
   fromNumber?: string;
   availability?: string;
+  transcript_source?: string;
+  retry_at?: string;
+  meta?: { call?: { status?: string; duration?: number } };
   segments?: {
     transcript?: string;
     text?: string;
@@ -122,9 +125,12 @@ export interface SalesStatus {
   }[];
   history_days: number;
   ai_daily_limit: number;
+  ai_archive_automatic: boolean;
+  ai_usage: { day: string; reviews: number; transcriptions: number };
   location_id: string;
 }
 export interface ContactDetail {
+  location_id: string;
   contact: GhlRecord | null;
   conversations: GhlRecord[];
   opportunities: GhlRecord[];

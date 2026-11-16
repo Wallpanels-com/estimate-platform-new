@@ -588,3 +588,417 @@
   max-height: 160px;
   overflow-y: auto;
 }
+
+/* Sales controls reuse Estimator's shared choice surfaces and bronze accents. */
+.sales-filters > .choice {
+  min-width: 180px;
+  flex: 1 1 180px;
+}
+.sales-tab-explanation {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.sales-tab-explanation:empty {
+  display: none;
+}
+.sales-tab-explanation strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.sales-date-filters {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.sales-date-filters > small {
+  padding-bottom: 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.sales-date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  border-radius: var(--radius);
+}
+.sales-date-presets button {
+  border: 0;
+  background: transparent;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.sales-date-presets button[aria-pressed="true"] {
+  background: #eee8dc;
+  color: #684d24;
+}
+.sales-date-field {
+  display: grid;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  min-width: 170px;
+}
+.sales-date-trigger {
+  display: flex;
+  gap: 8px;
+  color: var(--ink);
+  justify-content: flex-start;
+}
+.sales-calendar {
+  margin: 0;
+  padding: 16px;
+  width: min(296px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px #24271e26;
+  font: inherit;
+}
+.sales-calendar-heading,
+.sales-calendar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sales-calendar-heading {
+  margin-bottom: 12px;
+  font-size: 13px;
+  text-transform: capitalize;
+}
+.sales-calendar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.sales-calendar button:hover {
+  background: #eee8dc;
+}
+.sales-calendar-week,
+.sales-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  text-align: center;
+}
+.sales-calendar-week {
+  color: var(--muted);
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+.sales-calendar-days .outside {
+  color: #77796f;
+}
+.sales-calendar-days [aria-current="date"] {
+  box-shadow: inset 0 0 0 1px #b49a68;
+}
+.sales-calendar-days [aria-pressed="true"] {
+  background: #71552a;
+  color: white;
+}
+.sales-calendar-actions {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.sales-calendar button:focus-visible,
+.sales-date-presets button:focus-visible {
+  outline: 2px solid #8a6a38;
+  outline-offset: 2px;
+}
+.sales-ghl-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sales-ghl-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #725522;
+  background: #f6f2e9;
+  border: 1px solid #e4d9c4;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.sales-ghl-link:hover {
+  background: #eee5d3;
+}
+.sales-chat-shell {
+  --chat-client: #fff;
+  --chat-company: #e9eee4;
+  --chat-note: #fff1bf;
+  --chat-call: #edf3f7;
+  --chat-event: #f1eaf6;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f3f3ee;
+}
+.sales-chat-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--paper);
+}
+.sales-chat-toolbar span,
+.sales-chat-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.sales-chat-toolbar button {
+  border: 0;
+  background: transparent;
+  color: #71552a;
+  cursor: pointer;
+  padding: 4px;
+}
+.sales-chat-scroll {
+  max-height: 60dvh;
+  min-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sales-chat-day {
+  align-self: center;
+  margin: 8px 0;
+  color: #60675d;
+  font-size: 11px;
+  background: #e6e8df;
+  border-radius: 20px;
+  padding: 6px 12px;
+}
+.sales-chat-bubble {
+  max-width: 78%;
+  min-width: min(220px, 100%);
+  padding: 12px 16px;
+  border: 1px solid #dfe1d8;
+  border-radius: 12px;
+  background: var(--chat-client);
+  align-self: flex-start;
+  box-shadow: 0 1px 2px #20282006;
+}
+.sales-chat-bubble.outgoing {
+  background: var(--chat-company);
+  align-self: flex-end;
+  border-bottom-right-radius: 3px;
+}
+.sales-chat-bubble.incoming {
+  border-bottom-left-radius: 3px;
+}
+.sales-chat-bubble.note {
+  background: var(--chat-note);
+  border-color: #e8d898;
+  align-self: center;
+  width: min(620px, 90%);
+}
+.sales-chat-bubble header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #59664e;
+  margin-bottom: 8px;
+}
+.sales-chat-bubble header span {
+  margin-left: auto;
+  font-size: 10px;
+  color: #676c62;
+}
+.sales-chat-bubble p {
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.sales-chat-bubble footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  color: #687260;
+  font-size: 10px;
+  margin-top: 8px;
+}
+.sales-chat-event {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 90%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #60675d;
+  background: #e9ebe3;
+  font-size: 11px;
+}
+.sales-chat-event.opportunity {
+  background: var(--chat-event);
+  color: #695475;
+}
+.sales-chat-event time {
+  white-space: nowrap;
+  font-size: 10px;
+  opacity: 0.8;
+}
+.sales-chat-call {
+  align-self: center;
+  width: min(700px, 100%);
+  border: 1px solid #cad8e2;
+  border-radius: 10px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  background: #edf3f7;
+  color: #294e64;
+  min-width: 0;
+}
+.sales-chat-call header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+}
+.sales-chat-call header time {
+  margin-left: auto;
+  font-size: 10px;
+  color: #576d7a;
+}
+.sales-call-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 11px;
+}
+.sales-chat-call .button {
+  border-color: #bccfdb;
+  color: #294e64;
+  background: #fff;
+}
+.sales-chat-call > p,
+.sales-chat-call small {
+  font-size: 12px;
+}
+.sales-calls-list {
+  display: grid;
+  gap: 16px;
+}
+.sales-calls-list .sales-chat-call {
+  width: 100%;
+}
+.sales-transcript-toggle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #294e64;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.sales-transcript-content {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 16px;
+  background: #ffffffb8;
+  border-radius: 8px;
+  color: var(--ink);
+}
+.sales-transcript-content p {
+  margin: 0;
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sales-transcript-content time {
+  font-size: 10px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+@media (max-width: 768px) {
+  .sales-chat-scroll {
+    padding: 12px;
+  }
+  .sales-chat-bubble {
+    max-width: 92%;
+  }
+  .sales-date-presets {
+    width: 100%;
+  }
+  .sales-date-field {
+    min-width: 0;
+    flex: 1 1 140px;
+  }
+}
+@media (max-width: 390px) {
+  .sales-chat-call,
+  .sales-chat-bubble {
+    padding: 12px;
+  }
+  .sales-chat-bubble.note {
+    max-width: 100%;
+    width: 100%;
+  }
+  .sales-chat-event {
+    max-width: 100%;
+  }
+  .sales-chat-scroll {
+    padding: 8px;
+  }
+  .sales-date-presets button {
+    flex: 1;
+    padding: 8px;
+  }
+}

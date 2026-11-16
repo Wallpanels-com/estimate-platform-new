@@ -23,27 +23,30 @@ conversation text for analysis, as authorized, but has no tools or CRM credentia
 
 ## Synchronization
 
-Three independent worker loops run under one Postgres advisory lock: resource
-polling, contact/message hydration, and AI reviews. Durable cursors and jobs survive
+Five independent worker loops run under one Postgres advisory lock: resource
+polling, background hydration, urgent opened-client hydration, AI reviews and audio transcription. Durable cursors and jobs survive
 restarts. Requests retry with backoff and surface permission/provider errors.
 
 - All opportunities import with stable cursors beyond 10,000 records, then repeat
   a full reconciliation after five minutes. Reports explicitly flag initial partial
   imports. Removed records are marked inactive only after a complete successful scan.
-- Changed opportunities use a separate read-only search about every 60 seconds,
+- Changed opportunities use a separate read-only search about every five seconds,
   with a five-minute overlap for indexing delays. Full scans reconcile deletions.
 - Phone numbers, users, recent conversations and Voice AI calls poll about every
-  60 seconds; UI refreshes its cache every 10–30 seconds. This is eventual consistency,
+  5–15 seconds; UI refreshes its cache every five seconds. This is eventual consistency,
   not a live audio stream or a guarantee of instantaneous CRM changes.
-- Pipelines, custom fields and agent directory refresh every ten minutes.
+- Pipelines/users refresh every 15 seconds; custom fields and agents every ten minutes.
 - Conversation/message history is loaded for the configured 90-day window, most
   recent first. Opening a client prioritizes missing data and refreshes cached
-  messages after 60 seconds, contact notes/tasks after five minutes. Up to 500
+  messages after five seconds, contact notes/tasks after 15 seconds. Up to 500
   cached messages are shown per client. Older opportunities remain searchable.
 - Notes are also read during complete opportunity scans. Internal comments are
   `TYPE_INTERNAL_COMMENT` messages; both preserve original text, author and time.
 - Voice AI call logs contain transcripts; regular phone transcripts are read when
-  available from GHL. Missing transcripts are explicitly marked, never invented.
+  available from GHL. For new/opened calls with no GHL transcript, existing audio
+  is uploaded to Groq whisper-large-v3-turbo (25 MB maximum). Timestamps are retained,
+  speakers are not inferred. Absent audio, silence and provider limits have distinct
+  UI states. Old unopened calls do not trigger automatic audio transcription.
   Audio is served through an authenticated backend proxy on demand.
 
 ## Features and interpretation
@@ -65,8 +68,12 @@ status and assignment changes are stored from integration activation onward.
 
 Groq runs after available calls and after two minutes of message inactivity.
 Input is bounded to 60 messages / 45,000 characters; unchanged sources are not
-reanalyzed. The daily request budget (excluding rejected HTTP 429 requests) defaults to 150
-UTC; queued work resumes the next day. Each accepted finding must contain an exact
+reanalyzed. Daily local caps default to zero (disabled), independently for analysis
+and ASR. Provider quotas still apply. `SALES_AI_ARCHIVE_AUTOMATIC=false` means
+only recent conversations and explicitly opened clients are automatically reviewed;
+low-priority archive jobs remain dormant, without consuming requests. A rejected
+HTTP 413 reduces the excerpt for retry; HTTP 429 pauses the respective worker.
+Neither blocks CRM synchronization. Each accepted finding must contain an exact
 quote from an included source. Strengths, issues and optional improvements are
 separate. Empty findings are valid. Reviews remain AI suggestions, not verified
 employee violations. No approved Sales Ops policy was supplied, so the prompt
@@ -88,3 +95,20 @@ GET-only portal endpoints, fixed upstream read/search operations, exact quote
 validation, cursor overlap, incomplete-list protection, credential scrubbing and
 timezones. Local/production QA additionally checks real GHL/Groq results, exports,
 responsive UI and employee denial.
+
+## Conversation UI and dates
+
+Recent conversations are sorted by their latest CRM event, not lead creation or
+proof that a live call is in progress. Activity date filters select that latest
+event; deal/report dates select creation time. Browser IANA timezone boundaries
+are converted to UTC, including DST. Messenger history combines messages and notes
+chronologically: client left, company right, yellow internal notes, blue calls,
+purple opportunity events. Unknown stage details are never inferred from generic
+GHL event text. Header links open GHL contact, conversation and opportunity records.
+Custom selects and calendar controls support keyboard navigation.
+
+Polling is near-real-time, not instant: provider indexing/quotas, backlog and
+network delays add latency. Opportunity deletions require a full successful scan.
+Messages within the imported date window, contact notes/tasks, numbers and users
+are retired locally only after successful complete reconciliation. No webhook or
+CRM setting is changed by the portal.

@@ -3,6 +3,7 @@ import csv
 import io
 from datetime import date, datetime, timezone, timedelta
 from decimal import Decimal, InvalidOperation
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
@@ -21,7 +22,16 @@ router=APIRouter(prefix='/sales',tags=['Sales Control'],dependencies=[Depends(ge
 def base(kind): return select(R).where(R.location_id==loc(),R.kind==kind,R.active==True)
 def serial(row): return {**row.payload,'_id':row.external_id,'_synced_at':row.seen_at,'_changed_at':row.changed_at,'_active':row.active}
 
-def conditions(q='',pipeline='',stage='',owner='',status='',source='',from_date=None,to_date=None):
+def date_conditions(from_date=None,to_date=None,time_zone='UTC'):
+    if from_date and to_date and from_date>to_date:raise HTTPException(422,'Start date must precede end date.')
+    try:tz=ZoneInfo(time_zone)
+    except (ZoneInfoNotFoundError,ValueError):raise HTTPException(422,'Unknown time zone.') from None
+    result=[]
+    if from_date:result.append(R.occurred_at>=datetime.combine(from_date,datetime.min.time(),tzinfo=tz).astimezone(timezone.utc))
+    if to_date:result.append(R.occurred_at<datetime.combine(to_date+timedelta(days=1),datetime.min.time(),tzinfo=tz).astimezone(timezone.utc))
+    return result
+
+def conditions(q='',pipeline='',stage='',owner='',status='',source='',from_date=None,to_date=None,time_zone='UTC'):
     result=[];p=R.payload
     if q:
         term='%'+q.replace('\\','\\\\').replace('%','\\%').replace('_','\\_')+'%'
@@ -30,26 +40,27 @@ def conditions(q='',pipeline='',stage='',owner='',status='',source='',from_date=
         if value: result.append(p[key].astext==value)
     if status=='review':result.append(p['status'].astext.in_(['lost','abandoned']))
     elif status:result.append(p['status'].astext==status)
-    if from_date:result.append(R.occurred_at>=datetime.combine(from_date,datetime.min.time(),tzinfo=timezone.utc))
-    if to_date:result.append(R.occurred_at<datetime.combine(to_date+timedelta(days=1),datetime.min.time(),tzinfo=timezone.utc))
+    result.extend(date_conditions(from_date,to_date,time_zone))
     return result
 
-def filters(q:str=Query('',max_length=200),pipeline:str='',stage:str='',owner:str='',status:str='',source:str='',from_date:date|None=None,to_date:date|None=None):
-    if from_date and to_date and from_date>to_date:raise HTTPException(422,'Start date must precede end date.')
-    return dict(q=q,pipeline=pipeline,stage=stage,owner=owner,status=status,source=source,from_date=from_date,to_date=to_date)
+def filters(q:str=Query('',max_length=200),pipeline:str='',stage:str='',owner:str='',status:str='',source:str='',from_date:date|None=None,to_date:date|None=None,time_zone:str='UTC'):
+    date_conditions(from_date,to_date,time_zone)
+    return dict(q=q,pipeline=pipeline,stage=stage,owner=owner,status=status,source=source,from_date=from_date,to_date=to_date,time_zone=time_zone)
 
 @router.get('/status')
 async def status(db:AsyncSession=Depends(get_db)):
     states=(await db.scalars(select(SalesSync).where(SalesSync.location_id==loc(),~SalesSync.resource.like('contact:%'),~SalesSync.resource.like('messages:%')))).all()
     counts=dict((await db.execute(select(R.kind,func.count()).where(R.location_id==loc(),R.active==True).group_by(R.kind))).all())
-    jobs=(await db.execute(select(SalesJob.kind,func.count()).where(SalesJob.location_id==loc()).group_by(SalesJob.kind))).all()
-    errors=(await db.execute(select(SalesJob.kind,SalesJob.error,func.count()).where(SalesJob.location_id==loc(),SalesJob.error.is_not(None)).group_by(SalesJob.kind,SalesJob.error))).all()
+    jobs=(await db.execute(select(SalesJob.kind,func.count()).where(SalesJob.location_id==loc(),or_(SalesJob.kind!='analysis',SalesJob.priority>=20) if not settings.SALES_AI_ARCHIVE_AUTOMATIC else True).group_by(SalesJob.kind))).all()
+    errors=(await db.execute(select(SalesJob.kind,SalesJob.error,func.count()).where(SalesJob.location_id==loc(),SalesJob.error.is_not(None),or_(SalesJob.kind!='analysis',SalesJob.priority>=20) if not settings.SALES_AI_ARCHIVE_AUTOMATIC else True).group_by(SalesJob.kind,SalesJob.error))).all()
     analyses=await db.scalar(select(func.count()).select_from(SalesAnalysis).where(SalesAnalysis.location_id==loc()))
     concerns=await db.scalar(select(func.count()).select_from(SalesAnalysis).where(SalesAnalysis.location_id==loc(),SalesAnalysis.payload['outcome'].astext=='review_needed'))
-    return {'configured':bool(settings.SALES_GHL_TOKEN and loc()),'enabled':settings.SALES_SYNC_ENABLED,'read_only':True,'owner_only':True,'location_id':loc(),
+    today=now().date().isoformat()
+    usage={s.resource:s.state.get('requests',0) if s.state.get('day')==today else 0 for s in states}
+    return {'ai_usage':{'day':today,'reviews':usage.get('analysis_usage',0),'transcriptions':usage.get('transcription_usage',0)},'configured':bool(settings.SALES_GHL_TOKEN and loc()),'enabled':settings.SALES_SYNC_ENABLED,'read_only':True,'owner_only':True,'location_id':loc(),
         'counts':counts,'analyses':analyses,'concerns':concerns,'jobs':dict(jobs),'job_errors':[{'kind':k,'error':e,'count':n} for k,e,n in errors],
         'resources':[{'name':s.resource,'last_success':s.last_success,'next_run':s.next_run,'error':s.error,'state':s.state} for s in states],
-        'history_days':settings.SALES_HISTORY_DAYS,'ai_daily_limit':settings.SALES_AI_DAILY_LIMIT,'policy_status':'no_approved_sales_ops'}
+        'history_days':settings.SALES_HISTORY_DAYS,'ai_daily_limit':settings.SALES_AI_DAILY_LIMIT,'ai_archive_automatic':settings.SALES_AI_ARCHIVE_AUTOMATIC,'policy_status':'no_approved_sales_ops'}
 
 @router.get('/lookups')
 async def lookups(db:AsyncSession=Depends(get_db)):
@@ -74,8 +85,8 @@ async def opportunities(f:dict=Depends(filters),page:int=Query(1,ge=1),limit:int
     return {'items':[{**serial(r),'_latest_comment':comments.get(r.contact_id)} for r in items],'total':total,'page':page,'limit':limit}
 
 @router.get('/activity')
-async def activity(q:str=Query('',max_length=200),owner:str='',page:int=Query(1,ge=1),db:AsyncSession=Depends(get_db)):
-    query=base('conversations')
+async def activity(q:str=Query('',max_length=200),owner:str='',from_date:date|None=None,to_date:date|None=None,time_zone:str='UTC',page:int=Query(1,ge=1),db:AsyncSession=Depends(get_db)):
+    query=base('conversations').where(*date_conditions(from_date,to_date,time_zone))
     if q:query=query.where(or_(R.payload['contactName'].astext.ilike('%'+q+'%'),R.payload['fullName'].astext.ilike('%'+q+'%')))
     if owner:query=query.where(R.payload['assignedTo'].astext==owner)
     total=await db.scalar(select(func.count()).select_from(query.subquery()))
@@ -112,7 +123,7 @@ async def contact(contact_id:str,db:AsyncSession=Depends(get_db)):
     if not existing:raise HTTPException(404,'Contact is not present in the synchronized location.')
     contact_row=await get_record(db,'contacts',contact_id)
     state=await db.get(SalesSync,(loc(),'contact:'+contact_id))
-    if not state or not state.last_success or now()-state.last_success>timedelta(minutes=5):
+    if not state or not state.last_success or now()-state.last_success>timedelta(seconds=15):
         await enqueue(db,'contact',contact_id,priority=50)
     # Existing cached conversations are enough for most records; discover on demand otherwise.
     conversations=(await db.scalars(base('conversations').where(R.contact_id==contact_id))).all()
@@ -120,15 +131,19 @@ async def contact(contact_id:str,db:AsyncSession=Depends(get_db)):
         await enqueue(db,'discover',contact_id,priority=50)
     for row in conversations:
         s=await db.get(SalesSync,(loc(),'messages:'+row.external_id))
-        if not s or not s.last_success or now()-s.last_success>timedelta(seconds=60):
+        if not s or not s.last_success or now()-s.last_success>timedelta(seconds=5):
             await enqueue(db,'messages',row.external_id,{'id':row.external_id,'contactId':contact_id},priority=50)
     grouped={}
     for kind in ('opportunities','notes','tasks','calls','transcripts'):
         grouped[kind]=[serial(r) for r in (await db.scalars(base(kind).where(R.contact_id==contact_id).order_by(R.occurred_at.desc().nullslast()))).all()]
+    # Opening a client explicitly promotes archived Voice AI calls for review.
+    for call in grouped['calls']:
+        if call.get('transcript'):
+            await enqueue(db,'analysis','call:'+call['_id'],{'source_kind':'calls','id':call['_id'],'contactId':contact_id},priority=50)
     messages=(await db.scalars(base('messages').where(R.contact_id==contact_id).order_by(R.occurred_at.desc().nullslast()).limit(500))).all()
     reviews=(await db.scalars(select(SalesAnalysis).where(SalesAnalysis.location_id==loc(),SalesAnalysis.contact_id==contact_id).order_by(SalesAnalysis.created_at.desc()).limit(30))).all()
     pending=await db.scalar(select(func.count()).select_from(SalesJob).where(SalesJob.location_id==loc(),or_(SalesJob.payload['contactId'].astext==contact_id,SalesJob.key=='contact:'+contact_id,SalesJob.key=='discover:'+contact_id)))
-    return {'contact':serial(contact_row) if contact_row else None,'conversations':[serial(r) for r in conversations],**grouped,'messages':[serial(r) for r in messages],
+    return {'location_id':loc(),'contact':serial(contact_row) if contact_row else None,'conversations':[serial(r) for r in conversations],**grouped,'messages':[serial(r) for r in messages],
         'analyses':[{'id':r.source_id,'created_at':r.created_at,**r.payload} for r in reviews],
         'pending':pending,'history_days':settings.SALES_HISTORY_DAYS,'message_limit':500,'warning':state.error if state else None}
 
@@ -191,3 +206,21 @@ async def recording(message_id:str,db:AsyncSession=Depends(get_db)):
         return Response(content,media_type=mime,headers={'Cache-Control':'no-store'})
     except GhlError:raise HTTPException(404,'Recording is not available through this API.') from None
     finally:await c.close()
+
+
+@router.get('/transcripts/{message_id}')
+async def transcript(message_id:str,db:AsyncSession=Depends(get_db)):
+    message=await get_record(db,'messages',message_id)
+    voice=await db.scalar(base('calls').where(R.payload['messageId'].astext==message_id).limit(1))
+    if not voice and (not message or message.payload.get('messageType')!='TYPE_CALL'):
+        raise HTTPException(404,'Call not found in this location.')
+    row=await get_record(db,'transcripts',message_id)
+    terminal=('available','not_recorded','no_speech','too_large')
+    if not row or row.payload.get('availability') not in terminal:
+        pending=await db.get(SalesJob,(loc(),'asr:'+message_id))
+        if not pending:
+            await enqueue(db,'transcript',message_id,{'id':message_id,'contactId':(message or voice).contact_id},priority=50)
+        return {**(serial(row) if row else {'_id':message_id,'segments':[]}),
+            'availability':row.payload.get('availability') if row and row.payload.get('availability') not in (None,'not_available') else 'queued',
+            'retry_at':pending.next_run if pending else None}
+    return serial(row)

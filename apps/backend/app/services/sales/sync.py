@@ -48,7 +48,7 @@ async def sync_resource(db,c,resource):
         data=await c.get(path,{'locationId':loc()} if resource!='fields' else None)
         key={'users':'users','pipelines':'pipelines','fields':'customFields'}[resource]
         await reconcile(db,resource,data[key],started)
-        state={'count':len(data[key]),'complete':True};delay=60 if resource=='users' else 600
+        state={'count':len(data[key]),'complete':True};delay=15 if resource in ('users','pipelines') else 600
     elif resource=='numbers':
         items=[]
         for page in range(100):
@@ -57,7 +57,7 @@ async def sync_resource(db,c,resource):
             if len(batch)<100:break
         else: raise ValueError('Number pagination did not finish')
         await reconcile(db,'numbers',items,started)
-        state={'count':len(items),'complete':True}
+        state={'count':len(items),'complete':True};delay=5
     elif resource=='agents':
         items=[]
         for page in range(1,101):
@@ -82,7 +82,7 @@ async def sync_resource(db,c,resource):
         else:
             # Replay a five-minute overlap to tolerate indexing delay.
             state={'checkpoint':(stamp(state['until'])-timedelta(minutes=5)).isoformat(),'complete':True,
-                'loaded':state['loaded'],'total':state['total']};delay=60
+                'loaded':state['loaded'],'total':state['total']};delay=5
     elif resource=='opportunities':
         params={'location_id':loc(),'limit':100,'order':'added_desc','status':'all','getNotes':'true'}
         if state.get('cursor'):params.update(state['cursor'])
@@ -102,14 +102,18 @@ async def sync_resource(db,c,resource):
         params={'locationId':loc(),'pageSize':50,'page':state.get('page',1)}
         d=await c.get('/voice-ai/dashboard/call-logs',params)
         cutoff=now()-timedelta(days=settings.SALES_HISTORY_DAYS)
+        unchanged=0
         for item in d['callLogs']:
+            old=await get_record(db,'calls',item['id'])
+            same=bool(old and old.payload.get('transcript')==item.get('transcript'))
+            if same:unchanged+=1
             await save(db,'calls',item)
-            if item.get('transcript') and not item.get('trialCall') and (stamp(item.get('createdAt')) or now())>=cutoff:
+            if not same and item.get('transcript') and not item.get('trialCall') and (stamp(item.get('createdAt')) or now())>=cutoff:
                 priority=30 if (stamp(item.get('createdAt')) or cutoff)>=now()-timedelta(days=1) else 1
                 await enqueue(db,'analysis','call:'+item['id'],{'source_kind':'calls','id':item['id']},priority=priority)
-        if d['callLogs'] and params['page']*50<d['total']:
+        if d['callLogs'] and params['page']*50<d['total'] and not (params['page']==1 and state.get('complete') and unchanged==len(d['callLogs'])):
             state={'page':params['page']+1,'total':d['total']};delay=0
-        else:state={'page':1,'total':d['total'],'complete':True};delay=60
+        else:state={'page':1,'total':d['total'],'complete':True};delay=15
     elif resource in ('recent','history'):
         if resource=='history' and state.get('complete'): row.next_run=started+timedelta(days=1);return
         params={'locationId':loc(),'limit':100,'sort':'desc','sortBy':'last_message_date'}
@@ -131,7 +135,7 @@ async def sync_resource(db,c,resource):
         ended=not items or len(items)<100 or (stamp(last.get('lastMessageDate')) or cutoff)<cutoff
         if resource=='recent' and (unchanged==len(items) or first_recent):ended=True
         if ended:
-            state.update(cursor=None,complete=True,initialized=True);delay=60 if resource=='recent' else 86400
+            state.update(cursor=None,complete=True,initialized=True);delay=5 if resource=='recent' else 86400
         elif cursor is None or cursor==state.get('cursor'):
             raise ValueError('Conversation pagination needs reconciliation')
         else:state['cursor']=cursor;delay=0
@@ -139,6 +143,7 @@ async def sync_resource(db,c,resource):
 
 async def sync_messages(db,c,job):
     p=dict(job.payload);params={'limit':100}
+    if not p.get('scan_started'):p['scan_started']=now().isoformat()
     if p.get('cursor'):params['lastMessageId']=p['cursor']
     d=(await c.get('/conversations/'+p['id']+'/messages',params))['messages'];items=d['messages']
     cutoff=now()-timedelta(days=settings.SALES_HISTORY_DAYS)
@@ -147,14 +152,17 @@ async def sync_messages(db,c,job):
         if item.get('messageType')=='TYPE_CALL' and item.get('status') in ('completed','connected') and (stamp(item.get('dateAdded')) or now())>=cutoff:
             trans=await get_record(db,'transcripts',item['id'])
             if not trans or not trans.payload.get('segments'):
-                await enqueue(db,'transcript',item['id'],{'id':item['id'],'contactId':p.get('contactId')})
+                await enqueue(db,'transcript',item['id'],{'id':item['id'],'contactId':p.get('contactId')},priority=job.priority if job.priority>=40 or (stamp(item.get('dateAdded')) or cutoff)>=now()-timedelta(days=1) else 0)
     if items and d.get('nextPage') and (stamp(items[-1].get('dateAdded')) or now())>=cutoff:
         cursor=d.get('lastMessageId')
         if not cursor or cursor==p.get('cursor'):raise ValueError('Repeated message cursor')
         p['cursor']=cursor;job.payload=p;job.next_run=now();return False
+    await db.execute(update(SalesRecord).where(SalesRecord.location_id==loc(),SalesRecord.kind=='messages',SalesRecord.parent_id==p['id'],SalesRecord.occurred_at>=cutoff,SalesRecord.seen_at<stamp(p['scan_started'])).values(active=False))
     await enqueue(db,'contact',p['contactId'],priority=job.priority)
     # Recent activity and explicitly opened clients outrank the archive backlog.
-    review_priority=max(20,job.priority) if job.priority>=5 else 0
+    conversation=await get_record(db,'conversations',p['id'])
+    recent=conversation and (stamp(conversation.payload.get('lastMessageDate')) or cutoff)>=now()-timedelta(days=1)
+    review_priority=max(20,job.priority) if job.priority>=40 or (job.priority>=5 and recent) else 0
     await enqueue(db,'analysis','conversation:'+p['id'],{'source_kind':'messages','id':p['id'],'contactId':p['contactId']},priority=review_priority)
     sync=await state_for(db,'messages:'+p['id']);sync.last_success=now();sync.state={'complete':True,'history_days':settings.SALES_HISTORY_DAYS};sync.next_run=now()+timedelta(seconds=60);sync.error=None
     return True
@@ -174,19 +182,8 @@ async def sync_contact(db,c,job):
     return True
 
 async def sync_transcript(db,c,job):
-    p=job.payload
-    try:
-        data=await c.get(f'/conversations/locations/{loc()}/messages/{p["id"]}/transcription')
-    except GhlError as e:
-        if e.status in (400,404):
-            await save(db,'transcripts',{'id':p['id'],'contactId':p.get('contactId'),'segments':[],'availability':'not_available'})
-            if job.attempts>=5:return True
-        raise
-    segments=data if isinstance(data,list) else data.get('transcriptions',data.get('transcription',data.get('data',[])))
-    if not isinstance(segments,list):raise ValueError('Unsupported transcript shape')
-    await save(db,'transcripts',{'id':p['id'],'contactId':p.get('contactId'),'segments':segments,'availability':'available'})
-    await enqueue(db,'analysis','transcript:'+p['id'],{'source_kind':'transcripts','id':p['id'],'contactId':p.get('contactId')},priority=2)
-    return True
+    from .transcription import read_ghl_transcript
+    return await read_ghl_transcript(db,c,job)
 
 async def process_job(db,c,job):
     if job.kind=='discover':
@@ -199,6 +196,9 @@ async def process_job(db,c,job):
     if job.kind=='messages':return await sync_messages(db,c,job)
     if job.kind=='contact':return await sync_contact(db,c,job)
     if job.kind=='transcript':return await sync_transcript(db,c,job)
+    if job.kind=='asr':
+        from .transcription import transcribe_recording
+        return await transcribe_recording(db,c,job)
     if job.kind=='analysis':
         from .analysis import analyze
         return await analyze(db,job)
@@ -215,11 +215,11 @@ async def poll_resources(c):
                 row.next_run=now()+timedelta(seconds=60 if not isinstance(e,GhlError) or e.status!=429 else 120)
                 await db.commit()
 
-async def poll_jobs(c, analysis_only=False):
+async def poll_jobs(c, analysis_only=False, asr_only=False, urgent_only=False):
     # Priority work first; preserve durable job state across restarts and failures.
-    for _ in range(1 if analysis_only else 12):
+    for _ in range(1 if analysis_only or asr_only or urgent_only else 12):
         async with AsyncSessionLocal() as db:
-            job=await db.scalar(select(SalesJob).where(SalesJob.location_id==loc(),SalesJob.next_run<=now(),SalesJob.kind=='analysis' if analysis_only else SalesJob.kind!='analysis').order_by(SalesJob.priority.desc(),SalesJob.next_run).limit(1).with_for_update(skip_locked=True))
+            job=await db.scalar(select(SalesJob).where(SalesJob.location_id==loc(),SalesJob.next_run<=now(),(SalesJob.priority>=20 if analysis_only and not settings.SALES_AI_ARCHIVE_AUTOMATIC else True),SalesJob.kind=='asr' if asr_only else SalesJob.kind=='analysis' if analysis_only else SalesJob.kind.notin_(['analysis','asr']), (SalesJob.priority>=40 if urgent_only else SalesJob.priority<40) if not (analysis_only or asr_only) else True).order_by(SalesJob.priority.desc(),SalesJob.next_run).limit(1).with_for_update(skip_locked=True))
             if not job:break
             key=job.key
             try:
@@ -236,6 +236,12 @@ async def poll_jobs(c, analysis_only=False):
 async def poll_analysis(c):
     await poll_jobs(c, analysis_only=True)
 
+async def poll_urgent(c):
+    await poll_jobs(c, urgent_only=True)
+
+async def poll_transcriptions(c):
+    await poll_jobs(c, asr_only=True)
+
 async def run_worker():
     if not (settings.SALES_SYNC_ENABLED and settings.SALES_GHL_TOKEN and loc()):return
     while True:
@@ -245,6 +251,12 @@ async def run_worker():
                 await lock.commit()
                 if not acquired:
                     await asyncio.sleep(10);continue
+                if settings.SALES_AI_DAILY_LIMIT<=0:
+                    # Release jobs deferred by the former local daily cap.
+                    async with AsyncSessionLocal() as db:
+                        tomorrow=now().replace(hour=0,minute=0,second=0,microsecond=0)+timedelta(days=1)
+                        await db.execute(update(SalesJob).where(SalesJob.location_id==loc(),SalesJob.kind=='analysis',SalesJob.next_run==tomorrow).values(next_run=now()))
+                        await db.commit()
                 c=GhlClient()
                 try:
                     async def poll_loop(fn):
@@ -255,6 +267,8 @@ async def run_worker():
                         group.create_task(poll_loop(poll_resources))
                         group.create_task(poll_loop(poll_jobs))
                         group.create_task(poll_loop(poll_analysis))
+                        group.create_task(poll_loop(poll_transcriptions))
+                        group.create_task(poll_loop(poll_urgent))
                 finally:
                     await c.close()
                     await lock.execute(text('SELECT pg_advisory_unlock(731940116)'));await lock.commit()

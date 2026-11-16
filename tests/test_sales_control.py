@@ -123,3 +123,85 @@ class ProviderBackoff(IsolatedAsyncioTestCase):
             self.assertGreater(stamp(usage.state['blocked_until']),now())
             self.assertFalse(await analyze(db,job))
             client.post.assert_awaited_once()
+
+class SalesDates(TestCase):
+    def test_local_day_tracks_dst_and_rejects_invalid_filters(self):
+        from datetime import date, timedelta
+        from app.api.v1.sales import date_conditions
+        bounds=date_conditions(date(2026,3,8),date(2026,3,8),'America/New_York')
+        self.assertEqual(bounds[1].right.value-bounds[0].right.value,timedelta(hours=23))
+        self.assertEqual(bounds[0].right.value.hour,5)
+        for args in [(date(2026,1,2),date(2026,1,1),'UTC'),(None,None,'Not/AZone')]:
+            with self.assertRaises(HTTPException) as e:date_conditions(*args)
+            self.assertEqual(e.exception.status_code,422)
+
+class TranscriptionFallback(IsolatedAsyncioTestCase):
+    def test_segments_do_not_invent_speakers_or_timestamps(self):
+        from app.services.sales.transcription import speech_segments
+        rows=speech_segments({'segments':[{'text':' hello ','start':1.25},{'text':'No timestamp'}, {'text':'noise','no_speech_prob':.99,'avg_logprob':-2}]})
+        self.assertEqual(rows,[{'text':'hello','startTime':1250},{'text':'No timestamp'}])
+
+    async def test_missing_ghl_text_only_transcribes_new_or_opened_calls(self):
+        from unittest.mock import AsyncMock
+        from app.services.sales.transcription import read_ghl_transcript
+        from app.services.sales.client import GhlError
+        db=O(scalar=AsyncMock(return_value=None));client=O(get=AsyncMock(side_effect=GhlError(400)))
+        for priority,expected in [(0,False),(5,True),(50,True)]:
+            job=O(payload={'id':'call','contactId':'contact'},priority=priority)
+            with patch('app.services.sales.transcription.get_record',AsyncMock(return_value=None)),patch('app.services.sales.transcription.save',AsyncMock()),patch('app.services.sales.transcription.enqueue',AsyncMock()) as enqueue:
+                self.assertTrue(await read_ghl_transcript(db,client,job))
+                self.assertEqual(bool(enqueue.await_count),expected)
+                if expected:self.assertEqual(enqueue.call_args.args[1],'asr')
+
+    async def test_missing_recording_never_calls_groq(self):
+        from unittest.mock import AsyncMock,MagicMock
+        from app.services.sales.transcription import transcribe_recording
+        from app.services.sales.client import GhlError
+        from app.services.sales.store import now
+        usage=O(state={});db=O(get=AsyncMock(return_value=usage))
+        job=O(payload={'id':'call'},priority=50)
+        with patch.object(settings,'SALES_GROQ_API_KEY','synthetic'),patch('app.services.sales.transcription.get_record',AsyncMock(return_value=None)),patch('app.services.sales.transcription.save',AsyncMock()) as save,patch('app.services.sales.transcription.httpx.AsyncClient',MagicMock()) as groq:
+            self.assertTrue(await transcribe_recording(db,O(get=AsyncMock(side_effect=GhlError(404))),job))
+            groq.assert_not_called();self.assertEqual(save.call_args.args[2]['availability'],'not_recorded')
+
+class ReviewBudget(IsolatedAsyncioTestCase):
+    async def test_no_local_cap_and_large_input_retries_smaller_excerpt(self):
+        from unittest.mock import AsyncMock,MagicMock
+        from app.models.sales import SalesSync
+        from app.services.sales.analysis import analyze
+        from app.services.sales.store import now
+        usage=O(state={'day':now().date().isoformat(),'requests':999},last_success=None,error=None)
+        async def get(model,key):return usage if model is SalesSync else None
+        db=O(get=get,commit=AsyncMock())
+        job=O(payload={'source_kind':'calls','id':'test'},attempts=0,error=None,next_run=now())
+        client=MagicMock();client.__aenter__=AsyncMock(return_value=client);client.__aexit__=AsyncMock(return_value=False)
+        client.post=AsyncMock(return_value=httpx.Response(413))
+        with patch.object(settings,'SALES_GROQ_API_KEY','synthetic'),patch.object(settings,'SALES_AI_DAILY_LIMIT',0),patch('app.services.sales.analysis.sources_for',AsyncMock(return_value=([{'id':'call:test','text':'Recorded words. '*100}],None))),patch('app.services.sales.analysis.httpx.AsyncClient',return_value=client):
+            self.assertFalse(await analyze(db,job))
+            client.post.assert_awaited_once();self.assertEqual(usage.state['requests'],999)
+            self.assertEqual(job.payload['input_limit'],22500)
+
+    async def test_opening_unchanged_review_uses_cache_before_provider_call(self):
+        from unittest.mock import AsyncMock,MagicMock
+        from app.services.sales.analysis import analyze,VERSION
+        from app.services.sales.store import digest
+        sources=[{'id':'call:test','text':'Recorded words. '*100}]
+        fingerprint=digest({'version':VERSION,'model':settings.SALES_AI_MODEL,'sources':sources,'unreviewed_calls':False})
+        db=O(get=AsyncMock(return_value=O(fingerprint=fingerprint)))
+        with patch.object(settings,'SALES_GROQ_API_KEY','synthetic'),patch('app.services.sales.analysis.sources_for',AsyncMock(return_value=(sources,None))),patch('app.services.sales.analysis.httpx.AsyncClient',MagicMock()) as groq:
+            self.assertTrue(await analyze(db,O(payload={'source_kind':'calls','id':'test','input_limit':3000})))
+            groq.assert_not_called()
+
+    async def test_archive_jobs_are_excluded_without_blocking_crm(self):
+        from unittest.mock import AsyncMock,MagicMock
+        from app.services.sales.sync import poll_jobs
+        db=O(scalar=AsyncMock(return_value=None))
+        context=MagicMock();context.__aenter__=AsyncMock(return_value=db);context.__aexit__=AsyncMock(return_value=False)
+        with patch.object(settings,'SALES_AI_ARCHIVE_AUTOMATIC',False),patch('app.services.sales.sync.AsyncSessionLocal',return_value=context):
+            await poll_jobs(O(),analysis_only=True)
+            query=db.scalar.call_args.args[0].compile()
+            self.assertIn(20,query.params.values())
+            self.assertIn('analysis',query.params.values())
+            await poll_jobs(O())
+            query=db.scalar.call_args.args[0].compile()
+            self.assertNotIn(20,query.params.values())

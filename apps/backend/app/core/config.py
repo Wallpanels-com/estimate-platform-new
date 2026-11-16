@@ -20,7 +20,9 @@ class Settings(BaseSettings):
     SALES_AI_MODEL: str = "openai/gpt-oss-120b"
     SALES_SYNC_ENABLED: bool = False
     SALES_HISTORY_DAYS: int = 90
-    SALES_AI_DAILY_LIMIT: int = 150
+    SALES_AI_DAILY_LIMIT: int = 0
+    SALES_ASR_DAILY_LIMIT: int = 0
+    SALES_AI_ARCHIVE_AUTOMATIC: bool = False
     FRONTEND_DIST: str = ""
     AGENTATION_USER_ID: UUID | None = None
     ACCESS_MANAGER_USER_ID: UUID | None = None

@@ -42,7 +42,7 @@ def plain(value):
 async def sources_for(db,p):
     kind=p['source_kind'];ident=p['id'];sources=[];cid=p.get('contactId')
     if kind=='messages':
-        rows=(await db.scalars(select(SalesRecord).where(SalesRecord.location_id==loc(),SalesRecord.kind=='messages',SalesRecord.parent_id==ident).order_by(SalesRecord.occurred_at.desc()).limit(60))).all()
+        rows=(await db.scalars(select(SalesRecord).where(SalesRecord.location_id==loc(),SalesRecord.kind=='messages',SalesRecord.active==True,SalesRecord.parent_id==ident).order_by(SalesRecord.occurred_at.desc()).limit(60))).all()
         for row in reversed(rows):
             m=row.payload;text=plain(m.get('body'))
             if not text or m.get('messageType','').startswith('TYPE_ACTIVITY'):continue
@@ -60,10 +60,10 @@ async def sources_for(db,p):
                 if txt:sources.append({'id':f'{ident}:{i}','text':txt,'actor':str(s.get('mediaChannel','unknown')),'start_ms':s.get('startTime')})
     # Bound cost explicitly; output states exactly which sources were reviewed.
     bounded=[];remaining=45000
-    for s in sources:
+    for s in reversed(sources):
         if remaining<=0:break
-        s={**s,'text':s['text'][:remaining]};remaining-=len(s['text']);bounded.append(s)
-    return bounded,cid
+        s={**s,'text':s['text'][-remaining:]};remaining-=len(s['text']);bounded.append(s)
+    return list(reversed(bounded)),cid
 
 def validate_review(raw,sources):
     result=Review.model_validate(raw).model_dump();lookup={s['id']:s['text'] for s in sources}
@@ -87,6 +87,13 @@ async def analyze(db,job):
         job.next_run=now()+timedelta(hours=1);return False
     p=job.payload;sources,cid=await sources_for(db,p)
     if not sources or sum(len(s['text']) for s in sources)<60:return True
+    all_sources=sources
+    input_limit=max(3000,min(45000,int(p.get('input_limit',45000))))
+    remaining=input_limit;bounded=[]
+    for source in reversed(sources):
+        if remaining<=0:break
+        part={**source,'text':source['text'][-remaining:]};remaining-=len(part['text']);bounded.append(part)
+    sources=list(reversed(bounded))
     if p['source_kind']=='messages':
         latest=max((stamp(s.get('date')) for s in sources if stamp(s.get('date'))),default=None)
         if latest and now()-latest<timedelta(minutes=2):
@@ -96,7 +103,7 @@ async def analyze(db,job):
         unreviewed_calls=bool(await db.scalar(select(func.count()).select_from(SalesRecord).where(
             SalesRecord.location_id==loc(),SalesRecord.kind=='messages',SalesRecord.parent_id==p['id'],
             SalesRecord.payload['messageType'].astext=='TYPE_CALL')))
-    fingerprint=digest({'version':VERSION,'model':settings.SALES_AI_MODEL,'sources':sources,'unreviewed_calls':unreviewed_calls})
+    fingerprint=digest({'version':VERSION,'model':settings.SALES_AI_MODEL,'sources':all_sources,'unreviewed_calls':unreviewed_calls})
     source_id=p['source_kind']+':'+p['id']
     old=await db.get(SalesAnalysis,(loc(),source_id))
     if old and old.fingerprint==fingerprint:return True
@@ -110,7 +117,7 @@ async def analyze(db,job):
     blocked_until=stamp(usage.state.get('blocked_until'))
     if blocked_until and blocked_until>now():
         job.next_run=blocked_until;return False
-    if count>=settings.SALES_AI_DAILY_LIMIT:
+    if settings.SALES_AI_DAILY_LIMIT>0 and count>=settings.SALES_AI_DAILY_LIMIT:
         job.next_run=midnight+timedelta(days=1);return False
     # Reserve requests; rate-limit rejections are refunded below.
     usage.state={'day':day,'requests':count+1,'limit':settings.SALES_AI_DAILY_LIMIT}
@@ -126,6 +133,11 @@ async def analyze(db,job):
         job.error=f'Groq HTTP {r.status_code}; retry scheduled.'
         job.attempts+=1
         job.next_run=now()+timedelta(seconds=min(3600,60*2**min(job.attempts,6)))
+        if r.status_code==413 and input_limit>3000:
+            job.payload={**p,'input_limit':max(3000,input_limit//2)}
+            usage.state={**usage.state,'requests':count}
+            job.next_run=now()+timedelta(seconds=30)
+            job.error='Source exceeds provider limit; retrying a smaller excerpt.'
         if r.status_code==429:
             try:delay=float(r.headers.get('retry-after','60'))
             except (TypeError,ValueError):delay=60
@@ -135,8 +147,9 @@ async def analyze(db,job):
             job.next_run=blocked
         return False
     raw=json.loads(r.json()['choices'][0]['message']['content']);payload=validate_review(raw,sources)
+    if input_limit<45000:payload['limitations'].append(f'Из-за ограничения провайдера разобран фрагмент до {input_limit} символов; это не весь разговор.')
     if unreviewed_calls:payload['limitations'].append('В диалоге есть звонки, содержание которых не включено в этот текстовый разбор.')
-    payload.update(source_kind=p['source_kind'],source_id=p['id'],prompt_version=VERSION,coverage='Up to 60 messages / 45,000 characters; available transcript only')
+    payload.update(source_kind=p['source_kind'],source_id=p['id'],prompt_version=VERSION,coverage=f'Up to 60 messages / {input_limit:,} characters; available transcript only')
     stmt=insert(SalesAnalysis).values(location_id=loc(),source_id=source_id,contact_id=cid,fingerprint=fingerprint,model=settings.SALES_AI_MODEL,payload=payload,created_at=now())
     await db.execute(stmt.on_conflict_do_update(index_elements=['location_id','source_id'],set_={k:getattr(stmt.excluded,k) for k in ('contact_id','fingerprint','model','payload','created_at')}))
     return True

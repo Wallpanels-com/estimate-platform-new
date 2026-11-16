@@ -30,6 +30,8 @@ import {
   Pagination,
   Blank,
 } from "../components/sales/shared";
+import Select from "../components/Select";
+import DateFilters from "../components/sales/DateFilters";
 import ContactPanel from "../components/sales/ContactPanel";
 import ReviewCard from "../components/sales/ReviewCard";
 import Numbers from "../components/sales/Numbers";
@@ -65,12 +67,12 @@ function SalesWorkspace() {
   const lookup = useQuery({
     queryKey: ["sales", "lookups"],
     queryFn: () => request<Lookups>("/sales/lookups"),
-    refetchInterval: 60000,
+    refetchInterval: 5000,
   });
   const health = useQuery({
     queryKey: ["sales", "status"],
     queryFn: () => request<SalesStatus>("/sales/status"),
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
   const filter = new URLSearchParams();
   for (const k of [
@@ -86,7 +88,19 @@ function SalesWorkspace() {
   }
   if (q) filter.set("q", q);
   if (tab === "leads") filter.set("status", "review");
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  filter.set("time_zone", timeZone);
   const f = filter.toString();
+  const datePrefix = tab === "activity" ? "activity_" : "";
+  const fromDate = params.get(datePrefix + "from_date") || "";
+  const toDate = params.get(datePrefix + "to_date") || "";
+  const activityDates = new URLSearchParams({
+    from_date: params.get("activity_from_date") || "",
+    to_date: params.get("activity_to_date") || "",
+    time_zone: timeZone,
+  });
+  if (!activityDates.get("from_date")) activityDates.delete("from_date");
+  if (!activityDates.get("to_date")) activityDates.delete("to_date");
   const owner = params.get("owner") || "";
   const deals = useQuery({
     queryKey: ["sales", "opportunities", f, page],
@@ -95,23 +109,23 @@ function SalesWorkspace() {
         signal,
       }),
     enabled: ["deals", "leads"].includes(tab),
-    refetchInterval: 15000,
+    refetchInterval: 5000,
   });
   const activity = useQuery({
-    queryKey: ["sales", "activity", q, owner, page],
+    queryKey: ["sales", "activity", q, owner, page, activityDates.toString()],
     queryFn: ({ signal }) =>
       request<Page<GhlRecord>>(
-        `/sales/activity?q=${encodeURIComponent(q)}&owner=${encodeURIComponent(owner)}&page=${page}`,
+        `/sales/activity?q=${encodeURIComponent(q)}&owner=${encodeURIComponent(owner)}&page=${page}&${activityDates}`,
         { signal },
       ),
     enabled: tab === "activity",
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
   const numbers = useQuery({
     queryKey: ["sales", "numbers"],
     queryFn: () => request<{ items: GhlRecord[] }>("/sales/numbers"),
     enabled: tab === "numbers",
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
   const reviews = useQuery({
     queryKey: ["sales", "analyses", page, params.get("concerns")],
@@ -120,7 +134,7 @@ function SalesWorkspace() {
         `/sales/analyses?page=${page}&concerns=${params.get("concerns") === "true"}`,
       ),
     enabled: tab === "reviews",
-    refetchInterval: 15000,
+    refetchInterval: 5000,
   });
   const reports = useQuery({
     queryKey: ["sales", "reports", f],
@@ -129,10 +143,10 @@ function SalesWorkspace() {
     refetchInterval: 30000,
   });
   const tabs = [
-    ["activity", s("Активность", "Activity"), Activity],
+    ["activity", s("Последние диалоги", "Recent conversations"), Activity],
     ["deals", s("Все сделки", "All opportunities"), BriefcaseBusiness],
     ["reviews", s("Разборы ИИ", "AI reviews"), Bot],
-    ["leads", s("Лиды на проверку", "Lead review"), AlertTriangle],
+    ["leads", s("Потерянные сделки", "Lost opportunities"), AlertTriangle],
     ["reports", s("Отчёты", "Reports"), BarChart3],
     ["numbers", s("Номера", "Numbers"), Phone],
   ] as const;
@@ -209,7 +223,7 @@ function SalesWorkspace() {
         <article>
           <span>{s("Разборы Groq", "Groq reviews")}</span>
           <strong>{(state?.analyses || 0).toLocaleString()}</strong>
-          <small>{s("По доступным текстам", "Based on available text")}</small>
+          <small>{s("Сохранено за всё время", "Saved across all dates")}</small>
         </article>
         <article>
           <span>{s("Номера компании", "Company numbers")}</span>
@@ -250,7 +264,9 @@ function SalesWorkspace() {
             </p>
             <p>
               {s("Автоматический анализ", "Automatic reviews")}:{" "}
-              {state?.ai_daily_limit} / {s("день", "day")}
+              {state?.ai_daily_limit
+                ? `${state.ai_daily_limit} / ${s("день", "day")}`
+                : s("без суточного ограничения", "no daily cap")}
             </p>
             {state?.job_errors.map((e, i) => (
               <p key={i}>
@@ -319,7 +335,7 @@ function SalesWorkspace() {
               onChange={(e) => update("q", e.target.value)}
             />
           </label>
-          <select
+          <Select
             aria-label={s("Менеджер", "Manager")}
             value={owner}
             onChange={(e) => update("owner", e.target.value)}
@@ -330,10 +346,10 @@ function SalesWorkspace() {
                 {u.name}
               </option>
             ))}
-          </select>
+          </Select>
           {dealFilters && (
             <>
-              <select
+              <Select
                 aria-label={s("Воронка", "Pipeline")}
                 value={params.get("pipeline") || ""}
                 onChange={(e) => update("pipeline", e.target.value)}
@@ -344,8 +360,8 @@ function SalesWorkspace() {
                     {p.name}
                   </option>
                 ))}
-              </select>
-              <select
+              </Select>
+              <Select
                 aria-label={s("Этап", "Stage")}
                 value={params.get("stage") || ""}
                 onChange={(e) => update("stage", e.target.value)}
@@ -363,9 +379,9 @@ function SalesWorkspace() {
                       {st.name}
                     </option>
                   ))}
-              </select>
+              </Select>
               {tab !== "leads" && (
-                <select
+                <Select
                   aria-label={s("Статус", "Status")}
                   value={params.get("status") || ""}
                   onChange={(e) => update("status", e.target.value)}
@@ -374,7 +390,7 @@ function SalesWorkspace() {
                   {["open", "won", "lost", "abandoned"].map((v) => (
                     <option key={v}>{v}</option>
                   ))}
-                </select>
+                </Select>
               )}
               <input
                 aria-label={s("Источник", "Source")}
@@ -385,22 +401,6 @@ function SalesWorkspace() {
                 value={params.get("source") || ""}
                 onChange={(e) => update("source", e.target.value)}
               />
-              <label>
-                {s("Создано с", "Created from")}
-                <input
-                  type="date"
-                  value={params.get("from_date") || ""}
-                  onChange={(e) => update("from_date", e.target.value)}
-                />
-              </label>
-              <label>
-                {s("По", "To")}
-                <input
-                  type="date"
-                  value={params.get("to_date") || ""}
-                  onChange={(e) => update("to_date", e.target.value)}
-                />
-              </label>
               <div className="sales-exports">
                 <Button
                   variant="secondary"
@@ -422,6 +422,79 @@ function SalesWorkspace() {
           )}
         </div>
       )}
+      {(dealFilters || tab === "activity") && (
+        <DateFilters
+          from={fromDate}
+          to={toDate}
+          activity={tab === "activity"}
+          onChange={(from, to) =>
+            setParams((old) => {
+              const next = new URLSearchParams(old);
+              for (const [key, value] of [
+                [datePrefix + "from_date", from],
+                [datePrefix + "to_date", to],
+              ]) {
+                value ? next.set(key, value) : next.delete(key);
+              }
+              next.delete("page");
+              return next;
+            })
+          }
+        />
+      )}
+      <div className="sales-tab-explanation">
+        {tab === "activity" &&
+          s(
+            "Каждая карточка — диалог с клиентом. Сверху — последнее событие в GHL: сообщение, звонок, заметка или изменение сделки. Это не список новых лидов и не индикатор текущего звонка. Фильтр дат относится к последнему событию диалога.",
+            "Each card is a client conversation, sorted by its latest GHL event: message, call, note or opportunity update. These are not newly created leads or live-call indicators. Dates filter the conversation’s latest event.",
+          )}
+        {tab === "deals" &&
+          s(
+            "Все загруженные opportunities из GHL. Один клиент может иметь несколько сделок. Фильтруйте по воронке, этапу, ответственному и дате создания сделки.",
+            "All imported GHL opportunities. One client can have multiple opportunities. Filter by pipeline, stage, owner and opportunity creation date.",
+          )}
+        {tab === "reports" &&
+          s(
+            "Текущее распределение сделок по менеджерам, воронкам, этапам и статусам, плюс суммы из GHL. Даты выбирают сделки по времени создания; это не история конверсии и не оценка качества менеджера.",
+            "Current opportunity counts and GHL values by owner, pipeline, stage and status. Dates select opportunities by creation time; this is not historical conversion or a manager quality score.",
+          )}
+        {tab === "reviews" && (
+          <>
+            <span>
+              {s(
+                "Разбор — оценка одного звонка или загруженного фрагмента переписки: что хорошо, что стоит проверить и как улучшить. Число разборов не равно числу клиентов.",
+                "A review evaluates one call or an imported conversation excerpt: strengths, concerns and suggestions. The review count is not the client count.",
+              )}
+            </span>
+            <strong>
+              {s("Готово всего", "Total ready")}: {state?.analyses ?? 0} ·{" "}
+              {s("В очереди", "Queued")}: {state?.jobs.analysis ?? 0}
+            </strong>
+            <span>
+              {s("Запросы сегодня (UTC)", "Requests today (UTC)")}:{" "}
+              {s("разбор", "reviews")} — {state?.ai_usage?.reviews ?? 0},{" "}
+              {s("расшифровка аудио", "audio transcription")} —{" "}
+              {state?.ai_usage?.transcriptions ?? 0}.{" "}
+              {s(
+                "Это счётчик обращений портала, не счёт за услуги Groq.",
+                "These are portal request counters, not a Groq billing statement.",
+              )}
+            </span>
+            <span>
+              {state?.ai_daily_limit
+                ? `${s("Дневной лимит", "Daily limit")}: ${state.ai_daily_limit}. `
+                : s(
+                    "Суточного ограничения в портале нет. ",
+                    "No daily cap in the portal. ",
+                  )}
+              {s(
+                "Новые разговоры разбираются автоматически, архивные — при открытии клиента. Готовые разборы используются повторно. Ограничения Groq могут временно задержать очередь.",
+                "New conversations are reviewed automatically; archived conversations on opening the client. Saved reviews are reused. Groq limits can temporarily delay the queue.",
+              )}
+            </span>
+          </>
+        )}
+      </div>
       {exportError && <ErrorNotice>{exportError}</ErrorNotice>}
       {tab === "leads" && (
         <p className="sales-muted">
@@ -442,8 +515,8 @@ function SalesWorkspace() {
               {!activity.data.items.length ? (
                 <Blank>
                   {s(
-                    "Ожидаем первую загрузку диалогов",
-                    "Waiting for the first conversation sync",
+                    "По выбранным датам и фильтрам диалогов нет",
+                    "No conversations match these dates and filters",
                   )}
                 </Blank>
               ) : (

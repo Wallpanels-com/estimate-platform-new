@@ -1,87 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { request, API_ORIGIN, TOKEN_KEY, errorMessage } from "../../lib/api";
-import { tokenStorage } from "../../lib/portal";
+import { request, errorMessage } from "../../lib/api";
 import { Modal, Button, ErrorNotice, Loading } from "../ui";
-import type { ContactDetail, Lookups, GhlRecord } from "./types";
+import type { ContactDetail, Lookups } from "./types";
 import { useSalesText, when, userName, stageName, Blank } from "./shared";
 import ReviewCard from "./ReviewCard";
+import ChatTimeline, { CallsList } from "./ChatTimeline";
+import { GhlLinks, GhlOpportunityLink } from "./GhlLinks";
 
-function Recording({ id }: { id: string }) {
-  const s = useSalesText();
-  const [url, setUrl] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  useEffect(
-    () => () => {
-      if (url) URL.revokeObjectURL(url);
-    },
-    [url],
-  );
-  async function load() {
-    setLoading(true);
-    setError("");
-    try {
-      const r = await fetch(
-        `${API_ORIGIN}/api/v1/sales/recordings/${encodeURIComponent(id)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${tokenStorage.getItem(TOKEN_KEY)}`,
-          },
-          signal: AbortSignal.timeout(30000),
-        },
-      );
-      if (!r.ok)
-        throw new Error(
-          s("Запись недоступна через API", "Recording unavailable through API"),
-        );
-      setUrl(URL.createObjectURL(await r.blob()));
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setLoading(false);
-    }
-  }
-  return (
-    <div className="sales-recording">
-      {url ? (
-        <audio controls src={url} />
-      ) : (
-        <Button variant="secondary" disabled={loading} onClick={load}>
-          {loading
-            ? s("Загрузка…", "Loading…")
-            : s("Слушать запись", "Play recording")}
-        </Button>
-      )}
-      {error && <small role="status">{error}</small>}
-    </div>
-  );
-}
-function Message({ m, lookups }: { m: GhlRecord; lookups?: Lookups }) {
-  const s = useSalesText();
-  const internal = (m.messageType || "").toUpperCase().includes("INTERNAL");
-  return (
-    <article className={"sales-message " + (internal ? "internal" : "")}>
-      <div className="sales-row">
-        <strong>
-          {internal
-            ? s("Внутренний комментарий", "Internal comment")
-            : m.messageType?.replace("TYPE_", "") || s("Сообщение", "Message")}
-        </strong>
-        <time>{when(m.dateAdded)}</time>
-      </div>
-      <small>
-        {m.userId
-          ? userName(lookups, m.userId)
-          : m.direction === "inbound"
-            ? s("Клиент", "Client")
-            : m.source || s("Автор не указан", "Author unavailable")}
-      </small>
-      <p>{(m.body || "").replace(/<[^>]+>/g, " ") || m.status || "—"}</p>
-      {m.messageType === "TYPE_CALL" && <Recording id={m._id} />}
-    </article>
-  );
-}
 export default function ContactPanel({
   id,
   onClose,
@@ -99,7 +25,7 @@ export default function ContactPanel({
       request<ContactDetail>(`/sales/contacts/${encodeURIComponent(id)}`, {
         signal,
       }),
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
   const d = data.data;
   const c = d?.contact;
@@ -127,6 +53,11 @@ export default function ContactPanel({
         ) : (
           d && (
             <>
+              <GhlLinks
+                detail={d}
+                contactId={id}
+                onDeals={() => setTab("deals")}
+              />
               <div className="sales-contact-meta">
                 <span>{c?.phone || fallback?.phone || "—"}</span>
                 <span>{c?.email || fallback?.email || "—"}</span>
@@ -177,97 +108,9 @@ export default function ContactPanel({
                 ))}
               </nav>
               {tab === "history" && (
-                <div className="sales-timeline">
-                  {!d.messages.length && !d.notes.length ? (
-                    <Blank>
-                      {s(
-                        "История ещё не загружена или отсутствует в GHL",
-                        "History is loading or unavailable in GHL",
-                      )}
-                    </Blank>
-                  ) : (
-                    <>
-                      {d.notes.map((m) => (
-                        <Message
-                          key={"note" + m._id}
-                          m={{ ...m, messageType: "TYPE_INTERNAL_NOTE" }}
-                          lookups={lookups}
-                        />
-                      ))}
-                      {d.messages.map((m) => (
-                        <Message key={m._id} m={m} lookups={lookups} />
-                      ))}
-                    </>
-                  )}
-                </div>
+                <ChatTimeline detail={d} lookups={lookups} clientName={name} />
               )}
-              {tab === "calls" && (
-                <div className="sales-timeline">
-                  {!d.calls.length && !d.transcripts.length && (
-                    <Blank>
-                      {s(
-                        "Транскрипты ещё не загружены или недоступны. Записи звонков — во вкладке «История».",
-                        "Transcripts are loading or unavailable. Call recordings are in History.",
-                      )}
-                    </Blank>
-                  )}
-                  {d.calls.map((call) => (
-                    <article className="sales-message" key={call._id}>
-                      <div className="sales-row">
-                        <strong>
-                          Voice AI ·{" "}
-                          {lookups?.agents.find((a) => a.id === call.agentId)
-                            ?.name || call.agentId}
-                        </strong>
-                        <time>{when(call.createdAt)}</time>
-                      </div>
-                      <p>{call.summary}</p>
-                      {call.messageId && <Recording id={call.messageId} />}
-                      <details>
-                        <summary>
-                          {s("Транскрипт GHL", "GHL transcript")} ·{" "}
-                          {call.duration || 0}s
-                        </summary>
-                        <p className="sales-transcript">
-                          {call.transcript ||
-                            s(
-                              "Транскрипт отсутствует",
-                              "Transcript unavailable",
-                            )}
-                        </p>
-                      </details>
-                    </article>
-                  ))}
-                  {d.transcripts.map((r) => (
-                    <article className="sales-message" key={r._id}>
-                      <strong>
-                        {s("Транскрипт звонка", "Call transcript")}
-                      </strong>
-                      {r.availability === "not_available" ? (
-                        <p>
-                          {s(
-                            "GHL пока не предоставляет транскрипт этого звонка",
-                            "GHL does not currently provide a transcript for this call",
-                          )}
-                        </p>
-                      ) : (
-                        r.segments?.map((seg, i) => (
-                          <p key={i}>
-                            <small>
-                              {seg.startTime != null
-                                ? `${Math.floor(seg.startTime / 1000)}s · `
-                                : ""}
-                              {s("Канал", "Channel")} {seg.mediaChannel ?? "—"}
-                            </small>
-                            <br />
-                            {seg.transcript || seg.text}
-                          </p>
-                        ))
-                      )}
-                    </article>
-                  ))}
-                </div>
-              )}
+              {tab === "calls" && <CallsList detail={d} lookups={lookups} />}
               {tab === "analysis" && (
                 <div className="sales-timeline">
                   <p className="sales-muted">
@@ -292,7 +135,13 @@ export default function ContactPanel({
                 <div className="sales-timeline">
                   {d.opportunities.map((o) => (
                     <article className="sales-message" key={o._id}>
-                      <strong>{o.name}</strong>
+                      <div className="sales-row">
+                        <strong>{o.name}</strong>
+                        <GhlOpportunityLink
+                          locationId={d.location_id}
+                          id={o._id}
+                        />
+                      </div>
                       <p>
                         {stageName(lookups, o.pipelineStageId)} · {o.status} ·{" "}
                         {userName(lookups, o.assignedTo)}

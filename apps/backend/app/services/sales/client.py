@@ -5,6 +5,7 @@ Its endpoint and body are fixed here; it cannot create/update an opportunity.
 """
 import asyncio
 import re
+import time
 import httpx
 from app.core.config import settings
 
@@ -19,9 +20,16 @@ class GhlError(Exception):
 
 class GhlClient:
     def __init__(self, transport=None):
+        self._pace_lock=asyncio.Lock()
+        self._next_request=0.0
         self.client = httpx.AsyncClient(base_url='https://services.leadconnectorhq.com',
             headers={'Authorization': 'Bearer '+settings.SALES_GHL_TOKEN, 'Version':'2021-07-28'},
             timeout=httpx.Timeout(25,connect=8),follow_redirects=False,transport=transport)
+
+    async def pace(self):
+        async with self._pace_lock:
+            await asyncio.sleep(max(0,self._next_request-time.monotonic()))
+            self._next_request=time.monotonic()+.17
 
     async def close(self):
         await self.client.aclose()
@@ -33,7 +41,7 @@ class GhlClient:
             'filters':[{'field':'date_updated','operator':'range','value':{'gte':since,'lte':until}}],
             'sort':[{'field':'date_updated','direction':'asc'}]}
         if cursor is not None:body['searchAfter']=cursor
-        await asyncio.sleep(.14)
+        await self.pace()
         try:
             response=await self.client.post('/opportunities/search',headers={'Version':'v3'},json=body)
         except httpx.HTTPError:raise GhlError() from None
@@ -46,7 +54,7 @@ class GhlClient:
             raise ValueError('Only allowlisted CRM read endpoints are permitted.')
         if not settings.SALES_GHL_TOKEN:
             raise GhlError(401)
-        await asyncio.sleep(.14)
+        await self.pace()
         try:
             response = await self.client.get(path,params=params)
         except httpx.HTTPError:
