@@ -125,6 +125,20 @@ class ProviderBackoff(IsolatedAsyncioTestCase):
             client.post.assert_awaited_once()
 
 class SalesDates(TestCase):
+    def test_bundled_timezone_data_supports_browser_aliases_without_system_data(self):
+        from datetime import date
+        from zoneinfo import ZoneInfo, reset_tzpath, TZPATH
+        from app.api.v1.sales import date_conditions
+        original=TZPATH
+        try:
+            reset_tzpath([]);ZoneInfo.clear_cache()
+            old=date_conditions(date(2026,11,16),None,'Europe/Kiev')
+            canonical=date_conditions(date(2026,11,16),None,'Europe/Kyiv')
+            self.assertEqual(old[0].right.value,canonical[0].right.value)
+            self.assertTrue(date_conditions(date(2026,11,16),None,'America/New_York'))
+        finally:
+            reset_tzpath(original);ZoneInfo.clear_cache()
+
     def test_local_day_tracks_dst_and_rejects_invalid_filters(self):
         from datetime import date, timedelta
         from app.api.v1.sales import date_conditions
