@@ -167,6 +167,17 @@ class TranscriptionFallback(IsolatedAsyncioTestCase):
                 self.assertEqual(bool(enqueue.await_count),expected)
                 if expected:self.assertEqual(enqueue.call_args.args[1],'asr')
 
+    async def test_voice_ai_transcript_reuses_call_review_instead_of_duplicate(self):
+        from unittest.mock import AsyncMock
+        from app.services.sales.transcription import read_ghl_transcript
+        voice=O(external_id='voice1',payload={'transcript':'Existing Voice AI transcript'})
+        db=O(scalar=AsyncMock(return_value=voice));client=O(get=AsyncMock())
+        with patch('app.services.sales.transcription.get_record',AsyncMock(return_value=None)),patch('app.services.sales.transcription.save',AsyncMock()),patch('app.services.sales.transcription.enqueue',AsyncMock()) as enqueue:
+            self.assertTrue(await read_ghl_transcript(db,client,O(payload={'id':'message1'},priority=50)))
+            client.get.assert_not_awaited()
+            self.assertEqual(enqueue.call_args.args[2],'call:voice1')
+            self.assertEqual(enqueue.call_args.args[3]['source_kind'],'calls')
+
     async def test_missing_recording_never_calls_groq(self):
         from unittest.mock import AsyncMock,MagicMock
         from app.services.sales.transcription import transcribe_recording

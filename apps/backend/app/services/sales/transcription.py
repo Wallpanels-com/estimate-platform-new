@@ -44,7 +44,12 @@ async def read_ghl_transcript(db,c,job):
         source='ghl'
     if segments:
         await save(db,'transcripts',{**payload,'segments':segments,'availability':'available','transcript_source':source})
-        await enqueue(db,'analysis','transcript:'+ident,{'source_kind':'transcripts','id':ident,'contactId':p.get('contactId')},priority=max(20,job.priority))
+        # Voice AI logs and conversation messages can reference the same call.
+        # Reuse one analysis identity instead of paying to review it twice.
+        if source=='ghl_voice_ai':
+            await enqueue(db,'analysis','call:'+voice.external_id,{'source_kind':'calls','id':voice.external_id,'contactId':p.get('contactId')},priority=max(20,job.priority))
+        else:
+            await enqueue(db,'analysis','transcript:'+ident,{'source_kind':'transcripts','id':ident,'contactId':p.get('contactId')},priority=max(20,job.priority))
     elif job.priority>=5:
         await save(db,'transcripts',{**payload,'availability':'queued'})
         await enqueue(db,'asr',ident,p,priority=job.priority)
