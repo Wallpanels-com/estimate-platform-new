@@ -1,11 +1,12 @@
-"""Owner-only Pre-estimate range trial. Original item prices are never changed."""
+"""Shared Pre-estimate zone ranges. Original item prices are never changed."""
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Literal, Annotated
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
-from .page_access import can_view_sales
+from .page_access import allowed_pages
 from .proposal_display import _View
 from .presentation_tax import breakdown
 
+# Preserve the saved pilot settings; no data migration or reset on rollout.
 KEY = 'pre_zone_ranges_trial'
 CENT = Decimal('0.01')
 LIMIT = Decimal('999999999999.99')
@@ -13,8 +14,12 @@ Price = Annotated[Decimal, Field(ge=0, le=LIMIT, decimal_places=2)]
 
 
 def available(user):
-    # Same immutable owner identity boundary, including the estimating portal.
-    return can_view_sales(user)
+    if not getattr(user, "is_active", False):
+        return False
+    identity = getattr(user, "_portal_profile", None)
+    return "estimates" in allowed_pages(user) and (
+        identity is None or identity.get("module") in (None, "estimating")
+    )
 
 
 class RangeOptions(BaseModel):
@@ -90,7 +95,7 @@ def snapshot(estimate):
 
 
 def presentation_view(estimate, user):
-    # Never annotate ORM instances, and never alter Final or another user's PDF.
+    # All authorized employees render the same saved bounds; never alter ORM data or Final.
     if not available(user) or getattr(estimate, 'type', None) != 'pre' or not settings(estimate):
         return estimate
     values = snapshot(estimate)

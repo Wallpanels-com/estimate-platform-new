@@ -1,4 +1,4 @@
-"""Owner isolation, persisted ranges, arithmetic and measured PDF geometry."""
+"""Shared account access, persisted ranges, arithmetic and measured PDF geometry."""
 import sys, uuid, tempfile
 from pathlib import Path
 from decimal import Decimal
@@ -21,7 +21,8 @@ from app.api.v1 import estimates
 from test_final_layout import estimate, zone, item, AuditedCanvas
 OWNER = uuid.uuid4()
 USER = O(id=OWNER, is_active=True, name='Owner', email='owner')
-OTHER = O(id=uuid.uuid4(), is_active=True)
+OTHER = O(id=uuid.uuid4(), is_active=True, name="Employee", email="employee", page_access=["estimates"])
+RESTRICTED = O(id=uuid.uuid4(), is_active=True, page_access=["hr"])
 
 
 def fixture(count=2):
@@ -71,16 +72,23 @@ class Ranges(TestCase):
         e.zones[1].line_items[0].total_price=Decimal(0)
         with self.assertRaises(ValueError):r.select_range(e,e.zones[1],r.RangeOptions(enabled=True))
 
-    def test_owner_only_views_untouched_final_and_unconfigured_exports(self):
+    def test_shared_views_access_gates_and_untouched_final(self):
         e=fixture();before=deepcopy(e)
         with patch.object(settings,'ACCESS_MANAGER_USER_ID',OWNER):
             self.assertIs(r.presentation_view(e,USER),e)
             r.select_range(e,e.zones[0],r.RangeOptions(enabled=True))
-            self.assertIs(r.presentation_view(e,OTHER),e)
+            self.assertIsNot(r.presentation_view(e,OTHER),e)
+            self.assertIs(r.presentation_view(e,RESTRICTED),e)
             inactive=O(id=OWNER,is_active=False)
             self.assertIs(r.presentation_view(e,inactive),e)
-            portal=O(id=OWNER,is_active=True,_portal_profile={'owner':False,'module':'estimating'})
+            portal=O(id=OTHER.id,is_active=True,_portal_profile={'owner':False,'module':'estimating','pages':['estimates']})
+            self.assertIsNot(r.presentation_view(e,portal),e)
+            portal._portal_profile['pages']=['hr']
             self.assertIs(r.presentation_view(e,portal),e)
+            portal._portal_profile={'module':'hr','pages':['estimates']}
+            self.assertIs(r.presentation_view(e,portal),e)
+            self.assertFalse(r.available(None))
+            self.assertFalse(r.available(O(id=OTHER.id,is_active=True,page_access=['quick_estimate'])))
             v=r.presentation_view(e,USER)
             self.assertIsNot(v,e)
             self.assertEqual(r.price_label(v.zones[0]),'$810.00 – $1,035.00')
@@ -114,10 +122,12 @@ class Ranges(TestCase):
                                 self.assertFalse(min(a[3],b[3])-max(a[1],b[1])>.8 and min(a[4],b[4])-max(a[2],b[2])>.8,(brand,count,a,b))
                             for page,x,y,right in AuditedCanvas.rules:
                                 if page==a[0]:self.assertFalse(a[2]+.8<y<a[4]-.8 and min(right,a[3])-max(x,a[1])>1,(a,y))
+                        owner_bytes = target.read_bytes()
                         render_for_user(OTHER,pdf.generate_pre_estimate,_PreEstimateView(e),target)
-                        self.assertNotIn('$24,000.00',' '.join(p.extract_text() for p in PdfReader(target).pages))
-            # An ordinary user's bytes must stay exactly as before the trial.
-            e=fixture();r.select_range(e,e.zones[0],r.RangeOptions(enabled=True))
+                        self.assertEqual(owner_bytes,target.read_bytes())
+                        self.assertIn('$24,000.00',' '.join(p.extract_text() for p in PdfReader(target).pages))
+            # Disabled settings preserve the existing output for employees.
+            e=fixture();r.select_range(e,e.zones[0],r.RangeOptions(enabled=False))
             render_for_user(OTHER,pdf.generate_pre_estimate,e,target);before=target.read_bytes()
             e.pdf_layout=None
             render_for_user(OTHER,pdf.generate_pre_estimate,e,target)
@@ -125,13 +135,13 @@ class Ranges(TestCase):
 
 
 class Endpoints(IsolatedAsyncioTestCase):
-    async def test_owner_gate_and_saved_settings(self):
+    async def test_employee_can_save_owner_can_read_and_restricted_users_denied(self):
         e=fixture();db=O(commit=AsyncMock())
         with patch.object(settings,'ACCESS_MANAGER_USER_ID',OWNER), patch.object(estimates,'load_estimate',new=AsyncMock(return_value=e)) as load:
             with self.assertRaises(HTTPException) as denied:
-                await estimates.update_zone_range(e.id,e.zones[0].id,r.RangeOptions(enabled=True),db,OTHER)
+                await estimates.update_zone_range(e.id,e.zones[0].id,r.RangeOptions(enabled=True),db,RESTRICTED)
             self.assertEqual(denied.exception.status_code,403);load.assert_not_awaited()
-            await estimates.update_zone_range(e.id,e.zones[0].id,r.RangeOptions(enabled=True),db,USER)
+            await estimates.update_zone_range(e.id,e.zones[0].id,r.RangeOptions(enabled=True),db,OTHER)
             data=await estimates.get_zone_ranges(e.id,db,USER)
             self.assertTrue(data['active']);db.commit.assert_awaited_once()
             e.type='final'
