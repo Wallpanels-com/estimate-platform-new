@@ -33,6 +33,7 @@ from .pre_estimate_v1 import (
 from .pdf_optimization import contained as _contain
 from .proposal_style import fonts as _fonts, background as slide_background, pre_title, brand as slide_brand
 from .proposal_display import display_options, item_caption, without_calculations
+from .zone_ranges import price_label
 
 W, H, M = 1152, 648, 64
 INK = HexColor("#292724")
@@ -91,8 +92,12 @@ def zone_label(zone):
     ).strip()
 
 
+def zone_investment(zone, factor):
+    return money(Decimal(zone._pre_exact)) if getattr(zone, "_pre_exact", None) is not None else money(_zone_total(zone, factor))
+
+
 def list_price(zone, factor):
-    return "-" if _pending_only(zone) else money(_zone_total(zone, factor))
+    return price_label(zone) or ("-" if _pending_only(zone) else zone_investment(zone, factor))
 
 
 @dataclass(frozen=True)
@@ -441,7 +446,7 @@ def zone_pages(zone, factor, media):
     return pages
 
 
-def list_pages(kind, zones):
+def list_pages(kind, zones, ranged=False):
     """Count-based overview/summary policy, shared by every estimate.
 
     1-5 zones: one full-width column. 6-10: two balanced columns.
@@ -449,14 +454,15 @@ def list_pages(kind, zones):
     20 => 10 + 10). Measured text can require more pages, never smaller type.
     """
     column_count = 1 if len(zones) <= SINGLE_COLUMN_ZONE_LIMIT else 2
-    name_width = 718 if column_count == 1 else 274
-    max_name_lines = int((LIST_CAPACITY - 10) // 24)
+    ranged = ranged or any(price_label(z) for z in zones)
+    name_width = ((W - 2 * M if column_count == 1 else COLUMN_WIDTH) - 36) if ranged else (718 if column_count == 1 else 274)
+    max_name_lines = int((LIST_CAPACITY - (38 if ranged else 10)) // 24)
     rows = []
     for idx, zone in enumerate(zones, 1):
         name = _wrap(zone_label(zone), name_width, 18, "WP-Medium")
         for offset in range(0, len(name), max_name_lines):
             part = name[offset : offset + max_name_lines]
-            rows.append((idx, zone, part, offset == 0, len(part) * 24 + 10))
+            rows.append((idx, zone, part, offset == 0, len(part) * 24 + (38 if ranged else 10)))
     if not rows:
         return [Page(kind)]
     # Each row reserves the same height in both columns, including wrapped names.
@@ -488,6 +494,7 @@ def list_pages(kind, zones):
 
 
 def list_column(c, rows, x, width, y, factor):
+    ranged = bool(getattr(c, "_pre_range_summary", None))
     for idx, zone, name, show_price, height in rows:
         if show_price:
             text(c, f"{idx:02d}", x, y, 12, "Medium", MUTED)
@@ -497,8 +504,8 @@ def list_column(c, rows, x, width, y, factor):
                 c,
                 list_price(zone, factor),
                 x + width,
-                y,
-                19,
+                y - len(name) * 24 if ranged else y,
+                min(19, (width - 36) / max(1, pdfmetrics.stringWidth(list_price(zone, factor), "WP-Medium", 1))) if ranged else 19,
                 "Medium",
                 MUTED if _pending_only(zone) else INK,
                 right=True,
@@ -521,13 +528,14 @@ def column_entries(c, page, factor):
 
 def plan(est, factor, zones, media):
     # The shared title is rendered separately. Start directly with the overview.
-    pages = list_pages("overview", zones)
+    ranged = bool(getattr(est, "_pre_range_summary", None))
+    pages = list_pages("overview", zones, ranged)
     if media.shared:
         media.reference_location = "project reference"
         pages.append(Page("reference", assets=media.cover))
     for zone in zones:
         pages += zone_pages(zone, factor, media)
-    pages += list_pages("summary", zones)
+    pages += list_pages("summary", zones, ranged)
     return pages
 
 
@@ -580,6 +588,8 @@ def entries(c, page, factor, start=None):
 def money_block(c, label, value, x, y, width, height, size=30, fill=BEIGE):
     surface(c, x, y, width, height, fill)
     text(c, label, x + 24, y + height - 27, 14, "Medium", MUTED)
+    if getattr(c, "_pre_range_summary", None):
+        size = min(size, (width - 48) / max(1, pdfmetrics.stringWidth(value, "WP-Medium", 1)))
     text(c, value, x + 24, y + 22, size, "Medium")
 
 
@@ -602,6 +612,10 @@ def overview(c, est, page, factor, total, zones):
         return
     pending = any(_pending(z) for z in zones)
     value = "To be confirmed" if total == 0 and pending else money(total)
+    ranged = getattr(est, "_pre_range_summary", None)
+    if ranged:
+        money_block(c, "Project Investment Range / before tax", range_text(ranged["lower"], ranged["upper"]), M, 76, W - 2 * M, 88, 31)
+        return
     money_block(c, "Current Calculation Basis", value, M, 76, W - 2 * M, 88, 31)
     text(
         c,
@@ -663,6 +677,11 @@ def zone_slide(c, page, factor, index, count, media):
         if row.kind == "item":
             rule(c, page.text_x, y + 9, page.text_width)
     pending = _pending_only(zone)
+    ranged_price = price_label(zone)
+    if ranged_price:
+        block_top = y - 24 if page.mode == "scope" else max(148, y - 14)
+        money_block(c, "Estimated Zone Investment", ranged_price, page.text_x, block_top - 76, page.text_width, 76, 28)
+        return
     if page.mode == "scope":
         block_top = y - 24
         surface(
@@ -684,7 +703,7 @@ def zone_slide(c, page, factor, index, count, media):
         )
         text(
             c,
-            "To be confirmed" if pending else money(_zone_total(zone, factor)),
+            "To be confirmed" if pending else zone_investment(zone, factor),
             page.text_x + page.text_width - 24,
             block_top - 49,
             24 if pending else 32,
@@ -709,13 +728,40 @@ def zone_slide(c, page, factor, index, count, media):
     )
     text(
         c,
-        "To be confirmed" if pending else money(_zone_total(zone, factor)),
+        "To be confirmed" if pending else zone_investment(zone, factor),
         W - M - 24,
         block_top - (49 if block_width >= 600 else 60),
         30,
         "Medium",
         right=True,
     )
+
+
+
+def range_text(lower, upper):
+    return money(Decimal(lower)) if Decimal(lower) == Decimal(upper) else f"{money(Decimal(lower))} – {money(Decimal(upper))}"
+
+
+def range_totals(c, estimate, values):
+    from .presentation_tax import tax_options
+    if not tax_options(estimate).enabled:
+        money_block(c, "Grand Total / Investment Range", range_text(values['lower'], values['upper']), M, 84, W - 2 * M, 88, 32)
+        return
+    # Three bounded columns; two value lines keep even large ranges readable.
+    surface(c, M, 84, W - 2 * M, 88, BEIGE)
+    width = (W - 2 * M - 96) / 3
+    for idx, (label, lo, hi) in enumerate([
+        ('Subtotal', values['lower'], values['upper']),
+        (values['tax_label'], values['tax_lower'], values['tax_upper']),
+        ('Grand Total', values['grand_lower'], values['grand_upper']),
+    ]):
+        x = M + 24 + idx * (width + 24)
+        text(c, label.upper(), x, 153, 11, 'Medium')
+        low, high = money(Decimal(lo)), money(Decimal(hi))
+        size = min(24, width / max(pdfmetrics.stringWidth(v, 'WP-Medium', 1) for v in (low, '– ' + high)))
+        text(c, low, x, 123, size, 'Medium')
+        if lo != hi:
+            text(c, '– ' + high, x, 96, size, 'Medium')
 
 
 def summary(c, page, factor, total, pending, show_total=True, estimate=None):
@@ -738,6 +784,11 @@ def summary(c, page, factor, total, pending, show_total=True, estimate=None):
         )
         return
     if not show_total:
+        return
+    ranged = getattr(estimate, "_pre_range_summary", None)
+    if ranged:
+        range_totals(c, estimate, ranged)
+        lines(c, _wrap("Preliminary guide, not a contract. Final pricing follows confirmed scope and measurements." + (" Unpriced scope is excluded." if pending else ""), W - 2 * M, 14), M, 62, 14, 20, color=MUTED)
         return
     unpriced = total == 0 and pending
     from .presentation_tax import tax_options, draw_totals
@@ -786,6 +837,7 @@ def generate_pre_estimate(est, output_path):
     if direct:
         zones.append(
             SimpleNamespace(
+                _pre_exact=(getattr(est, "_pre_range_summary", None) or {}).get("direct_total"),
                 label="Additional scope",
                 sort_order=len(zones),
                 line_items=direct,
@@ -804,6 +856,7 @@ def generate_pre_estimate(est, output_path):
     c = canvas.Canvas(destination, pagesize=(W, H), pageCompression=1, invariant=1)
     from .proposal_brands import brand_key
     c._proposal_brand = brand_key(est)
+    c._pre_range_summary = getattr(est, "_pre_range_summary", None)
     c.setTitle(f'{est.client_name or est.title or "Project"} | Pre-Estimate')
     c.setAuthor(est.prepared_by or "WallPanels")
     c.setSubject("Preliminary interior scope and investment / Design V2")

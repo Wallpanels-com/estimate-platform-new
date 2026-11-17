@@ -103,7 +103,8 @@ def render_for_user(user, renderer, estimate, destination):
     state = (allowed, {}) if photo_optimization_enabled(user) else None
     token = _photo_export.set(state)
     try:
-        return renderer(estimate, destination)
+        from .zone_ranges import presentation_view
+        return renderer(presentation_view(estimate, user), destination)
     finally:
         _photo_export.reset(token)
 

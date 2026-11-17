@@ -30,7 +30,7 @@ def generate_pre_estimate(est, output_path):
     brand = brand_key(est)
     # Validate the selected appendix before rendering any partial proposal.
     company = load_company_slides() if brand == "wallpanels" else load_company_slides(brand=brand)
-    if design_version() == "v1" and brand == "wallpanels":
+    if design_version() == "v1" and brand == "wallpanels" and not getattr(est, "_pre_range_summary", None):
         from .pre_estimate_v1 import generate_pre_estimate as render
     else:
         from .pre_estimate_v2 import generate_pre_estimate as render

@@ -64,6 +64,10 @@ import EstimatePdfPreview from "../components/EstimatePdfPreview";
 import ProposalBrandSwitch from "../components/ProposalBrandSwitch";
 import PresentationOptions from "../components/PresentationOptions";
 import PresentationTaxForm from "../components/PresentationTaxForm";
+import ZoneRangeForm, {
+  rangeLabel,
+  type RangeSnapshot,
+} from "../components/ZoneRangeForm";
 import PdfChecks, { type ExportChecks } from "../components/PdfChecks";
 import {
   createEstimatePdfLoader,
@@ -90,6 +94,7 @@ export default function Builder() {
   const [proposal, setProposal] = useState(false);
   const [details, setDetails] = useState(false);
   const [taxForm, setTaxForm] = useState(false);
+  const [rangeZone, setRangeZone] = useState<string | null>(null);
   const [records, setRecords] = useState(false);
   const [zoneForm, setZoneForm] = useState<"new" | "edit" | null>(null);
   const [adding, setAdding] = useState<
@@ -140,6 +145,17 @@ export default function Builder() {
   }, [busy, saveFailed, hasDrafts]);
   const pdfMode: EstimatePdfMode = estimate?.type === "final" ? "final" : "pre";
   const pdfId = estimate?.id;
+  const rangeTrial = !!me?.zone_ranges_enabled && estimate?.type === "pre";
+  const rangeQuery = useQuery({
+    queryKey: ["zone-ranges", id, estimate?.updated_at, me?.id],
+    queryFn: ({ signal }) =>
+      request<RangeSnapshot>(`/estimates/${id}/zone-ranges`, { signal }),
+    enabled: rangeTrial && !!id,
+  });
+  const selectedRangeZone = estimate?.zones.find((z) => z.id === rangeZone);
+  const selectedRange = rangeZone
+    ? rangeQuery.data?.zones[rangeZone]
+    : undefined;
   const proposalBrand =
     estimate?.pdf_layout?.proposal_brand === "verona" ? "verona" : "wallpanels";
   const presentationVisibility = {
@@ -158,6 +174,8 @@ export default function Builder() {
         presentationVisibility.show_grand_total,
         presentationVisibility.show_calculations,
         estimate.pdf_layout?.presentation_tax,
+        rangeTrial ? me?.id : null,
+        rangeTrial ? estimate.pdf_layout?.pre_zone_ranges_trial : null,
       ])
     : undefined;
   const pdfFilename = estimatePdfFilename(
@@ -702,6 +720,45 @@ export default function Builder() {
                   )}
                 </EmptyState>
               )}
+              {rangeTrial ? (
+                <div className="zone-range-control">
+                  <div>
+                    <span>{t("Zone price in PDF")}</span>
+                    <strong>
+                      {rangeQuery.data?.zones[zone.id]
+                        ? rangeLabel(
+                            rangeQuery.data.zones[zone.id].lower,
+                            rangeQuery.data.zones[zone.id].upper,
+                          )
+                        : "…"}
+                    </strong>
+                    {rangeQuery.data?.zones[zone.id]?.stale ? (
+                      <small>
+                        {t(
+                          "Review manual range: the zone or discount changed.",
+                        )}
+                      </small>
+                    ) : null}
+                  </div>
+                  <Button
+                    disabled={
+                      busy ||
+                      hasDrafts ||
+                      !rangeQuery.data ||
+                      rangeQuery.isFetching
+                    }
+                    onClick={() => setRangeZone(zone.id)}
+                  >
+                    <Settings2 size={16} />
+                    {t("Price range")}
+                  </Button>
+                  {rangeQuery.isError ? (
+                    <ErrorNotice retry={() => void rangeQuery.refetch()}>
+                      {t("Could not load zone ranges.")}
+                    </ErrorNotice>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="scope-footer">
                 <div>
                   <span>{t("Zone subtotal")}</span>
@@ -871,7 +928,20 @@ export default function Builder() {
               <p className="summary-note">
                 {t("Pre-estimate PDF range")}
                 <br />
-                {money(prePdfTotal * 0.9)} – {money(prePdfTotal * 1.15)}
+                {rangeTrial && rangeQuery.data?.active
+                  ? rangeLabel(
+                      rangeQuery.data.grand_lower,
+                      rangeQuery.data.grand_upper,
+                    )
+                  : `${money(prePdfTotal * 0.9)} – ${money(prePdfTotal * 1.15)}`}
+                {rangeTrial &&
+                rangeQuery.data?.active &&
+                estimate.pdf_layout?.presentation_tax?.enabled ? (
+                  <>
+                    <br />
+                    {t("Including tax")}
+                  </>
+                ) : null}
               </p>
             ) : null}
             {pdfMode === "final" ? (
@@ -944,6 +1014,24 @@ export default function Builder() {
             loadPdf={loadPdf}
             checks={pdfMode === "final" ? finalChecks.data : undefined}
             onClose={() => setProposal(false)}
+          />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {rangeTrial && selectedRangeZone && selectedRange ? (
+          <ZoneRangeForm
+            key={selectedRangeZone.id}
+            label={selectedRangeZone.label}
+            value={selectedRange}
+            onClose={() => setRangeZone(null)}
+            onSave={(options) =>
+              mutate(() =>
+                patch(
+                  `/estimates/${id}/zones/${selectedRangeZone.id}/price-range`,
+                  options,
+                ),
+              )
+            }
           />
         ) : null}
       </ModalPresence>

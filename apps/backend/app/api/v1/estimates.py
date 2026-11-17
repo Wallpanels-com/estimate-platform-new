@@ -240,10 +240,57 @@ async def update_estimate(
     if fields.get('type') in ('pre', 'final') and fields['type'] != est.type:
         est = await switch_mode(db, est, fields.pop('type'))
         estimate_id = est.id
+    if "pdf_layout" in fields:
+        from app.services.zone_ranges import KEY
+        layout = dict(fields["pdf_layout"] or {})
+        layout.pop(KEY, None)
+        if KEY in (est.pdf_layout or {}):
+            layout[KEY] = est.pdf_layout[KEY]
+        fields["pdf_layout"] = layout or None
     for field, value in fields.items():
         setattr(est, field, value)
     touch(est, current_user)
     await db.flush()
+    await db.commit()
+    return await load_estimate(estimate_id, current_user, db)
+
+
+
+from app.services.zone_ranges import RangeOptions, available as ranges_available, select_range, snapshot as range_snapshot
+
+
+def require_zone_range_trial(user, est=None):
+    if not ranges_available(user):
+        raise HTTPException(403, 'Zone ranges are available only to Dmitry during this trial.')
+    if est is not None and (est.type != 'pre' or getattr(est, 'deleted_at', None)):
+        raise HTTPException(400, 'Zone ranges are available in active Pre-estimates only.')
+
+
+@router.get("/{estimate_id}/zone-ranges")
+async def get_zone_ranges(estimate_id: uuid.UUID, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    require_zone_range_trial(current_user)
+    est = await load_estimate(estimate_id, current_user, db)
+    require_zone_range_trial(current_user, est)
+    try:
+        return range_snapshot(est)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@router.patch("/{estimate_id}/zones/{zone_id}/price-range", response_model=EstimateOut)
+async def update_zone_range(estimate_id: uuid.UUID, zone_id: uuid.UUID, data: RangeOptions, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    require_zone_range_trial(current_user)
+    est = await load_estimate(estimate_id, current_user, db)
+    require_zone_range_trial(current_user, est)
+    zone = next((z for z in est.zones if z.id == zone_id), None)
+    if zone is None:
+        raise HTTPException(404, 'Zone not found in this estimate.')
+    try:
+        select_range(est, zone, data)
+        range_snapshot(est)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    touch(est, current_user)
     await db.commit()
     return await load_estimate(estimate_id, current_user, db)
 
@@ -403,6 +450,9 @@ async def duplicate_estimate(
         for ident, slot in layout.get('final_zone_photos', {}).items()
         if ident in mappings['maps']['zones']
     }
+    from app.services.zone_ranges import KEY
+    if KEY in layout:
+        layout[KEY] = {mappings["maps"]["zones"][key]: value for key, value in layout[KEY].items() if key in mappings["maps"]["zones"]}
     new_est.pdf_layout = layout or None
     new_est.cover_image_id = mappings['maps']['images'].get(str(src.cover_image_id)) if src.cover_image_id else None
     await db.flush()
