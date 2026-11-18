@@ -1,22 +1,32 @@
-"""Owner-only ordered two-photo presentation trial and private QA estimates."""
+"""Shared ordered presentation photos; owner-private QA remains isolated."""
 from fastapi import HTTPException
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Annotated
-from .page_access import can_view_sales
+from .page_access import can_view_sales, allowed_pages
 from .proposal_display import _View
 from .final_zone_photos import selected_slot
 
+# Keep the stored key and capability name for existing trial selections/clients.
 KEY = 'final_zone_photo_pairs_trial'
 PRIVATE_KEY = 'private_preview_owner'
 
 
 def available(user):
+    if not getattr(user, "is_active", False):
+        return False
+    identity = getattr(user, "_portal_profile", None)
+    return "estimates" in allowed_pages(user) and (
+        identity is None or identity.get("module") in (None, "estimating")
+    )
+
+
+def private_available(user):
     return can_view_sales(user)
 
 
 def can_read(layout, user):
     owner = (layout or {}).get(PRIVATE_KEY)
-    return not owner or (str(getattr(user, 'id', '')) == owner and available(user))
+    return not owner or (str(getattr(user, 'id', '')) == owner and private_available(user))
 
 
 def require_read(layout, user):

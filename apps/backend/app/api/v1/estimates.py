@@ -148,8 +148,8 @@ async def create_estimate(
     values = data.model_dump()
     private = values.pop('private_preview', False)
     if private:
-        from app.services.photo_pair_trial import available, PRIVATE_KEY
-        if not available(current_user):
+        from app.services.photo_pair_trial import private_available, PRIVATE_KEY
+        if not private_available(current_user):
             raise HTTPException(403, 'Private previews are available only to Dmitry.')
         values['pdf_layout'] = {PRIVATE_KEY: str(current_user.id)}
     values['prepared_by'] = name
@@ -231,7 +231,7 @@ from app.services.photo_pair_trial import PhotoPairInput
 async def set_zone_photo_pair(estimate_id: uuid.UUID, zone_id: uuid.UUID, data: PhotoPairInput, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     from app.services.photo_pair_trial import available, select_pair
     if not available(current_user):
-        raise HTTPException(403, 'Two-photo previews are available only to Dmitry.')
+        raise HTTPException(403, 'Presentation photos require access to estimates.')
     est = await load_estimate(estimate_id, current_user, db)
     if est.type != 'final':
         raise HTTPException(400, 'Presentation photos are selected in Final Estimate.')

@@ -1,4 +1,4 @@
-"""Owner trial: ordered image pairs, private resources and uncropped geometry."""
+"""Shared ordered image pairs, private resources and uncropped geometry."""
 from pathlib import Path
 from types import SimpleNamespace as O
 import sys, uuid, tempfile, itertools
@@ -17,13 +17,13 @@ import test_final_layout as fixtures
 from test_final_layout import zone, estimate
 
 class Pairs(TestCase):
-    def test_validation_order_removal_and_owner_only_render(self):
+    def test_validation_order_removal_and_shared_render(self):
         owner=user(); other=user(); est,z,_=fixture()
         with patch.object(access.settings,'ACCESS_MANAGER_USER_ID',owner.id):
             pair.select_pair(est,z,[3,1])
             self.assertEqual(pair.slots_for(est,z),[3,1])
             self.assertEqual(pair.presentation_view(est,owner).zones[0]._presentation_slots,[3,1])
-            self.assertIs(pair.presentation_view(est,other),est)
+            self.assertEqual(pair.presentation_view(est,other).zones[0]._presentation_slots,[3,1])
             self.assertFalse(hasattr(z,'_presentation_slots'))
             z.images=[O(slot=1)]
             self.assertEqual(pair.slots_for(est,z),[1])
@@ -31,6 +31,20 @@ class Pairs(TestCase):
             with self.assertRaises(ValidationError): pair.PhotoPairInput(slots=slots)
         for slots in ([1,1],[4]):
             with self.assertRaises(ValueError): pair.select_pair(est,z,slots)
+
+    def test_shared_capability_respects_page_grants_and_portal_module(self):
+        self.assertTrue(pair.available(user()))
+        self.assertTrue(pair.available(user(['estimates'])))
+        for pages in ([], ['hr'], ['quick_estimate']):
+            self.assertFalse(pair.available(user(pages)))
+        inactive=user(); inactive.is_active=False
+        self.assertFalse(pair.available(inactive)); self.assertFalse(pair.available(None))
+        portal=user(); portal._portal_profile={'owner':False,'module':'estimating','pages':['estimates']}
+        self.assertTrue(pair.available(portal))
+        portal._portal_profile['module']='hr'
+        self.assertFalse(pair.available(portal))
+        est,_,_=fixture(); est.type='pre'
+        self.assertIs(pair.presentation_view(est,user()),est)
 
     def test_private_marker_survives_new_final(self):
         owner=user(); other=user()
@@ -79,13 +93,13 @@ class PrivateBoundary(IsolatedAsyncioTestCase):
                     self.assertEqual(err.exception.status_code,404)
                     await access.authorize_request(owner,db,request(path,method))
 
-    async def test_pair_endpoint_rejects_other_and_saves_owner(self):
-        owner=user(); employee=user(); est,z,_=fixture(); db=O(commit=AsyncMock())
+    async def test_pair_endpoint_rejects_restricted_and_saves_employee(self):
+        owner=user(); employee=user(); restricted=user(["hr"]); est,z,_=fixture(); db=O(commit=AsyncMock())
         with patch.object(access.settings,'ACCESS_MANAGER_USER_ID',owner.id), patch.object(estimates,'load_estimate',AsyncMock(return_value=est)):
             with self.assertRaises(HTTPException) as err:
-                await estimates.set_zone_photo_pair(est.id,z.id,pair.PhotoPairInput(slots=[1,3]),db,employee)
+                await estimates.set_zone_photo_pair(est.id,z.id,pair.PhotoPairInput(slots=[1,3]),db,restricted)
             self.assertEqual(err.exception.status_code,403); db.commit.assert_not_awaited()
-            await estimates.set_zone_photo_pair(est.id,z.id,pair.PhotoPairInput(slots=[3,1]),db,owner)
+            await estimates.set_zone_photo_pair(est.id,z.id,pair.PhotoPairInput(slots=[3,1]),db,employee)
             self.assertEqual(pair.slots_for(est,z),[3,1]); db.commit.assert_awaited_once()
 
     async def test_generic_patch_cannot_remove_or_forge_trial_markers(self):
