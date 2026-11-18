@@ -1,10 +1,11 @@
-"""Owner-only client-facing zone notes, independent of priced scope."""
+"""Shared client-facing zone notes, independent of priced scope."""
 from copy import deepcopy
 from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
-from .page_access import can_view_sales
+from .page_access import allowed_pages
 from .proposal_display import _View
 
+# Preserve notes saved during the owner trial; no migration or reset.
 KEY = 'zone_presentation_notes_trial'
 Note = Annotated[str, StringConstraints(strict=True, strip_whitespace=True, min_length=1, max_length=1000)]
 
@@ -22,7 +23,12 @@ class NotesInput(BaseModel):
 
 
 def available(user):
-    return can_view_sales(user)
+    if not getattr(user, "is_active", False):
+        return False
+    identity = getattr(user, "_portal_profile", None)
+    return "estimates" in allowed_pages(user) and (
+        identity is None or identity.get("module") in (None, "estimating")
+    )
 
 
 def entries(estimate):

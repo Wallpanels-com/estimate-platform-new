@@ -3,7 +3,7 @@
 The approved blank image is a background only. Zone numbers, headings, row
 names, optional saved-field calculations, prices, separators and totals are native
 PDF marks. Descriptions and SKU
-fields are excluded by default; the owner notes pilot also shows descriptions.
+fields are excluded by default; authorized presentation views include descriptions.
 """
 
 from dataclasses import dataclass, field

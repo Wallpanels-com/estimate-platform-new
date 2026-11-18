@@ -1,9 +1,11 @@
-# Presentation notes — Dmitry-only trial
+# Presentation notes — shared release
 
-The owner approved a production trial on 2026-11-18, not a shared rollout.
-`presentation_notes.available` uses the existing immutable access-manager owner
-check. `auth/me.presentation_notes_enabled`, the PATCH route, and PDF rendering
-all enforce that gate. Other accounts retain their existing PDF output.
+Dmitry approved the shared rollout on 2026-11-18 after testing the owner trial.
+Active accounts with Estimates access can use the editor and render the notes.
+Portal sessions require the estimating module or no module, plus the estimates
+page grant; owner status is no longer required. `auth/me.presentation_notes_enabled`,
+the PATCH route and PDF rendering enforce the same boundary. HR-only, Quick-only
+and inactive accounts remain excluded. Existing saved notes are preserved.
 
 Each Pre/Final zone has a Presentation notes editor with editable suggestions,
 free text, multiple rows and a text preview. Up to 20 notes of 1,000 characters
@@ -15,22 +17,20 @@ Notes render after priced scope, without a price or calculation, regardless of
 the calculation visibility switch. They do not participate in pricing, tax,
 ranges, or XLSX. Both brands and Pre/Final PDF paths use the gated immutable view;
 preview/download share the PDF source. Long notes use measured wrapping and
-continuation pages. The trial also includes item descriptions in Final scope
+continuation pages. The shared release also includes item descriptions in Final scope
 rows; Pre already supports them. Existing zero-price items are not auto-converted.
 
 Duplication remaps zone IDs. A linked Final inherits Pre notes until its own notes
 are explicitly edited (including clearing the list). Explicit Final notes protect
 a removed source zone from automatic removal. No schema migration is needed.
 
-Validation: test_presentation_notes (owner route gate, validation, real database
-branch inheritance/override/reload, both brands/modes/calculation settings,
-long-note geometry and other-account byte equivalence); 31 branch/range/display/
-delivery/photo regression tests; frontend build, i18n, PDF-source and repo checks.
-Browser QA uses mocked requests, verifies presets/free typing, keyboard selection,
-conflict preservation, save/reopen/delete and owner gating at 1512, 1280, 1024,
-768 and 390 px. Rendered PDF and browser screenshots were visually inspected.
-No customer estimates were edited for verification.
+Validation: test_presentation_notes covers shared employee access, restricted and
+inactive accounts, portal modules/grants, validation, real database inheritance,
+override/reload and both brands/modes/calculation settings. It verifies measured
+long-note geometry, identical owner/employee PDFs and excluded-account isolation.
+Branch/range/delivery regressions and frontend build/i18n/PDF-source checks cover
+existing behavior. No customer estimates are modified for verification.
 
-A future shared rollout must explicitly update the backend access policy and
-review the owner-only Final-description behavior. Do not enable globally until
-Dmitry approves the trial.
+The UI and layout are unchanged from the approved trial: presets, free text,
+keyboard selection, conflict preservation, save/reopen/delete and responsive
+layouts were previously verified at 1512, 1280, 1024, 768 and 390 px.

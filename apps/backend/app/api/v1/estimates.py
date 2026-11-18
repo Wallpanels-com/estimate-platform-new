@@ -304,7 +304,7 @@ from app.services.presentation_notes import NotesInput, available as notes_avail
 @router.patch("/{estimate_id}/zones/{zone_id}/presentation-notes", response_model=EstimateOut)
 async def update_presentation_notes(estimate_id: uuid.UUID, zone_id: uuid.UUID, data: NotesInput, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     if not notes_available(current_user):
-        raise HTTPException(403, 'Presentation notes are available only to Dmitry during this trial.')
+        raise HTTPException(403, 'Presentation notes require access to Estimates.')
     est = await load_estimate(estimate_id, current_user, db)
     if est.type not in ('pre', 'final') or getattr(est, 'deleted_at', None):
         raise HTTPException(400, 'Presentation notes require an active Pre or Final estimate.')

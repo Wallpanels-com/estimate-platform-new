@@ -1,4 +1,4 @@
-"""Owner-only notes: persistence, branch inheritance and bounded PDF text."""
+"""Shared notes: persistence, branch inheritance and bounded PDF text."""
 import asyncio
 from copy import deepcopy
 from decimal import Decimal
@@ -20,7 +20,7 @@ from app.services.proposal_brands import select_brand
 from app.services.final_pricing import quote
 from app.core.config import settings
 from app.api.v1 import estimates
-from test_zone_ranges import fixture, OWNER, USER, OTHER
+from test_zone_ranges import fixture, OWNER, USER, OTHER, RESTRICTED
 from test_final_layout import AuditedCanvas
 
 class Notes(TestCase):
@@ -31,14 +31,25 @@ class Notes(TestCase):
         with patch.object(settings,'ACCESS_MANAGER_USER_ID',OWNER):
             notes.select_notes(e,e.zones[0],notes.NotesInput(notes=[' Bench is not included ']))
             self.assertEqual(notes.notes_for(e,e.zones[0]),['Bench is not included'])
-            self.assertIs(notes.presentation_view(e,OTHER),e)
+            self.assertIsNot(notes.presentation_view(e,OTHER),e)
+            self.assertEqual(notes.presentation_view(e,OTHER).zones[0]._presentation_notes,['Bench is not included'])
+            self.assertIs(notes.presentation_view(e,RESTRICTED),e)
             view=notes.presentation_view(e,USER)
             self.assertIsNot(view,e)
             self.assertEqual(view.zones[0]._presentation_notes,['Bench is not included'])
             self.assertFalse(hasattr(e.zones[0],'_presentation_notes'))
             inactive=O(id=OWNER,is_active=False)
             self.assertIs(notes.presentation_view(e,inactive),e)
-            self.assertFalse(notes.available(O(id=OWNER,is_active=True,_portal_profile={'owner':False,'module':'estimating'})))
+            self.assertFalse(notes.available(None))
+            self.assertFalse(notes.available(O(id=uuid.uuid4(),is_active=True,page_access=['quick_estimate'])))
+            portal=O(id=OTHER.id,is_active=True,_portal_profile={'owner':False,'module':'estimating','pages':['estimates']})
+            self.assertTrue(notes.available(portal))
+            portal._portal_profile['module']=None
+            self.assertTrue(notes.available(portal))
+            portal._portal_profile['module']='hr'
+            self.assertFalse(notes.available(portal))
+            portal._portal_profile={'owner':False,'module':'estimating','pages':['hr']}
+            self.assertFalse(notes.available(portal))
         self.assertEqual(e.line_items,before.line_items)
         self.assertEqual(e.zones,before.zones)
         self.assertEqual(quote(e),quote(before))
@@ -74,7 +85,7 @@ class Notes(TestCase):
                 self.assertEqual(f.final_total,Decimal('100'))
             asyncio.run(verify())
 
-    def test_pdf_geometry_descriptions_notes_and_account_isolation(self):
+    def test_pdf_geometry_descriptions_notes_and_shared_access(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(settings,'ACCESS_MANAGER_USER_ID',OWNER):
             path=Path(directory)/'notes.pdf'
             for mode,renderer in [('pre',pre.generate_pre_estimate),('final',final.generate_final_client)]:
@@ -108,20 +119,23 @@ class Notes(TestCase):
                             for record in [a for a in records if 'Bench is not' in a[-1] or a[-1].startswith('Note ')]:
                                 for b in [x for x in records if x[0]==record[0] and '$' in x[-1]]:
                                     self.assertGreater(abs(record[2]-b[2]),5,(record,b))
+                            owner=path.read_bytes()
                             render_for_user(OTHER,render,e,path)
+                            self.assertEqual(owner,path.read_bytes())
+                            render_for_user(RESTRICTED,render,e,path)
                             other=path.read_bytes()
                             self.assertNotIn('Bench is not included',' '.join(p.extract_text() for p in PdfReader(path).pages))
                             e.pdf_layout.pop(notes.KEY)
-                            render_for_user(OTHER,render,e,path)
+                            render_for_user(RESTRICTED,render,e,path)
                             self.assertEqual(other,path.read_bytes())
 
 class Endpoints(IsolatedAsyncioTestCase):
     async def test_notes_gate_revision_flow_and_unchanged_prices(self):
         e=fixture();db=O(commit=AsyncMock())
         with patch.object(settings,'ACCESS_MANAGER_USER_ID',OWNER),patch.object(estimates,'load_estimate',new=AsyncMock(return_value=e)) as load:
-            with self.assertRaises(HTTPException) as denied:await estimates.update_presentation_notes(e.id,e.zones[0].id,notes.NotesInput(notes=['Note']),db,OTHER)
+            with self.assertRaises(HTTPException) as denied:await estimates.update_presentation_notes(e.id,e.zones[0].id,notes.NotesInput(notes=['Note']),db,RESTRICTED)
             self.assertEqual(denied.exception.status_code,403);load.assert_not_awaited()
-            await estimates.update_presentation_notes(e.id,e.zones[0].id,notes.NotesInput(notes=['Note']),db,USER)
+            await estimates.update_presentation_notes(e.id,e.zones[0].id,notes.NotesInput(notes=['Note']),db,OTHER)
             self.assertEqual(notes.notes_for(e,e.zones[0]),['Note'])
             db.commit.assert_awaited_once()
             e.type='quick'
