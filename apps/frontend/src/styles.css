@@ -5344,3 +5344,29 @@ html:has(.embedded-workspace) #root {
   font-weight: 500;
   white-space: pre-wrap;
 }
+
+.photo-paste {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.photo-paste textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 72px;
+  resize: none;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.photo-save-status {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.photo-save-status:empty {
+  display: none;
+}

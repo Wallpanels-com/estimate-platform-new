@@ -884,6 +884,7 @@ try {
   for (const count of [0, 4]) {
     const uploads = [];
     const covers = [];
+    let finishUpload = () => Promise.resolve(true);
     const photoClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -908,7 +909,7 @@ try {
               finalMode: true,
               coverImageId: "photo-2",
               onSelectCover: (id) => covers.push(id),
-              onUpload: (slot, file) => uploads.push({ slot, file }),
+              onUpload: (slot, file) => { uploads.push({ slot, file }); return finishUpload(); },
               onDelete: () => {},
             }),
           ),
@@ -969,6 +970,30 @@ try {
     assert.equal(uploads.length, 1);
     assert.equal(uploads[0].slot, count === 0 ? 1 : 3);
     assert.equal(uploads[0].file, file);
+    const pasteField = document.querySelector('textarea[aria-label="Paste zone photo"]');
+    if (count === 4) assert.equal(pasteField, null, 'Paste cannot overwrite a full zone');
+    else {
+      const paste = (files) => {
+        const event = new Event('paste', {bubbles:true, cancelable:true});
+        Object.defineProperty(event, 'clipboardData', {value:{files}});
+        pasteField.dispatchEvent(event);
+        assert.equal(event.defaultPrevented, true);
+      };
+      await act(async () => { paste([]); paste([file, file]); paste([new dom.window.File(['x'], 'x.gif', {type:'image/gif'})]); });
+      assert.equal(uploads.length, 1, 'Text, multiple images and unsupported formats must not upload');
+      let release;
+      finishUpload = () => new Promise(resolve => { release = resolve; });
+      await act(async () => { paste([file]); paste([file]); });
+      assert.equal(uploads.length, 2, 'Rapid paste must not create duplicate requests');
+      assert.equal(pasteField.disabled, true);
+      assert.match(document.querySelector('.photo-save-status').textContent, /Saving photo/);
+      await act(async () => release(true));
+      assert.equal(pasteField.disabled, false);
+      assert.match(document.querySelector('.photo-save-status').textContent, /Photo saved/);
+      finishUpload = async () => false;
+      await act(async () => paste([file]));
+      assert.equal(document.querySelector('.photo-save-status').textContent, '', 'Failed upload cannot claim persistence');
+    }
     await act(async () => root.unmount());
     photoClient.clear();
   }

@@ -5,6 +5,7 @@ import type { Zone } from "../lib/types";
 import { ModalPresence, Button, Confirm, Modal, useNotice } from "./ui";
 import ActionMenu from "./ActionMenu";
 import ProtectedImage from "./ProtectedImage";
+import PastePhoto from "./PastePhoto";
 export default function Photos({
   zone,
   onUpload,
@@ -17,7 +18,7 @@ export default function Photos({
   onSelectCover,
 }: {
   zone: Zone;
-  onUpload: (slot: number, file: File) => void;
+  onUpload: (slot: number, file: File) => Promise<boolean>;
   onDelete: (slot: number) => void;
   busy: boolean;
   finalMode?: boolean;
@@ -33,6 +34,10 @@ export default function Photos({
   const notify = useNotice();
   const input = useRef<HTMLInputElement>(null);
   const uploadSlot = useRef(1);
+  const uploadLock = useRef(false);
+  const [uploading, setUploading] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const disabled = busy || uploading;
   const availableSlot = [1, 2, 3, 4].find(
     (slot) => !zone.images.some((p) => p.slot === slot),
   );
@@ -40,16 +45,27 @@ export default function Photos({
     ? presentationSlot
     : [...zone.images].sort((a, b) => a.slot - b.slot)[0]?.slot;
   function choose(slot: number) {
+    if (disabled) return;
     uploadSlot.current = slot;
     input.current?.click();
   }
-  function upload(slot: number, file?: File) {
-    if (!file) return;
+  async function upload(slot: number, file?: File) {
+    if (!file || disabled || uploadLock.current) return;
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type))
       return notify("Choose a JPEG, PNG, or WebP image.", true);
     if (file.size > 20 * 1024 * 1024)
       return notify("Choose an image smaller than 20 MB.", true);
-    onUpload(slot, file);
+    uploadLock.current = true;
+    setUploading(true);
+    setSaved(false);
+    try {
+      setSaved(await onUpload(slot, file));
+    } catch {
+      notify("Photo could not be saved. Please try again.", true);
+    } finally {
+      uploadLock.current = false;
+      setUploading(false);
+    }
   }
   return (
     <section className="photos-panel" aria-label={t("Zone photographs")}>
@@ -104,7 +120,7 @@ export default function Photos({
                           ? "Selected for the title slide"
                           : "Use on the title slide",
                       )}
-                      disabled={busy}
+                      disabled={disabled}
                       onClick={() => onSelectCover?.(photo.id)}
                     >
                       <strong aria-hidden="true">T</strong>
@@ -124,7 +140,7 @@ export default function Photos({
                           ? "Selected for this zone’s Final Estimate"
                           : "Use in this zone’s Final Estimate",
                       )}
-                      disabled={busy}
+                      disabled={disabled}
                       onClick={() => onSelectPresentationPhoto?.(photo.slot)}
                     >
                       <Star
@@ -138,7 +154,7 @@ export default function Photos({
                   ) : null}
                   <ActionMenu
                     label={t("Actions for photo {0}", photo.slot)}
-                    disabled={busy}
+                    disabled={disabled}
                     actions={[
                       {
                         label: "Replace photo",
@@ -161,20 +177,34 @@ export default function Photos({
       {availableSlot ? (
         <Button
           className={`photo-add full-width ${zone.images.length ? "" : "photo-add-empty"}`}
-          disabled={busy}
+          disabled={disabled}
           onClick={() => choose(availableSlot)}
         >
           <ImagePlus size={19} aria-hidden="true" />
           {t("Add photo")}
         </Button>
       ) : null}
+      {availableSlot ? (
+        <PastePhoto
+          disabled={disabled}
+          onFile={(file) => void upload(availableSlot, file)}
+          onError={(message) => notify(message, true)}
+        />
+      ) : null}
+      <p className="photo-save-status" role="status">
+        {uploading
+          ? t("Saving photo… Keep this tab open until saving finishes.")
+          : saved
+            ? t("Photo saved. It will remain after you close this tab.")
+            : null}
+      </p>
       <input
         ref={input}
         className="file-input"
         type="file"
         accept="image/jpeg,image/png,image/webp"
         aria-label={t("Upload zone photo")}
-        disabled={busy}
+        disabled={disabled}
         onChange={(e) => {
           upload(uploadSlot.current, e.target.files?.[0]);
           e.target.value = "";

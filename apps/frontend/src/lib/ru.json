@@ -1186,5 +1186,13 @@
   "Edit notes": "Изменить примечания",
   "Text in the presentation": "Текст в презентации",
   "Notes could not be saved. Please try again.": "Не удалось сохранить примечания. Попробуйте ещё раз.",
-  "Add exclusions or other notes without a price.": "Добавьте исключения или другие примечания без цены."
+  "Add exclusions or other notes without a price.": "Добавьте исключения или другие примечания без цены.",
+  "Or paste an image": "Или вставьте изображение",
+  "Paste zone photo": "Вставить фото зоны",
+  "Click here and press Ctrl+V or ⌘V": "Выберите это поле и нажмите Ctrl+V или ⌘V",
+  "Paste one photo at a time.": "Вставляйте по одной фотографии.",
+  "Copy the image itself or a screenshot, then paste it here.": "Скопируйте само изображение или скриншот и вставьте его сюда.",
+  "Saving photo… Keep this tab open until saving finishes.": "Сохраняем фото… Дождитесь завершения перед закрытием вкладки.",
+  "Photo saved. It will remain after you close this tab.": "Фото сохранено. Оно останется после закрытия вкладки.",
+  "Photo could not be saved. Please try again.": "Не удалось сохранить фото. Попробуйте ещё раз."
 }
