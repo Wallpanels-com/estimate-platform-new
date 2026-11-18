@@ -95,3 +95,24 @@ npm run dev
 Source rollback leaves database records and uploaded media intact. No database
 rollback is needed for this task; do not restore the full database over later
 customer work. PostgreSQL is shared locally and must remain running.
+
+## Short-scope pagination correction (2026-11-18)
+
+A portrait photo reserves the bottom-left region for the total. A large two-line
+heading previously left only 181 points for scope rows; five short priced items
+therefore broke into 2 + 2 + 1 rows across three slides.
+
+Before paginating an overflowing 4–6-item photo layout, the renderer now measures
+candidate heading sizes and row spacing. It keeps the heading's upper alignment,
+photo and total geometry, and tries readable body sizes (minimum 18 pt) and
+headings (minimum 44 pt). It selects a one-page candidate only if every row,
+calculation, description and note fits above the reserved total. Already-fitting
+layouts, longer scopes and oversized notes retain normal continuation behavior.
+There is no project, zone-name, account or brand special case.
+
+The reported project's Living Room now has all five items and $19,960 on one
+slide. Comparing all 12 zones locally showed no other page-count changes;
+Wardrobe remains two slides. Both brand renders were visually inspected. Tests
+cover exact row retention, total, immutable prices, calculation toggles, geometry
+(including separators/photos), long notes and unchanged longer-scope layouts.
+See `presentation-notes-trial.md` for the current shared notes/description policy.

@@ -431,6 +431,54 @@ class FinalLayout(TestCase):
                     self.assertEqual(page.rows[0].price_below, count == 1)
                     self.check_geometry(est, f"short-{count}-{selected}.pdf")
 
+    def test_five_short_items_fit_portrait_slide_with_total_and_one_line_title(self):
+        from app.services.proposal_display import select_display_options
+        from app.services.proposal_brands import select_brand
+        names = ['Panels + Builtout', 'Electrical fireplace', 'Shelving unit',
+                 'Panels for a sliding door', 'Sliding door']
+        amounts = [6500, 4500, 2800, 2660, 3500]
+        for brand in ('wallpanels', 'verona'):
+            for calculations in (False, True):
+                z = zone('Living room tv wall', count=5, images=[self.photos(2)[1]])
+                for n, i in enumerate(z.line_items):
+                    i.name = names[n]; i.description = ''; i.sort_order = n
+                    i.total_price = Decimal(amounts[n])
+                    i.quantity = [Decimal(65), None, Decimal('3.5'), Decimal(38), None][n]
+                    i.unit_price = [Decimal(100), None, Decimal(800), Decimal(70), None][n]
+                    i.unit = ['SF', 'ea', 'LF', 'SF', 'ea'][n]
+                    i.calc_type = 'fixed' if i.quantity is None else 'manual'
+                est = estimate([z]); est._presentation_notes_enabled = True
+                select_brand(est, brand); select_display_options(est, {'show_calculations': calculations})
+                before = deepcopy(est)
+                pages = layout.zone_layout.paginate(z, 3, layout.price_quote(est),
+                    show_calculations=calculations, show_descriptions=True)
+                self.assertEqual(len(pages), 1)
+                self.assertEqual(len(pages[0].titles), 1)
+                self.assertEqual([r.item.id for r in pages[0].rows], [i.id for i in z.line_items])
+                self.assertTrue(pages[0].final)
+                self.assertGreaterEqual(min(r.size for r in pages[0].rows), 18)
+                reader = self.check_geometry(est, f'short-portrait-{brand}-{calculations}.pdf')
+                scope = reader.pages[1].extract_text()
+                self.assertIn('$19,960.00', scope)
+                for name in names:self.assertIn(name, scope)
+                self.assertEqual(est, before)
+
+    def test_compact_fit_leaves_longer_scopes_and_oversized_notes_paginated(self):
+        z = zone('Wardrobe', count=8, images=self.photos(1))
+        for i in z.line_items:i.description = ''
+        pricing = layout.price_quote(estimate([z]))
+        pages = layout.zone_layout.paginate(z, 5, pricing)
+        with patch.object(layout.zone_layout, 'fit_short_scope', side_effect=lambda page, items, quote, rows, *args: (page, rows)):
+            original = layout.zone_layout.paginate(z, 5, pricing)
+        self.assertEqual(pages, original)
+        self.assertGreater(len(pages), 1)
+        z = zone('Living room tv wall', count=5, images=[self.photos(2)[1]])
+        z._presentation_notes = ['Important client note: ' + 'Detailed finishing specifications. ' * 40]
+        pages = layout.zone_layout.paginate(z, 3, layout.price_quote(estimate([z])))
+        self.assertGreater(len(pages), 1)
+        self.assertEqual(sum(bool(r.price) for p in pages for r in p.rows), 5)
+        self.assertEqual(sum(p.final for p in pages), 1)
+
     def test_regular_scopes_share_the_larger_caption_gap(self):
         for selected in (1, 2):
             z = zone(count=9, images=self.photos(2) if selected else [])

@@ -6,7 +6,7 @@ PDF marks. Descriptions and SKU
 fields are excluded by default; authorized presentation views include descriptions.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from math import ceil
 from PIL import Image, ImageOps
@@ -112,6 +112,7 @@ class ZonePage:
     number: int
     titles: list
     title_size: float
+    title_y: float = 620
     rows: list = field(default_factory=list)
     assets: list = field(default_factory=list)
     side: bool = True
@@ -261,6 +262,43 @@ def row_data(items, width, capacity, quote, size=19, padding=20, weight="Regular
     return rows
 
 
+def fit_short_scope(page, items, quote, rows, show_calculations, show_descriptions):
+    """Try a readable one-page layout before splitting a short priced scope.
+
+    Preserve normal layouts and longer lists. The title keeps its top alignment
+    as it shrinks; photograph and total boxes never move. Only accept a candidate
+    when every measured row (including notes) fits above the reserved total.
+    """
+    capacity = page.body_top - page.body_bottom
+    if not page.side or not 4 <= len(items) <= 6 or sum(r.height for r in rows) <= capacity:
+        return page, rows
+    note_rows = [r for r in rows if r.note]
+    label = " ".join(str(page.zone.label).upper().split())
+    ascent = pdfmetrics.getFont("WP-Bold").face.ascent / 1000
+    original_size = 22 if page.portrait else 19
+    for text_size in range(original_size, 17, -1):
+        for heading_size in range(int(page.title_size), 43, -2):
+            if any(pdfmetrics.stringWidth(word, "WP-Bold", heading_size) > page.text_width for word in label.split()):
+                continue
+            titles = _wrap(label, page.text_width, heading_size, "WP-Bold")
+            title_y = page.title_y + (page.title_size - heading_size) * ascent
+            component_y = title_y - (len(titles) - 1) * heading_size * 1.25 - 64
+            body_top = component_y - COMPONENT_GAP
+            space = body_top - page.body_bottom
+            if space <= 0:
+                continue
+            # Keep the default padding whenever possible; four points still
+            # leaves a full leading interval between adjacent row baselines.
+            for padding in (12 if show_calculations else 20, 8, 4):
+                candidate = row_data(items, page.text_width, space, quote, text_size,
+                                     padding=padding, show_calculations=show_calculations,
+                                     show_descriptions=show_descriptions) + note_rows
+                if len(candidate) <= 8 and sum(r.height for r in candidate) <= space:
+                    return replace(page, titles=titles, title_size=heading_size,
+                                   title_y=title_y, component_y=component_y, body_top=body_top), candidate
+    return page, rows
+
+
 def paginate(zone, number, quote, selected_slot=None, photo_required=True, show_calculations=True, show_descriptions=False):
     assets = photos(zone, selected_slot, required=photo_required)
     base, introductions = geometry(zone, number, assets)
@@ -360,6 +398,9 @@ def paginate(zone, number, quote, selected_slot=None, photo_required=True, show_
                 for start in range(0, len(lines), limit):
                     chunk = lines[start:start + limit]
                     pending.append(Row(None, chunk, '', len(chunk) * 28 + 20, size=20, lead=28, note=True))
+        if page_index == 0 and not introductions:
+            page, pending = fit_short_scope(page, items, quote, pending, show_calculations, show_descriptions)
+            capacity = page.body_top - page.body_bottom
         target_capacity = capacity * page.columns
         # Do not strand one or two rows on a needless continuation. Balance the
         # remaining measured rows when they genuinely need multiple pages.
@@ -517,20 +558,20 @@ def draw(c, page, quote):
         for n, title in enumerate(page.titles):
             text(c, title, X, 625 - n * 47, 34, "Bold")
         return
-    last = 620 - (len(page.titles) - 1) * (page.title_size * 1.25)
+    last = page.title_y - (len(page.titles) - 1) * (page.title_size * 1.25)
     for n, title in enumerate(page.titles):
         color = GOLD if n == len(page.titles) - 1 and len(page.titles) > 1 else INK
         if page.portrait and len(page.titles) == 1 and " " in title:
             prefix, accent = title.rsplit(" ", 1)
-            text(c, prefix + " ", X, 620, page.title_size, "Bold")
+            text(c, prefix + " ", X, page.title_y, page.title_size, "Bold")
             offset = pdfmetrics.stringWidth(prefix + " ", "WP-Bold", page.title_size)
-            text(c, accent, X + offset, 620, page.title_size, "Bold", GOLD)
+            text(c, accent, X + offset, page.title_y, page.title_size, "Bold", GOLD)
             continue
         text(
             c,
             title,
             X,
-            620 - n * (page.title_size * 1.25),
+            page.title_y - n * (page.title_size * 1.25),
             page.title_size,
             "Bold",
             color,
