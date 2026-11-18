@@ -66,6 +66,8 @@ async def load_estimate(estimate_id: uuid.UUID, user: User, db: AsyncSession) ->
     est = result.scalar_one_or_none()
     if not est:
         raise HTTPException(status_code=404, detail="Estimate not found")
+    from app.services.photo_pair_trial import require_read
+    require_read(getattr(est, "pdf_layout", None), user)
     parent_timestamp = None
     if source:
         parent_timestamp = (await db.execute(select(Estimate.updated_at).where(Estimate.id == source))).scalar_one()
@@ -92,7 +94,7 @@ async def _purge_expired_trash(db: AsyncSession) -> None:
     return
 
 
-async def estimate_register(db: AsyncSession, *, trash: bool = False):
+async def estimate_register(db: AsyncSession, *, trash: bool = False, user=None):
     """Load selected branches in two queries, independent of project count."""
     result = await db.execute(
         select(Estimate)
@@ -103,6 +105,8 @@ async def estimate_register(db: AsyncSession, *, trash: bool = False):
         .order_by(Estimate.deleted_at.desc() if trash else Estimate.updated_at.desc())
     )
     roots = result.scalars().all()
+    from app.services.photo_pair_trial import can_read
+    roots = [est for est in roots if can_read(getattr(est, "pdf_layout", None), user)]
     active_final_ids = [est.id for est in roots if (est.branch_state or {}).get('active_mode') == 'final']
     finals = {}
     if active_final_ids:
@@ -123,7 +127,7 @@ async def list_estimates(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await estimate_register(db)
+    return await estimate_register(db, user=current_user)
 
 
 @router.get("/trash", response_model=List[EstimateListItem])
@@ -131,7 +135,7 @@ async def list_trash(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await estimate_register(db, trash=True)
+    return await estimate_register(db, trash=True, user=current_user)
 
 
 @router.post("", response_model=EstimateOut, status_code=201)
@@ -142,6 +146,12 @@ async def create_estimate(
 ):
     name = user_display_name(current_user)
     values = data.model_dump()
+    private = values.pop('private_preview', False)
+    if private:
+        from app.services.photo_pair_trial import available, PRIVATE_KEY
+        if not available(current_user):
+            raise HTTPException(403, 'Private previews are available only to Dmitry.')
+        values['pdf_layout'] = {PRIVATE_KEY: str(current_user.id)}
     values['prepared_by'] = name
     est = Estimate(**values, user_id=current_user.id, created_by_name=name, updated_by_name=name)
     db.add(est)
@@ -213,6 +223,31 @@ async def set_zone_photo(estimate_id: uuid.UUID, zone_id: uuid.UUID, data: ZoneP
     return await load_estimate(estimate_id, current_user, db)
 
 
+
+from app.services.photo_pair_trial import PhotoPairInput
+
+
+@router.put("/{estimate_id}/zones/{zone_id}/presentation-photos", response_model=EstimateOut)
+async def set_zone_photo_pair(estimate_id: uuid.UUID, zone_id: uuid.UUID, data: PhotoPairInput, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from app.services.photo_pair_trial import available, select_pair
+    if not available(current_user):
+        raise HTTPException(403, 'Two-photo previews are available only to Dmitry.')
+    est = await load_estimate(estimate_id, current_user, db)
+    if est.type != 'final':
+        raise HTTPException(400, 'Presentation photos are selected in Final Estimate.')
+    if est.source_estimate_id:
+        est = await synchronize(db, est)
+    zone = next((z for z in est.zones if z.id == zone_id), None)
+    if zone is None:
+        raise HTTPException(404, 'Zone not found')
+    try:
+        select_pair(est, zone, data.slots)
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
+    touch(est, current_user)
+    await db.commit()
+    return await load_estimate(est.id, current_user, db)
+
 @router.put("/{estimate_id}/cover-photo", response_model=EstimateOut)
 async def set_cover(estimate_id: uuid.UUID, data: CoverRequest, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     est = await load_estimate(estimate_id, current_user, db)
@@ -244,7 +279,8 @@ async def update_estimate(
         from app.services.zone_ranges import KEY
         layout = dict(fields["pdf_layout"] or {})
         from app.services.presentation_notes import KEY as NOTES_KEY
-        for reserved in (KEY, NOTES_KEY):
+        from app.services.photo_pair_trial import KEY as PAIR_KEY, PRIVATE_KEY
+        for reserved in (KEY, NOTES_KEY, PAIR_KEY, PRIVATE_KEY):
             layout.pop(reserved, None)
             if reserved in (est.pdf_layout or {}):
                 layout[reserved] = est.pdf_layout[reserved]
@@ -480,6 +516,9 @@ async def duplicate_estimate(
     from app.services.presentation_notes import KEY as NOTES_KEY, remap
     if NOTES_KEY in layout:
         layout[NOTES_KEY] = remap(src, mappings["maps"]["zones"])
+    from app.services.photo_pair_trial import KEY as PAIR_KEY
+    if PAIR_KEY in layout:
+        layout[PAIR_KEY] = {mappings['maps']['zones'][key]: value for key, value in layout[PAIR_KEY].items() if key in mappings['maps']['zones']}
     new_est.pdf_layout = layout or None
     new_est.cover_image_id = mappings['maps']['images'].get(str(src.cover_image_id)) if src.cover_image_id else None
     await db.flush()

@@ -74,7 +74,11 @@ def photos(zone, selected_slot=None, required=True):
         (image for image in images if image.slot == selected_slot),
         images[0] if images else None,
     )
-    for image in ([chosen] if chosen else []):
+    slots = getattr(zone, "_presentation_slots", None)
+    selected = ([next(image for image in images if image.slot == slot)
+                 for slot in slots if any(image.slot == slot for image in images)][:2]
+                if slots else ([chosen] if chosen else []))
+    for image in selected:
         try:
             with Image.open(image.file_path) as source:
                 im = ImageOps.exif_transpose(source)
@@ -164,8 +168,9 @@ def title_layout(label, width, side):
 
 def geometry(zone, number, assets, continued=False):
     side = bool(assets)
-    portrait = bool(assets and assets[0].ratio < 1)
-    width = 738 if portrait else 390 if side else W - 2 * X
+    paired = len(assets) == 2
+    portrait = bool(len(assets) == 1 and assets[0].ratio < 1)
+    width = 538 if paired else 738 if portrait else 390 if side else W - 2 * X
     titles, size, introductions = title_layout(zone.label, width, side)
     baseline = 620
     last = baseline - (len(titles) - 1) * size * 1.25
@@ -187,12 +192,12 @@ def geometry(zone, number, assets, continued=False):
             side=side,
             component_y=components,
             body_top=top,
-            body_bottom=220 if portrait else 100 if side else 205,
+            body_bottom=220 if portrait or paired else 100 if side else 205,
             columns=1 if side else 2,
             portrait=portrait,
-            text_width=738 if portrait else 386,
-            media_box=(912, 90, 490, 702) if portrait else (527, 210, 913, 530),
-            total_box=(82, 90, 738, 104) if portrait else (816, 90, 624, 104),
+            text_width=538 if paired else 738 if portrait else 386,
+            media_box=(674, 110, 728, 630) if paired else (912, 90, 490, 702) if portrait else (527, 210, 913, 530),
+            total_box=(82, 90, 538, 104) if paired else (82, 90, 738, 104) if portrait else (816, 90, 624, 104),
         ),
         introductions,
     )
@@ -270,7 +275,7 @@ def fit_short_scope(page, items, quote, rows, show_calculations, show_descriptio
     when every measured row (including notes) fits above the reserved total.
     """
     capacity = page.body_top - page.body_bottom
-    if not page.side or not 4 <= len(items) <= 6 or sum(r.height for r in rows) <= capacity:
+    if not page.side or not (1 if len(page.assets) == 2 else 4) <= len(items) <= 6 or sum(r.height for r in rows) <= capacity:
         return page, rows
     note_rows = [r for r in rows if r.note]
     label = " ".join(str(page.zone.label).upper().split())
@@ -336,7 +341,7 @@ def paginate(zone, number, quote, selected_slot=None, photo_required=True, show_
         # remaining scope keeps the same balanced composition.
         batch = assets
         page, _ = geometry(zone, number, batch, page_index > 0)
-        page.sparse = 1 <= len(items) <= 3 and not getattr(zone, "_presentation_notes", [])
+        page.sparse = 1 <= len(items) <= 3 and len(assets) != 2 and not getattr(zone, "_presentation_notes", [])
         if page.sparse:
             page.body_top = page.component_y - SHORT_SCOPE_GAPS[len(items)]
         width = page.text_width if page.side else (W - 2 * X - 66) / 2
@@ -505,6 +510,32 @@ def paginate(zone, number, quote, selected_slot=None, photo_required=True, show_
     return result
 
 
+def photo_boxes(assets, box):
+    """Ordered, uncropped pairs: choose the arrangement with most visible area.
+
+    Ratios set the shared height/width. Bound the split so a panorama cannot
+    reduce the other photograph to a thumbnail. First always reads left/top.
+    """
+    x, y, w, h = box
+    if len(assets) < 2:
+        return [box]
+    gap = 20
+    a, b = (photo.ratio for photo in assets)
+    share_x = max(.3, min(.7, a / (a + b)))
+    share_y = max(.3, min(.7, (1 / a) / (1 / a + 1 / b)))
+    left = (w - gap) * share_x
+    top = (h - gap) * share_y
+    candidates = [
+        [(x, y, left, h), (x + left + gap, y, w - gap - left, h)],
+        [(x, y + h - top, w, top), (x, y, w, h - gap - top)],
+    ]
+    def score(boxes):
+        areas = [min(bw / p.width, bh / p.height) ** 2 * p.width * p.height
+                 for p, (_, _, bw, bh) in zip(assets, boxes)]
+        return sum(areas) + .25 * min(areas)
+    return max(candidates, key=score)
+
+
 def contained(c, photo, x, y, w, h):
     from .pdf_optimization import image_reader
     image = image_reader(photo.path)
@@ -553,7 +584,8 @@ def draw(c, page, quote):
     if page.parts > 1:
         text(c, f"{page.part}/{page.parts}", 420, 719, 13, color=MUTED, right=True)
     if page.assets:
-        contained(c, page.assets[0], *page.media_box)
+        for photo, box in zip(page.assets, photo_boxes(page.assets, page.media_box)):
+            contained(c, photo, *box)
     if page.title_only:
         for n, title in enumerate(page.titles):
             text(c, title, X, 625 - n * 47, 34, "Bold")

@@ -900,7 +900,7 @@
   "Interview": "Собеседование",
   "Offer": "Предложение",
   "Hired": "Принят",
-  "Not selected": "Не выбран",
+  "Not selected": "Не выбрано",
   "Priority candidate": "Приоритетный кандидат",
   "Current place of residence / work": "Текущее место проживания / работы",
   "Location confirmed with candidate": "Местонахождение подтверждено кандидатом",
@@ -1194,5 +1194,12 @@
   "Copy the image itself or a screenshot, then paste it here.": "Скопируйте само изображение или скриншот и вставьте его сюда.",
   "Saving photo… Keep this tab open until saving finishes.": "Сохраняем фото… Дождитесь завершения перед закрытием вкладки.",
   "Photo saved. It will remain after you close this tab.": "Фото сохранено. Оно останется после закрытия вкладки.",
-  "Photo could not be saved. Please try again.": "Не удалось сохранить фото. Попробуйте ещё раз."
+  "Photo could not be saved. Please try again.": "Не удалось сохранить фото. Попробуйте ещё раз.",
+  "Zone presentation photos saved": "Фотографии слайда сохранены",
+  "Slide photo {0}: {1}": "Фото слайда {0}: {1}",
+  "Selected position {0}": "Выбрано под номером {0}",
+  "Click to remove from the pair. One photo must remain selected.": "Нажмите, чтобы убрать из пары. Одно фото должно остаться выбранным.",
+  "Remove a selected photo before choosing another.": "Сначала уберите одно из выбранных фото.",
+  "Add as the second slide photo": "Добавить вторым фото на слайд",
+  "Choose up to two stars. 1 is left or top; 2 is right or bottom. Layout is automatic.": "Выберите до двух звёздочек. 1 — слева или сверху, 2 — справа или снизу. Размещение автоматическое."
 }

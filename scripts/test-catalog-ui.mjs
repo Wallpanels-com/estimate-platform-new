@@ -997,6 +997,26 @@ try {
     await act(async () => root.unmount());
     photoClient.clear();
   }
+  // Ordered pair selection is gated; a third image cannot be selected.
+  const pairsClient = new QueryClient({defaultOptions:{queries:{retry:false}}});
+  root=createRoot(document.getElementById("root"));
+  let pairSlots=[1];
+  const pairChanges=[];
+  const renderPairs=async (enabled=true)=>act(async()=>root.render(h(QueryClientProvider,{client:pairsClient},h(LanguageProvider,null,h(Photos,{
+    zone:{id:"pairs",images:[1,2,3].map(slot=>({id:`pair-${slot}`,slot}))},busy:false,finalMode:true,
+    pairMode:enabled,presentationSlots:pairSlots,onSelectPresentationPhotos:slots=>{pairSlots=slots;pairChanges.push(slots);},onUpload:async()=>true,onDelete:()=>{}
+  })))));
+  const stars=()=>[...document.querySelectorAll('.photo-presentation-choice')].filter(b=>b.querySelector('svg'));
+  await renderPairs();
+  assert.equal(stars()[0].querySelector('small').textContent,'1');
+  await click(stars()[1]);await renderPairs();
+  assert.deepEqual(pairSlots,[1,2]);assert.equal(stars()[1].querySelector('small').textContent,'2');
+  assert.equal(stars()[2].disabled,true);await click(stars()[2]);assert.equal(pairChanges.length,1);
+  await click(stars()[0]);await renderPairs();assert.deepEqual(pairSlots,[2]);
+  assert.equal(stars()[1].querySelector('small').textContent,'1');
+  await click(stars()[2]);await renderPairs();assert.deepEqual(pairSlots,[2,3]);
+  await renderPairs(false);assert.equal(document.querySelectorAll('.photo-presentation-choice small').length,0);
+  await act(async()=>root.unmount());pairsClient.clear();
   console.log(
     "Catalogue UI tests passed: EN/RU search, keyboard selection/create, Price Book persistence callback, current-zone quote, retry without duplicate item, cancel, unchanged calculator routing, and EN/RU Price Book rate/category/edit/archive/delete confirmations and rate-group additions, and hidden photo upload/replace regression.",
   );

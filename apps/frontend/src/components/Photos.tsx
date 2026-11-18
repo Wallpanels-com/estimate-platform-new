@@ -13,6 +13,9 @@ export default function Photos({
   busy,
   finalMode = false,
   presentationSlot,
+  pairMode = false,
+  presentationSlots,
+  onSelectPresentationPhotos,
   onSelectPresentationPhoto,
   coverImageId,
   onSelectCover,
@@ -23,6 +26,9 @@ export default function Photos({
   busy: boolean;
   finalMode?: boolean;
   presentationSlot?: number | null;
+  pairMode?: boolean;
+  presentationSlots?: number[];
+  onSelectPresentationPhotos?: (slots: number[]) => void;
   onSelectPresentationPhoto?: (slot: number) => void;
   coverImageId?: string | null;
   onSelectCover?: (id: string) => void;
@@ -44,6 +50,21 @@ export default function Photos({
   const selectedSlot = zone.images.some((p) => p.slot === presentationSlot)
     ? presentationSlot
     : [...zone.images].sort((a, b) => a.slot - b.slot)[0]?.slot;
+  const validSlots = [...new Set(presentationSlots || [])]
+    .filter((slot) => zone.images.some((p) => p.slot === slot))
+    .slice(0, 2);
+  const selectedSlots = validSlots.length
+    ? validSlots
+    : selectedSlot
+      ? [selectedSlot]
+      : [];
+  function selectPair(slot: number) {
+    if (selectedSlots.includes(slot)) {
+      if (selectedSlots.length > 1)
+        onSelectPresentationPhotos?.(selectedSlots.filter((s) => s !== slot));
+    } else if (selectedSlots.length < 2)
+      onSelectPresentationPhotos?.([...selectedSlots, slot]);
+  }
   function choose(slot: number) {
     if (disabled) return;
     uploadSlot.current = slot;
@@ -130,26 +151,73 @@ export default function Photos({
                     <button
                       type="button"
                       className="photo-presentation-choice"
-                      aria-pressed={photo.slot === selectedSlot}
-                      aria-label={t(
-                        "Use photo {0} in this zone’s Final Estimate",
-                        photo.slot,
-                      )}
-                      title={t(
-                        photo.slot === selectedSlot
-                          ? "Selected for this zone’s Final Estimate"
-                          : "Use in this zone’s Final Estimate",
-                      )}
-                      disabled={disabled}
-                      onClick={() => onSelectPresentationPhoto?.(photo.slot)}
+                      aria-pressed={
+                        pairMode
+                          ? selectedSlots.includes(photo.slot)
+                          : photo.slot === selectedSlot
+                      }
+                      aria-label={
+                        pairMode
+                          ? t(
+                              "Slide photo {0}: {1}",
+                              photo.slot,
+                              selectedSlots.includes(photo.slot)
+                                ? t(
+                                    "Selected position {0}",
+                                    selectedSlots.indexOf(photo.slot) + 1,
+                                  )
+                                : t("Not selected"),
+                            )
+                          : t(
+                              "Use photo {0} in this zone’s Final Estimate",
+                              photo.slot,
+                            )
+                      }
+                      title={
+                        pairMode
+                          ? t(
+                              selectedSlots.includes(photo.slot)
+                                ? "Click to remove from the pair. One photo must remain selected."
+                                : selectedSlots.length === 2
+                                  ? "Remove a selected photo before choosing another."
+                                  : "Add as the second slide photo",
+                            )
+                          : t(
+                              photo.slot === selectedSlot
+                                ? "Selected for this zone’s Final Estimate"
+                                : "Use in this zone’s Final Estimate",
+                            )
+                      }
+                      disabled={
+                        disabled ||
+                        (pairMode &&
+                          selectedSlots.length === 2 &&
+                          !selectedSlots.includes(photo.slot))
+                      }
+                      onClick={() =>
+                        pairMode
+                          ? selectPair(photo.slot)
+                          : onSelectPresentationPhoto?.(photo.slot)
+                      }
                     >
                       <Star
                         size={17}
                         fill={
-                          photo.slot === selectedSlot ? "currentColor" : "none"
+                          (
+                            pairMode
+                              ? selectedSlots.includes(photo.slot)
+                              : photo.slot === selectedSlot
+                          )
+                            ? "currentColor"
+                            : "none"
                         }
                         aria-hidden="true"
                       />
+                      {pairMode && selectedSlots.includes(photo.slot) ? (
+                        <small aria-hidden="true">
+                          {selectedSlots.indexOf(photo.slot) + 1}
+                        </small>
+                      ) : null}
                     </button>
                   ) : null}
                   <ActionMenu
@@ -214,9 +282,11 @@ export default function Photos({
         {t("Up to 4 photos · JPEG, PNG, WebP")}
         <br />
         {t(
-          finalMode
-            ? "T selects the title photo. The star selects this zone’s slide photo."
-            : "Included in this zone’s PDF.",
+          finalMode && pairMode
+            ? "Choose up to two stars. 1 is left or top; 2 is right or bottom. Layout is automatic."
+            : finalMode
+              ? "T selects the title photo. The star selects this zone’s slide photo."
+              : "Included in this zone’s PDF.",
         )}
       </p>
       <ModalPresence>

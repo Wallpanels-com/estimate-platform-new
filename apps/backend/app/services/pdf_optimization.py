@@ -105,7 +105,8 @@ def render_for_user(user, renderer, estimate, destination):
     try:
         from .zone_ranges import presentation_view
         from .presentation_notes import presentation_view as notes_view
-        return renderer(notes_view(presentation_view(estimate, user), user), destination)
+        from .photo_pair_trial import presentation_view as pair_view
+        return renderer(pair_view(notes_view(presentation_view(estimate, user), user), user), destination)
     finally:
         _photo_export.reset(token)
 

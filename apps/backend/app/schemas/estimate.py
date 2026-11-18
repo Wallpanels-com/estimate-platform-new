@@ -127,6 +127,7 @@ class ZoneOut(BaseModel):
 # ---- Estimate ----
 
 class EstimateCreate(BaseModel):
+    private_preview: bool = False
     type: str
     title: Optional[str] = None
     room_name: Optional[str] = None

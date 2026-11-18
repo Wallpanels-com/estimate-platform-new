@@ -51,4 +51,7 @@ def initial_layout(estimate):
     if isinstance(getattr(estimate, 'pdf_layout', None), dict) and 'presentation_tax' in estimate.pdf_layout:
         from .presentation_tax import tax_options
         result['presentation_tax'] = tax_options(estimate).model_dump(mode='json')
+    from .photo_pair_trial import PRIVATE_KEY
+    if (getattr(estimate, 'pdf_layout', None) or {}).get(PRIVATE_KEY):
+        result[PRIVATE_KEY] = estimate.pdf_layout[PRIVATE_KEY]
     return result or None

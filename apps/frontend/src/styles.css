@@ -5370,3 +5370,12 @@ html:has(.embedded-workspace) #root {
 .photo-save-status:empty {
   display: none;
 }
+.photo-presentation-choice small {
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
+  align-self: flex-end;
+}
+
+.photo-presentation-choice:has(small) { width: 36px; gap: 2px; }
+.photo-presentation-choice:disabled { cursor: not-allowed; }

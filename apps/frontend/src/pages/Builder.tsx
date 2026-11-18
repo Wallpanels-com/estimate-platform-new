@@ -184,6 +184,10 @@ export default function Builder() {
         notesEnabled
           ? estimate.pdf_layout?.zone_presentation_notes_trial
           : null,
+        me?.photo_pair_trial_enabled ? "photo-pair-v1" : null,
+        me?.photo_pair_trial_enabled
+          ? estimate.pdf_layout?.final_zone_photo_pairs_trial
+          : null,
         rangeTrial ? me?.id : null,
         rangeTrial ? estimate.pdf_layout?.pre_zone_ranges_trial : null,
       ])
@@ -555,6 +559,23 @@ export default function Builder() {
                       body: JSON.stringify({ image_id }),
                     }),
                   "Title slide photo saved",
+                )
+              }
+              pairMode={!!me?.photo_pair_trial_enabled}
+              presentationSlots={
+                estimate.pdf_layout?.final_zone_photo_pairs_trial?.[zone.id]
+              }
+              onSelectPresentationPhotos={(slots) =>
+                mutate(
+                  () =>
+                    request(
+                      `/estimates/${id}/zones/${zone.id}/presentation-photos`,
+                      {
+                        method: "PUT",
+                        body: JSON.stringify({ slots }),
+                      },
+                    ),
+                  "Zone presentation photos saved",
                 )
               }
               presentationSlot={

@@ -90,7 +90,8 @@ async def authorize_request(user, db, request):
         return
     if path == '/estimates/trash' or re.fullmatch(r'/estimates/[^/]+/(restore|permanent)', path):
         require_any(user, 'trash')
-        return
+        if path == '/estimates/trash':
+            return
     if path == '/estimates':
         if method == 'POST':
             body = await request_fields(request)
@@ -102,26 +103,24 @@ async def authorize_request(user, db, request):
     media = re.fullmatch(r'/media/([^/]+)', path)
     document = re.fullmatch(r'/documents/([^/]+)', path)
     if match or media or document:
-        # Default/unrestricted employees retain the existing fast path. Restricted
-        # users cannot use a Quick grant to read a regular estimate via a known ID.
-        if {'estimates', 'quick_estimate', 'trash'}.issubset(allowed_pages(user)):
-            return
         from app.models.estimate import Estimate, EstimateImage
         from app.models.governance import DocumentVersion
         try:
             ident = uuid.UUID((match or media or document).group(1))
         except ValueError:
             raise HTTPException(404, 'Estimate not found')
-        query = select(Estimate.type, Estimate.deleted_at).where(Estimate.id == ident)
+        query = select(Estimate.type, Estimate.deleted_at, Estimate.pdf_layout).where(Estimate.id == ident)
         if media:
-            query = select(Estimate.type, Estimate.deleted_at).join(EstimateImage, EstimateImage.estimate_id == Estimate.id).where(EstimateImage.id == ident)
+            query = select(Estimate.type, Estimate.deleted_at, Estimate.pdf_layout).join(EstimateImage, EstimateImage.estimate_id == Estimate.id).where(EstimateImage.id == ident)
         elif document:
-            query = select(Estimate.type, Estimate.deleted_at).join(DocumentVersion, DocumentVersion.estimate_id == Estimate.id).where(DocumentVersion.id == ident)
+            query = select(Estimate.type, Estimate.deleted_at, Estimate.pdf_layout).join(DocumentVersion, DocumentVersion.estimate_id == Estimate.id).where(DocumentVersion.id == ident)
         row = (await db.execute(query)).first()
         if not row:
             raise HTTPException(404, 'Estimate not found')
+        from .photo_pair_trial import require_read
+        require_read(getattr(row, 'pdf_layout', None), user)
         require_any(user, *('trash',) if row.deleted_at else ('estimates', 'quick_estimate') if row.type == 'quick' else ('estimates',))
-        if row.deleted_at and method not in ('GET', 'HEAD'):
+        if row.deleted_at and method not in ('GET', 'HEAD') and not re.fullmatch(r'/estimates/[^/]+/(restore|permanent)', path):
             raise HTTPException(409, 'Restore this estimate before editing it.')
         if method == 'POST' and path.endswith('/mode'):
             require_any(user, 'estimates')
