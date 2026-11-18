@@ -39,6 +39,7 @@ class UserOut(BaseModel):
     agentation_enabled: bool = False
     page_access: list[str] | None = None
     can_manage_access: bool = False
+    presentation_notes_enabled: bool = False
     zone_ranges_enabled: bool = False
     sales_control_enabled: bool = False
     portal_managed: bool = False

@@ -84,6 +84,8 @@ def user_profile(user: User) -> UserOut:
     profile.sales_control_enabled = can_view_sales(user)
     from app.services.zone_ranges import available
     profile.zone_ranges_enabled = available(user)
+    from app.services.presentation_notes import available as notes_available
+    profile.presentation_notes_enabled = notes_available(user)
     profile.agentation_enabled = bool(user.is_active and settings.AGENTATION_USER_ID and user.id == settings.AGENTATION_USER_ID)
     identity = getattr(user, '_portal_profile', None)
     if identity is not None:

@@ -64,6 +64,7 @@ import EstimatePdfPreview from "../components/EstimatePdfPreview";
 import ProposalBrandSwitch from "../components/ProposalBrandSwitch";
 import PresentationOptions from "../components/PresentationOptions";
 import PresentationTaxForm from "../components/PresentationTaxForm";
+import PresentationNotesForm from "../components/PresentationNotesForm";
 import ZoneRangeForm, {
   rangeLabel,
   type RangeSnapshot,
@@ -94,6 +95,7 @@ export default function Builder() {
   const [proposal, setProposal] = useState(false);
   const [details, setDetails] = useState(false);
   const [taxForm, setTaxForm] = useState(false);
+  const [notesZone, setNotesZone] = useState<string | null>(null);
   const [rangeZone, setRangeZone] = useState<string | null>(null);
   const [records, setRecords] = useState(false);
   const [zoneForm, setZoneForm] = useState<"new" | "edit" | null>(null);
@@ -145,6 +147,10 @@ export default function Builder() {
   }, [busy, saveFailed, hasDrafts]);
   const pdfMode: EstimatePdfMode = estimate?.type === "final" ? "final" : "pre";
   const pdfId = estimate?.id;
+  const notesEnabled =
+    !!me?.presentation_notes_enabled &&
+    ["pre", "final"].includes(estimate?.type || "");
+  const noteTarget = estimate?.zones.find((z) => z.id === notesZone);
   const rangeTrial = !!me?.zone_ranges_enabled && estimate?.type === "pre";
   const rangeQuery = useQuery({
     queryKey: ["zone-ranges", id, estimate?.updated_at, me?.id],
@@ -174,6 +180,10 @@ export default function Builder() {
         presentationVisibility.show_grand_total,
         presentationVisibility.show_calculations,
         estimate.pdf_layout?.presentation_tax,
+        notesEnabled ? "zone-notes-v1" : null,
+        notesEnabled
+          ? estimate.pdf_layout?.zone_presentation_notes_trial
+          : null,
         rangeTrial ? me?.id : null,
         rangeTrial ? estimate.pdf_layout?.pre_zone_ranges_trial : null,
       ])
@@ -720,6 +730,43 @@ export default function Builder() {
                   )}
                 </EmptyState>
               )}
+              {notesEnabled ? (
+                <section
+                  className="presentation-notes-section"
+                  aria-label={t("Presentation notes")}
+                >
+                  <div className="presentation-notes-heading">
+                    <h3>{t("Presentation notes")}</h3>
+                    <Button
+                      disabled={busy || hasDrafts || saveFailed}
+                      onClick={() => setNotesZone(zone.id)}
+                    >
+                      <Pencil size={16} />
+                      {t(
+                        estimate.pdf_layout?.zone_presentation_notes_trial?.[
+                          zone.id
+                        ]?.notes.length
+                          ? "Edit notes"
+                          : "Add note",
+                      )}
+                    </Button>
+                  </div>
+                  {estimate.pdf_layout?.zone_presentation_notes_trial?.[zone.id]
+                    ?.notes.length ? (
+                    <ul>
+                      {estimate.pdf_layout.zone_presentation_notes_trial[
+                        zone.id
+                      ].notes.map((note, index) => (
+                        <li key={index}>{note}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="form-hint">
+                      {t("Add exclusions or other notes without a price.")}
+                    </p>
+                  )}
+                </section>
+              ) : null}
               {rangeTrial ? (
                 <div className="zone-range-control">
                   <div>
@@ -1029,6 +1076,28 @@ export default function Builder() {
                 patch(
                   `/estimates/${id}/zones/${selectedRangeZone.id}/price-range`,
                   options,
+                ),
+              )
+            }
+          />
+        ) : null}
+      </ModalPresence>
+      <ModalPresence>
+        {notesEnabled && noteTarget ? (
+          <PresentationNotesForm
+            key={noteTarget.id}
+            label={noteTarget.label}
+            notes={
+              estimate.pdf_layout?.zone_presentation_notes_trial?.[
+                noteTarget.id
+              ]?.notes || []
+            }
+            onClose={() => setNotesZone(null)}
+            onSave={(notes) =>
+              mutate(() =>
+                patch(
+                  `/estimates/${id}/zones/${noteTarget.id}/presentation-notes`,
+                  { notes },
                 ),
               )
             }

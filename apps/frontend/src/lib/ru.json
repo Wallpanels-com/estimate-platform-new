@@ -1175,5 +1175,16 @@
   "Including tax": "С учётом налога",
   "The price range could not be saved. Please try again.": "Не удалось сохранить диапазон. Попробуйте ещё раз.",
   "Add confirmed positive pricing before enabling a zone range.": "Сначала добавьте подтверждённые позиции с положительной стоимостью.",
-  "Enter a valid lower and upper price. The upper price must not be lower.": "Укажите корректные границы цены. Верхняя граница не должна быть меньше нижней."
+  "Enter a valid lower and upper price. The upper price must not be lower.": "Укажите корректные границы цены. Верхняя граница не должна быть меньше нижней.",
+  "Presentation notes": "Примечания для презентации",
+  "Choose a suggestion or type your own note. Notes appear after the scope, without a price, and do not affect totals.": "Выберите готовый вариант или напишите свой текст. Примечания появятся после списка работ, без цены, и не повлияют на итог.",
+  "Note {0}": "Примечание {0}",
+  "Delete note {0}": "Удалить примечание {0}",
+  "Choose or type a note…": "Выберите или напишите примечание…",
+  "No presentation notes. Save to remove the existing notes.": "Примечаний нет. Сохраните, чтобы удалить прежние примечания.",
+  "Add note": "Добавить примечание",
+  "Edit notes": "Изменить примечания",
+  "Text in the presentation": "Текст в презентации",
+  "Notes could not be saved. Please try again.": "Не удалось сохранить примечания. Попробуйте ещё раз.",
+  "Add exclusions or other notes without a price.": "Добавьте исключения или другие примечания без цены."
 }

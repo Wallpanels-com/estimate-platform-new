@@ -5280,3 +5280,67 @@ html:has(.embedded-workspace) #root {
     gap: 8px;
   }
 }
+
+.presentation-notes-section {
+  padding: 20px 28px;
+  border-top: 1px solid var(--border);
+}
+.presentation-notes-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.presentation-notes-heading h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.presentation-notes-section ul {
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.presentation-notes-body {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.presentation-notes-zone {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.presentation-notes-list {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.presentation-note-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+.presentation-note-row > .field {
+  min-width: 0;
+}
+.presentation-notes-add {
+  justify-self: start;
+}
+.presentation-notes-preview {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  overflow-wrap: anywhere;
+}
+.presentation-notes-preview > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.presentation-notes-preview p {
+  margin: 12px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: pre-wrap;
+}

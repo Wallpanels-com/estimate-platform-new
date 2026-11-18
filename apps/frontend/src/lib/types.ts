@@ -1,6 +1,7 @@
 export type NumberValue = number | string | null;
 export interface User {
   zone_ranges_enabled?: boolean;
+  presentation_notes_enabled?: boolean;
   sales_control_enabled?: boolean;
   portal_managed?: boolean;
   id: string;
@@ -66,6 +67,10 @@ export interface Estimate {
       rate: string;
       amount: string;
     };
+    zone_presentation_notes_trial?: Record<
+      string,
+      { notes: string[]; override?: boolean }
+    >;
     final_zone_photos?: Record<string, number>;
     [key: string]: unknown;
   } | null;

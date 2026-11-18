@@ -798,6 +798,7 @@ def generate_final_client(est, output_path):
             # Unassigned additional scope has no physical zone/photo editor.
             photo_required=bool(getattr(zone, "id", None)),
             show_calculations=display_options(est).show_calculations,
+            show_descriptions=bool(getattr(est, "_presentation_notes_enabled", False)),
         )
     pages += summary_pages(zones, pricing)
     output_path = Path(output_path)

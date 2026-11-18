@@ -104,7 +104,8 @@ def render_for_user(user, renderer, estimate, destination):
     token = _photo_export.set(state)
     try:
         from .zone_ranges import presentation_view
-        return renderer(presentation_view(estimate, user), destination)
+        from .presentation_notes import presentation_view as notes_view
+        return renderer(notes_view(presentation_view(estimate, user), user), destination)
     finally:
         _photo_export.reset(token)
 

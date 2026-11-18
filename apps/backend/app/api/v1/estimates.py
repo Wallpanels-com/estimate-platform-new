@@ -243,9 +243,11 @@ async def update_estimate(
     if "pdf_layout" in fields:
         from app.services.zone_ranges import KEY
         layout = dict(fields["pdf_layout"] or {})
-        layout.pop(KEY, None)
-        if KEY in (est.pdf_layout or {}):
-            layout[KEY] = est.pdf_layout[KEY]
+        from app.services.presentation_notes import KEY as NOTES_KEY
+        for reserved in (KEY, NOTES_KEY):
+            layout.pop(reserved, None)
+            if reserved in (est.pdf_layout or {}):
+                layout[reserved] = est.pdf_layout[reserved]
         fields["pdf_layout"] = layout or None
     for field, value in fields.items():
         setattr(est, field, value)
@@ -290,6 +292,28 @@ async def update_zone_range(estimate_id: uuid.UUID, zone_id: uuid.UUID, data: Ra
         range_snapshot(est)
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
+    touch(est, current_user)
+    await db.commit()
+    return await load_estimate(estimate_id, current_user, db)
+
+
+
+from app.services.presentation_notes import NotesInput, available as notes_available, select_notes
+
+
+@router.patch("/{estimate_id}/zones/{zone_id}/presentation-notes", response_model=EstimateOut)
+async def update_presentation_notes(estimate_id: uuid.UUID, zone_id: uuid.UUID, data: NotesInput, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if not notes_available(current_user):
+        raise HTTPException(403, 'Presentation notes are available only to Dmitry during this trial.')
+    est = await load_estimate(estimate_id, current_user, db)
+    if est.type not in ('pre', 'final') or getattr(est, 'deleted_at', None):
+        raise HTTPException(400, 'Presentation notes require an active Pre or Final estimate.')
+    if est.source_estimate_id:
+        est = await synchronize(db, est)
+    zone = next((z for z in est.zones if z.id == zone_id), None)
+    if zone is None:
+        raise HTTPException(404, 'Zone not found in this estimate.')
+    select_notes(est, zone, data)
     touch(est, current_user)
     await db.commit()
     return await load_estimate(estimate_id, current_user, db)
@@ -453,6 +477,9 @@ async def duplicate_estimate(
     from app.services.zone_ranges import KEY
     if KEY in layout:
         layout[KEY] = {mappings["maps"]["zones"][key]: value for key, value in layout[KEY].items() if key in mappings["maps"]["zones"]}
+    from app.services.presentation_notes import KEY as NOTES_KEY, remap
+    if NOTES_KEY in layout:
+        layout[NOTES_KEY] = remap(src, mappings["maps"]["zones"])
     new_est.pdf_layout = layout or None
     new_est.cover_image_id = mappings['maps']['images'].get(str(src.cover_image_id)) if src.cover_image_id else None
     await db.flush()

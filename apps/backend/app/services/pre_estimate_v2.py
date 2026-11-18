@@ -437,6 +437,12 @@ def zone_pages(zone, factor, media):
                 54,
             )
         )
+    for note in getattr(zone, '_presentation_notes', []):
+        note_lines = [line for paragraph in note.splitlines() for line in _wrap(paragraph, page.text_width, 18, 'WP-Medium')]
+        max_lines = max(1, int((capacity - 16) // 26))
+        for start in range(0, len(note_lines), max_lines):
+            chunk = note_lines[start:start + max_lines]
+            put(Row('note', [(line, 'Medium', 18, 26, INK) for line in chunk], len(chunk) * 26 + 16))
     for page in pages:
         if page.mode == "scope":
             # Centre the complete scope + investment composition within the body.

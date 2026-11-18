@@ -3,7 +3,7 @@
 The approved blank image is a background only. Zone numbers, headings, row
 names, optional saved-field calculations, prices, separators and totals are native
 PDF marks. Descriptions and SKU
-fields are deliberately excluded from zone slides; source records stay intact.
+fields are excluded by default; the owner notes pilot also shows descriptions.
 """
 
 from dataclasses import dataclass, field
@@ -17,7 +17,7 @@ from .pre_estimate_v1 import _wrap
 from .proposal_style import fonts as _fonts, background as slide_background, brand as slide_brand
 from .final_pricing import key
 from .final_zone_photos import PHOTO_REQUIRED
-from .proposal_display import item_caption, calculation_detail
+from .proposal_display import item_caption, calculation_detail, without_calculations
 
 W, H = 1440, 810
 X = 82
@@ -103,6 +103,7 @@ class Row:
     detail_start: int | None = None
     detail_size: float = 0
     price_line: int = 0
+    note: bool = False
 
 
 @dataclass
@@ -196,7 +197,13 @@ def geometry(zone, number, assets, continued=False):
     )
 
 
-def row_data(items, width, capacity, quote, size=19, padding=20, weight="Regular", show_calculations=True):
+def detail_text(item, amount, show_calculations, show_descriptions):
+    description = without_calculations(getattr(item, 'description', None)) if show_descriptions else ''
+    calculation = calculation_detail(item, amount) if show_calculations else ''
+    return ' · '.join(value for value in (description, calculation) if value)
+
+
+def row_data(items, width, capacity, quote, size=19, padding=20, weight="Regular", show_calculations=True, show_descriptions=False):
     lead = size + (6 if show_calculations and weight == "Regular" else 8)
     price_width = max(
         145,
@@ -218,7 +225,7 @@ def row_data(items, width, capacity, quote, size=19, padding=20, weight="Regular
     rows = []
     for item in items:
         detail_size = max(15, size - 5)
-        detail = calculation_detail(item, quote.item_prices[key(item)]) if show_calculations else ''
+        detail = detail_text(item, quote.item_prices[key(item)], show_calculations, show_descriptions)
         # Put the price alongside the smaller calculation line, leaving the
         # full text width for names. Four ordinary components still fit without
         # squeezing their type or reducing the photograph.
@@ -254,7 +261,7 @@ def row_data(items, width, capacity, quote, size=19, padding=20, weight="Regular
     return rows
 
 
-def paginate(zone, number, quote, selected_slot=None, photo_required=True, show_calculations=True):
+def paginate(zone, number, quote, selected_slot=None, photo_required=True, show_calculations=True, show_descriptions=False):
     assets = photos(zone, selected_slot, required=photo_required)
     base, introductions = geometry(zone, number, assets)
     if introductions and assets:
@@ -291,7 +298,7 @@ def paginate(zone, number, quote, selected_slot=None, photo_required=True, show_
         # remaining scope keeps the same balanced composition.
         batch = assets
         page, _ = geometry(zone, number, batch, page_index > 0)
-        page.sparse = 1 <= len(items) <= 3
+        page.sparse = 1 <= len(items) <= 3 and not getattr(zone, "_presentation_notes", [])
         if page.sparse:
             page.body_top = page.component_y - SHORT_SCOPE_GAPS[len(items)]
         width = page.text_width if page.side else (W - 2 * X - 66) / 2
@@ -319,11 +326,12 @@ def paginate(zone, number, quote, selected_slot=None, photo_required=True, show_
                 padding=12 if show_calculations and not page.sparse else 16 if not page.sparse and len(items) > 8 else 20,
                 weight="Medium" if page.sparse else "Regular",
                 show_calculations=show_calculations,
+                show_descriptions=show_descriptions,
             )
-            if len(items) == 1:
+            if len(items) == 1 and page.sparse:
                 names = _wrap(item_caption(items[0]), width, 30, "WP-Medium")
                 name_count = len(names)
-                detail = calculation_detail(items[0], quote.item_prices[key(items[0])]) if show_calculations else ''
+                detail = detail_text(items[0], quote.item_prices[key(items[0])], show_calculations, show_descriptions)
                 if detail:
                     names += _wrap(detail, width, 21, 'WP-Regular')
                 offset = (len(names) - 1) * 38 + 58
@@ -345,6 +353,13 @@ def paginate(zone, number, quote, selected_slot=None, photo_required=True, show_
                     ]
             pending += rows
             remaining = []
+        if page_index == 0:
+            for note in getattr(zone, '_presentation_notes', []):
+                lines = [line for paragraph in note.splitlines() for line in _wrap(paragraph, width, 20, 'WP-Medium')]
+                limit = max(1, int((capacity - 20) // 28))
+                for start in range(0, len(lines), limit):
+                    chunk = lines[start:start + limit]
+                    pending.append(Row(None, chunk, '', len(chunk) * 28 + 20, size=20, lead=28, note=True))
         target_capacity = capacity * page.columns
         # Do not strand one or two rows on a needless continuation. Balance the
         # remaining measured rows when they genuinely need multiple pages.
@@ -383,6 +398,7 @@ def paginate(zone, number, quote, selected_slot=None, photo_required=True, show_
                             detail_start=max(0, row.detail_start - cut) if row.detail_start is not None else None,
                             detail_size=row.detail_size,
                             price_line=max(0, row.price_line - cut),
+                            note=row.note,
                         ),
                     )
                 row = Row(
@@ -396,6 +412,7 @@ def paginate(zone, number, quote, selected_slot=None, photo_required=True, show_
                     detail_start=row.detail_start,
                     detail_size=row.detail_size,
                     price_line=row.price_line if row.price_line < cut else 0,
+                    note=row.note,
                 )
             # Keep each text-first column within its own vertical capacity.
             if page.columns == 2:
@@ -567,7 +584,7 @@ def draw(c, page, quote):
                 x,
                 y - n * row.lead,
                 row.detail_size if detail else row.size,
-                "Regular" if detail else "Medium" if page.sparse else "Regular",
+                "Regular" if detail else "Medium" if page.sparse or row.note else "Regular",
                 MUTED if detail else INK,
             )
         if row.price:

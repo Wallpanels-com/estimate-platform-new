@@ -149,6 +149,11 @@ async def clone(db, src, mode):
             db.add(MODELS[kind](id=ident, estimate_id=dst.id, **data))
             st["maps"][kind][str(obj.id)] = str(ident)
         await db.flush()
+    from .presentation_notes import KEY as NOTES_KEY, remap
+    inherited_notes = remap(src, st["maps"]["zones"], inherited=True)
+    if inherited_notes:
+        dst.pdf_layout = dict(dst.pdf_layout or {}) | {NOTES_KEY: inherited_notes}
+        await db.flush()
     return dst, st
 
 
@@ -340,7 +345,8 @@ async def synchronize(db, final):
         # this step would cascade-delete an item that moved into another zone.
         for zone in removed_zones:
             await db.refresh(zone, ["line_items", "images"])
-            protected = bool(state["overrides"].get(str(zone.id))) or any(
+            from .presentation_notes import entries as note_entries
+            protected = bool(note_entries(final).get(str(zone.id), {}).get("override")) or bool(state["overrides"].get(str(zone.id))) or any(
                 state["overrides"].get(str(child.id))
                 or (
                     isinstance(child, EstimateImage)
@@ -360,6 +366,8 @@ async def synchronize(db, final):
         final.branch_state = state
         await db.flush()
         final = await loaded(db, final.id)
+        from .presentation_notes import sync_notes
+        changed = sync_notes(pre, final, zone_map) or changed
         subtotal = sum((i.total_price for i in final.line_items), Decimal(0))
         if final.subtotal != subtotal:
             final.subtotal = subtotal

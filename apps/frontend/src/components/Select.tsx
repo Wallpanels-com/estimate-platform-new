@@ -378,6 +378,7 @@ export function Combobox({
   options,
   onValueChange,
   defaultValue = "",
+  hideEmptyMenu = false,
   ...props
 }: Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -386,6 +387,7 @@ export function Combobox({
   options: Choice[];
   onValueChange?: (value: string) => void;
   defaultValue?: string;
+  hideEmptyMenu?: boolean;
 }) {
   const field = useContext(FieldContext);
   const uid = useId();
@@ -401,6 +403,9 @@ export function Combobox({
     setQuery("");
     onValueChange?.(chosen);
   });
+  useEffect(() => {
+    if (hideEmptyMenu && !items.length && c.open) c.close();
+  }, [hideEmptyMenu, items.length, c.open, c.close]);
   return (
     <div className="choice editable-choice">
       <input
